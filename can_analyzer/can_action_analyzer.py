@@ -324,8 +324,9 @@ class CANActionAnalyzer:
             
             # Check for data pattern changes
             data_changed = False
-            unique_payloads_base = set(msg.data for msg in baseline_by_id[msg_id])
-            unique_payloads_action = set(msg.data for msg in action_by_id[msg_id])
+            # Convert bytearray to immutable bytes object before adding to set
+            unique_payloads_base = set(bytes(msg.data) for msg in baseline_by_id[msg_id])
+            unique_payloads_action = set(bytes(msg.data) for msg in action_by_id[msg_id])
             new_payloads = unique_payloads_action - unique_payloads_base
             
             # Check for correlation with action timestamps if multi-action capture
