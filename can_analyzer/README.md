@@ -22,8 +22,9 @@ pip install -r requirements.txt
 ```
 # Set up CAN interface with appropriate bitrate (125kbps) in listen-only mode
 sudo ip link set can0 down
-sudo ip link set can0 type can bitrate 125000 listen-only on
+sudo ip link set can0 type can bitrate 125000 listen-only on restart-ms 1000
 sudo ip link set can0 up
+sudo ifconfig can0 txqueuelen 65536
 
 # Verify the interface is up and in listen-only mode
 ip -details link show can0

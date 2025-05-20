@@ -17,7 +17,12 @@ Features:
 Usage:
 1. Install dependencies: pip install -r requirements.txt
 2. Set up Waveshare CAN HAT on Raspberry Pi and configure SocketCAN
-3. Run the script: python can_action_analyzer.py
+3. Run the script: python can_action_analyzer.py <can_interface>
+
+Examples:
+    python can_action_analyzer.py can0
+    python can_action_analyzer.py slcan0
+    python can_action_analyzer.py --help
 
 The script will guide you through the process of capturing and analyzing CAN data.
 """
@@ -30,15 +35,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 from collections import defaultdict
+import argparse
+import sys
 
 
 class CANActionAnalyzer:
-    def __init__(self, can_interface='can0', sample_rate=0.001):
+    def __init__(self, can_interface, sample_rate=0.001):
         """
         Initialize the CAN bus analyzer.
 
         Args:
-            can_interface: CAN interface name (default: 'can0')
+            can_interface: CAN interface name (required)
             sample_rate: Time between CAN message reads in seconds (default: 0.001)
         """
         self.can_interface = can_interface
@@ -523,9 +530,9 @@ class CANActionAnalyzer:
             print(f"Could not display plot (headless mode?): {e}")
 
 
-def interactive_session():
+def interactive_session(analyzer):
     """Run an interactive CAN bus analysis session."""
-    analyzer = CANActionAnalyzer()
+    
 
     # Display welcome message
     print("\n" + "=" * 80)
@@ -702,5 +709,38 @@ def interactive_session():
             print("Invalid choice. Please try again.")
 
 
+def main():
+    """Main entry point for the script."""
+    parser = argparse.ArgumentParser(
+        description="CAN Bus Analyzer for Vehicle Action Detection",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        'can_interface',
+        help="CAN interface to use (e.g., can0, slcan0)"
+    )
+    
+    args = parser.parse_args()
+    
+    # Print welcome message
+    print("\n" + "=" * 80)
+    print("CAN BUS ACTION ANALYZER".center(80))
+    print("For identifying messages related to vehicle actions".center(80))
+    print("=" * 80 + "\n")
+    
+    # Create analyzer instance
+    analyzer = CANActionAnalyzer(can_interface=args.can_interface)
+    
+    # Connect to CAN bus
+    if not analyzer.connect():
+        sys.exit(1)
+    
+    # Run interactive session
+    interactive_session(analyzer)
+    
+    # Cleanup on exit
+    analyzer.disconnect()
+
+
 if __name__ == "__main__":
-    interactive_session()
+    main()
