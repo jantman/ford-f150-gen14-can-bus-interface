@@ -204,6 +204,16 @@ class CANActionAnalyzer:
             if hasattr(msg, 'action_timestamps'):
                 msg_dict['action_timestamps'] = msg.action_timestamps
                 
+            # Add binary toggle metadata if they exist
+            if hasattr(msg, 'toggle_events'):
+                msg_dict['toggle_events'] = msg.toggle_events
+            if hasattr(msg, 'initial_state'):
+                msg_dict['initial_state'] = msg.initial_state
+            if hasattr(msg, 'toggled_state'):
+                msg_dict['toggled_state'] = msg.toggled_state
+            if hasattr(msg, 'capture_type'):
+                msg_dict['capture_type'] = msg.capture_type
+                
             serializable_msgs.append(msg_dict)
             
         # Create filename with timestamp
@@ -249,14 +259,36 @@ class CANActionAnalyzer:
             if 'action_timestamps' in msg_data:
                 msg.action_timestamps = msg_data['action_timestamps']
                 
+            # Load binary toggle metadata if they exist
+            if 'toggle_events' in msg_data:
+                msg.toggle_events = msg_data['toggle_events']
+            if 'initial_state' in msg_data:
+                msg.initial_state = msg_data['initial_state']
+            if 'toggled_state' in msg_data:
+                msg.toggled_state = msg_data['toggled_state']
+            if 'capture_type' in msg_data:
+                msg.capture_type = msg_data['capture_type']
+                
             messages.append(msg)
             
         self.captures[action_name] = messages
         
-        # Detect if this is a multi-action capture
-        has_timestamps = any(hasattr(msg, 'action_timestamps') for msg in messages)
-        if has_timestamps:
-            action_count = len(messages[0].action_timestamps) if hasattr(messages[0], 'action_timestamps') else 1
+        # Detect what kind of capture this is
+        capture_type = "Regular"
+        action_count = 1
+        
+        if messages:
+            if hasattr(messages[0], 'capture_type') and messages[0].capture_type == 'binary_toggle':
+                capture_type = "Binary Toggle"
+                if hasattr(messages[0], 'toggle_events'):
+                    action_count = len(messages[0].toggle_events)
+            elif hasattr(messages[0], 'action_timestamps'):
+                action_count = len(messages[0].action_timestamps)
+                capture_type = "Multi-Action"
+        
+        if capture_type == "Binary Toggle":
+            print(f"Loaded {len(messages)} messages for '{action_name}' - Binary Toggle with {action_count} state changes")
+        elif action_count > 1:
             print(f"Loaded {len(messages)} messages for '{action_name}' with {action_count} action repeats")
         else:
             print(f"Loaded {len(messages)} messages for '{action_name}'")
@@ -530,6 +562,314 @@ class CANActionAnalyzer:
         except Exception as e:
             print(f"Could not display plot (headless mode?): {e}")
 
+    def capture_binary_toggle(self, action_name, toggle_count=5, state_duration=3):
+        """
+        Capture CAN messages during binary state toggles (on/off, lock/unlock, etc.).
+        
+        This method is optimized for identifying messages that toggle between two states.
+        It prompts the user to alternate between two states multiple times.
+
+        Args:
+            action_name: Name of the action being toggled (e.g., 'door_lock', 'headlights')
+            toggle_count: Number of times to toggle between states (default: 5)
+            state_duration: Duration to hold each state in seconds (default: 3)
+
+        Returns:
+            List of captured CAN messages with toggle metadata
+        """
+        if not self.bus:
+            if not self.connect():
+                return []
+
+        print(f"\n{'='*60}")
+        print(f"BINARY TOGGLE CAPTURE: {action_name}")
+        print(f"{'='*60}")
+        print(f"This will capture {toggle_count} toggles between two states.")
+        print(f"You'll hold each state for {state_duration} seconds.")
+        print(f"Total capture time: ~{toggle_count * 2 * state_duration} seconds")
+        print("\nInstructions:")
+        print("1. Start with the action in the 'OFF' or initial state")
+        print("2. When prompted, toggle to the 'ON' state")
+        print("3. When prompted again, toggle back to the 'OFF' state")
+        print("4. Repeat this pattern for all toggles")
+        
+        # Get user confirmation and initial state description
+        initial_state = input(f"\nDescribe the initial state (e.g., 'doors unlocked', 'lights off'): ")
+        toggled_state = input(f"Describe the toggled state (e.g., 'doors locked', 'lights on'): ")
+        
+        input(f"\nEnsure the {action_name} is in the '{initial_state}' state, then press Enter to begin...")
+        
+        # Countdown
+        for i in range(3, 0, -1):
+            print(f"Starting capture in {i}...")
+            time.sleep(1)
+        
+        messages = []
+        toggle_events = []  # Store when each toggle occurred and what state
+        start_time = time.time()
+        current_state = initial_state
+        
+        print(f"\nCapture started! Current state: '{current_state}'")
+        
+        try:
+            for toggle_num in range(toggle_count * 2):  # Each toggle involves 2 state changes
+                # Capture messages for the current state duration
+                state_start_time = time.time()
+                state_end_time = state_start_time + state_duration
+                
+                while time.time() < state_end_time:
+                    msg = self.bus.recv(timeout=self.sample_rate)
+                    if msg:
+                        msg.timestamp = time.time() - start_time
+                        messages.append(msg)
+                
+                # Prompt for state change (except after the last state)
+                if toggle_num < (toggle_count * 2) - 1:
+                    current_time = time.time() - start_time
+                    
+                    # Determine next state
+                    if current_state == initial_state:
+                        next_state = toggled_state
+                    else:
+                        next_state = initial_state
+                    
+                    # Record the toggle event
+                    toggle_events.append({
+                        'timestamp': current_time,
+                        'from_state': current_state,
+                        'to_state': next_state,
+                        'toggle_number': (toggle_num // 2) + 1
+                    })
+                    
+                    print(f"\n>>> NOW! Change from '{current_state}' to '{next_state}' <<<")
+                    current_state = next_state
+                    
+                    # Brief pause to allow state change
+                    time.sleep(0.5)
+                else:
+                    # Final state - just record the end
+                    current_time = time.time() - start_time
+                    print(f"\nCapture complete! Final state: '{current_state}'")
+                    
+        except KeyboardInterrupt:
+            print("\nCapture interrupted by user.")
+        
+        print(f"\nCapture complete! Collected {len(messages)} messages across {len(toggle_events)} state changes.")
+        
+        # Add toggle metadata to the first message for later analysis
+        if messages and toggle_events:
+            meta_msg = type('Message', (), {})()
+            meta_msg.timestamp = 0
+            meta_msg.arbitration_id = 0
+            meta_msg.dlc = 8
+            meta_msg.data = bytes([0, 0, 0, 0, 0, 0, 0, 0])
+            meta_msg.is_extended_id = False
+            meta_msg.is_remote_frame = False
+            meta_msg.is_error_frame = False
+            meta_msg.toggle_events = toggle_events
+            meta_msg.initial_state = initial_state
+            meta_msg.toggled_state = toggled_state
+            meta_msg.capture_type = 'binary_toggle'
+            messages.insert(0, meta_msg)
+        
+        # Store the capture
+        self.captures[action_name] = messages
+        return messages
+
+    def analyze_binary_toggles(self, action_name):
+        """
+        Analyze a binary toggle capture to identify messages that change between two states.
+        
+        Args:
+            action_name: Name of the toggle capture to analyze
+            
+        Returns:
+            Dictionary of message IDs and their binary toggle characteristics
+        """
+        if action_name not in self.captures:
+            print(f"Toggle capture '{action_name}' not found")
+            return None
+            
+        messages = self.captures[action_name].copy()
+        
+        # Extract toggle metadata
+        if not messages or not hasattr(messages[0], 'toggle_events'):
+            print(f"Capture '{action_name}' doesn't appear to be a binary toggle capture")
+            return None
+            
+        toggle_events = messages[0].toggle_events
+        initial_state = messages[0].initial_state
+        toggled_state = messages[0].toggled_state
+        
+        # Remove metadata message
+        messages = messages[1:]
+        
+        print(f"\nAnalyzing binary toggle capture: {action_name}")
+        print(f"States: '{initial_state}' ↔ '{toggled_state}'")
+        print(f"Toggle events: {len(toggle_events)}")
+        
+        # Group messages by ID and analyze payload patterns around toggle events
+        toggle_analysis = {}
+        
+        # Group messages by arbitration ID
+        messages_by_id = defaultdict(list)
+        for msg in messages:
+            messages_by_id[msg.arbitration_id].append(msg)
+        
+        # Analyze each message ID
+        for msg_id, msg_list in messages_by_id.items():
+            # Create timeline of payloads for this message ID
+            payload_timeline = []
+            for msg in msg_list:
+                payload_timeline.append({
+                    'timestamp': msg.timestamp,
+                    'payload': bytes(msg.data)
+                })
+            
+            # Sort by timestamp
+            payload_timeline.sort(key=lambda x: x['timestamp'])
+            
+            # Analyze payload changes around toggle events
+            toggle_correlations = []
+            unique_payloads = set()
+            payload_changes = []
+            
+            # Track payload changes
+            for i in range(1, len(payload_timeline)):
+                prev_payload = payload_timeline[i-1]['payload']
+                curr_payload = payload_timeline[i]['payload']
+                
+                if prev_payload != curr_payload:
+                    payload_changes.append({
+                        'timestamp': payload_timeline[i]['timestamp'],
+                        'from_payload': prev_payload,
+                        'to_payload': curr_payload
+                    })
+                    unique_payloads.add(prev_payload)
+                    unique_payloads.add(curr_payload)
+            
+            # Check correlation with toggle events
+            correlated_changes = 0
+            toggle_window = 2.0  # 2-second window around each toggle
+            
+            for toggle_event in toggle_events:
+                toggle_time = toggle_event['timestamp']
+                
+                # Look for payload changes near this toggle
+                for change in payload_changes:
+                    if abs(change['timestamp'] - toggle_time) <= toggle_window:
+                        correlated_changes += 1
+                        toggle_correlations.append({
+                            'toggle_event': toggle_event,
+                            'payload_change': change,
+                            'time_diff': change['timestamp'] - toggle_time
+                        })
+                        break
+            
+            # Calculate binary toggle characteristics
+            is_binary_toggle = False
+            binary_confidence = 0
+            state_payloads = {}
+            
+            # Check if this message has exactly 2 unique payloads
+            if len(unique_payloads) == 2:
+                # Check if payload changes correlate well with state toggles
+                correlation_ratio = correlated_changes / len(toggle_events) if toggle_events else 0
+                
+                if correlation_ratio >= 0.6:  # At least 60% of toggles have corresponding payload changes
+                    is_binary_toggle = True
+                    binary_confidence = min(correlation_ratio * 100, 100)
+                    
+                    # Try to map payloads to states
+                    payloads = list(unique_payloads)
+                    
+                    # Use the first correlated change to determine mapping
+                    if toggle_correlations:
+                        first_correlation = toggle_correlations[0]
+                        if first_correlation['toggle_event']['from_state'] == initial_state:
+                            # Transition from initial to toggled state
+                            state_payloads[initial_state] = first_correlation['payload_change']['from_payload']
+                            state_payloads[toggled_state] = first_correlation['payload_change']['to_payload']
+                        else:
+                            # Transition from toggled to initial state
+                            state_payloads[toggled_state] = first_correlation['payload_change']['from_payload']
+                            state_payloads[initial_state] = first_correlation['payload_change']['to_payload']
+            
+            # Store analysis results
+            if is_binary_toggle or correlated_changes > 0:
+                toggle_analysis[msg_id] = {
+                    'msg_id': hex(msg_id),
+                    'is_binary_toggle': is_binary_toggle,
+                    'binary_confidence': binary_confidence,
+                    'unique_payloads': list(unique_payloads),
+                    'payload_changes_count': len(payload_changes),
+                    'correlated_changes': correlated_changes,
+                    'correlation_ratio': correlated_changes / len(toggle_events) if toggle_events else 0,
+                    'toggle_correlations': toggle_correlations,
+                    'state_payloads': state_payloads,
+                    'message_count': len(msg_list)
+                }
+        
+        return toggle_analysis
+
+    def print_binary_toggle_analysis(self, analysis):
+        """
+        Print the binary toggle analysis results in a readable format.
+        
+        Args:
+            analysis: Dictionary from analyze_binary_toggles
+        """
+        if not analysis:
+            print("No binary toggle patterns found")
+            return
+            
+        print(f"\n{'=' * 80}")
+        print(f"BINARY TOGGLE ANALYSIS RESULTS")
+        print(f"{'=' * 80}")
+        
+        # Sort by binary confidence
+        sorted_analysis = sorted(
+            analysis.items(),
+            key=lambda x: (x[1]['is_binary_toggle'], x[1]['binary_confidence']),
+            reverse=True
+        )
+        
+        binary_toggles = [item for item in sorted_analysis if item[1]['is_binary_toggle']]
+        other_correlations = [item for item in sorted_analysis if not item[1]['is_binary_toggle']]
+        
+        if binary_toggles:
+            print(f"\n🎯 CONFIRMED BINARY TOGGLE MESSAGES ({len(binary_toggles)} found):")
+            print("=" * 60)
+            
+            for i, (msg_id, data) in enumerate(binary_toggles, 1):
+                print(f"\n{i}. Message ID: {data['msg_id']} - Confidence: {data['binary_confidence']:.1f}%")
+                print(f"   ✓ BINARY TOGGLE DETECTED: Changes between exactly 2 payloads")
+                print(f"   ✓ Correlation: {data['correlated_changes']}/{len(data['toggle_correlations'])} toggles matched")
+                
+                if data['state_payloads']:
+                    print(f"   ✓ STATE MAPPING:")
+                    for state, payload in data['state_payloads'].items():
+                        hex_payload = ' '.join([f"{b:02X}" for b in payload])
+                        print(f"     '{state}': {hex_payload}")
+                else:
+                    print(f"   ✓ PAYLOADS:")
+                    for j, payload in enumerate(data['unique_payloads'], 1):
+                        hex_payload = ' '.join([f"{b:02X}" for b in payload])
+                        print(f"     Payload {j}: {hex_payload}")
+        
+        if other_correlations:
+            print(f"\n📊 OTHER CORRELATED MESSAGES ({len(other_correlations)} found):")
+            print("=" * 60)
+            
+            for i, (msg_id, data) in enumerate(other_correlations, 1):
+                print(f"\n{i}. Message ID: {data['msg_id']} - Correlation: {data['correlation_ratio']:.1%}")
+                print(f"   • {len(data['unique_payloads'])} unique payloads")
+                print(f"   • {data['correlated_changes']} payload changes near toggle events")
+                
+                if len(data['unique_payloads']) <= 3:  # Show payloads if not too many
+                    for j, payload in enumerate(data['unique_payloads'], 1):
+                        hex_payload = ' '.join([f"{b:02X}" for b in payload])
+                        print(f"     Payload {j}: {hex_payload}")
 
 def interactive_session(analyzer):
     """Run an interactive CAN bus analysis session."""
@@ -549,9 +889,11 @@ def interactive_session(analyzer):
         print("3. Analyze differences between captures")
         print("4. Save/load captures")
         print("5. Visualize message timeline")
+        print("6. Capture binary toggle action")
+        print("7. Analyze binary toggle capture")
         print("0. Exit")
         
-        choice = input("\nEnter your choice (0-5): ")
+        choice = input("\nEnter your choice (0-7): ")
         
         if choice == '1':
             # Baseline capture
@@ -697,6 +1039,61 @@ def interactive_session(analyzer):
                         analyzer.plot_message_timeline(action_name)
                 else:
                     analyzer.plot_message_timeline(action_name)
+            else:
+                print("Specified capture doesn't exist.")
+                
+        elif choice == '6':
+            # Binary toggle capture
+            action_name = input("Enter a name for this toggle action (e.g., 'door_lock_toggle'): ")
+            toggle_count = int(input("Enter number of toggles to capture [5]: ") or "5")
+            state_duration = float(input("Enter duration for each state in seconds [3]: ") or "3")
+            
+            analyzer.capture_binary_toggle(action_name, toggle_count=toggle_count, state_duration=state_duration)
+            analyzer.save_capture(action_name)
+            
+            # Automatically analyze the binary toggle capture
+            if input("\nAnalyze this binary toggle capture now? (y/n) [y]: ").lower() != 'n':
+                analysis = analyzer.analyze_binary_toggles(action_name)
+                if analysis:
+                    analyzer.print_binary_toggle_analysis(analysis)
+                    
+                    # Ask if user wants to visualize the binary toggle results
+                    if input("\nVisualize binary toggle timeline? (y/n): ").lower() == 'y':
+                        # Get the confirmed binary toggle message IDs
+                        binary_msg_ids = [msg_id for msg_id, data in analysis.items() if data['is_binary_toggle']]
+                        if binary_msg_ids:
+                            analyzer.plot_message_timeline(action_name, binary_msg_ids)
+                        else:
+                            analyzer.plot_message_timeline(action_name)
+            
+        elif choice == '7':
+            # Analyze binary toggle capture
+            if not analyzer.captures:
+                print("No captures available to analyze.")
+                continue
+                
+            print("\nAvailable captures:")
+            for i, name in enumerate(analyzer.captures.keys(), 1):
+                capture_type = "Binary Toggle" if (analyzer.captures[name] and 
+                                                 hasattr(analyzer.captures[name][0], 'capture_type') and 
+                                                 analyzer.captures[name][0].capture_type == 'binary_toggle') else "Regular"
+                print(f"{i}. {name} ({len(analyzer.captures[name])} messages) - {capture_type}")
+                
+            action_name = input("\nEnter the name of the binary toggle capture to analyze: ")
+            
+            if action_name in analyzer.captures:
+                analysis = analyzer.analyze_binary_toggles(action_name)
+                if analysis:
+                    analyzer.print_binary_toggle_analysis(analysis)
+                    
+                    # Ask if user wants to visualize the results
+                    if input("\nVisualize binary toggle timeline? (y/n): ").lower() == 'y':
+                        # Get the confirmed binary toggle message IDs
+                        binary_msg_ids = [msg_id for msg_id, data in analysis.items() if data['is_binary_toggle']]
+                        if binary_msg_ids:
+                            analyzer.plot_message_timeline(action_name, binary_msg_ids)
+                        else:
+                            analyzer.plot_message_timeline(action_name)
             else:
                 print("Specified capture doesn't exist.")
                 
