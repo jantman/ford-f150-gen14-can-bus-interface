@@ -1,0 +1,177 @@
+# 2025 Ford F150 Lariat V8 - Wiring and CAN Notes
+
+## CAN Messages
+
+* Interior ambient lighting: FD-CAN1, HS-CAN3, and LIN.
+* Lock system: FD-CAN1, FD-CAN3, HS-CAN3, MS-CAN1
+
+## CAN Busses, Connectors, and Locations
+
+### FD-CAN1
+
+Flexible Data rate CAN bus; this _should_ be an arbitration bitrate of 1Mbps and a data bitrate of 2Mbps, though I never successfully connected.
+
+Circuits `BDB03` “Diagnostic # CAN FD Bus High Speed High” and `BDB04` “Diagnostic # CAN FD Bus High Speed Low”
+
+Connectors:
+
+* C135 ABS Module
+* C175B PCM
+* C210 inline (behind glove box)
+* C1026 inline
+* C1035E BCMC
+* C1232B PCM
+* C1233B PCM
+* C1381B PCM
+* C1458A SOBDMC
+* C1591 inline
+* C2280F BCM
+* C2371A TCCM
+* C2431A GWM
+* C4396 VDM
+
+### FD-CAN2
+
+Flexible Data rate CAN bus; this _should_ be an arbitration bitrate of 1Mbps and a data bitrate of 2Mbps, though I never successfully connected.
+
+Circuits `BDB01` “Diagnostic # CAN FD Bus High Speed 2 High” and `BDB02` “Diagnostic # CAN FD Bus High Speed 2 Low”
+
+Connectors: 
+
+* C248 inline
+* C2431A GWM
+* C3221B Upfitter Customization Interface Module (UCIM)
+* C4803A Telematics Control Unit (TCU) Module
+
+### FD-CAN3
+
+Flexible Data rate CAN bus; this _should_ be an arbitration bitrate of 1Mbps and a data bitrate of 2Mbps, though I never successfully connected.
+
+Circuits `BDB05` “Diagnostic # CAN FD Bus High Speed 3 High” and `BDB06` “Diagnostic # CAN FD Bus High Speed 3 Low”
+
+Connectors: 
+
+* C145 inline
+* C215 inline
+* C226A Steering Column Control Module (SCCM)
+* C238 inline
+* C242B IPMA
+* C265 inline
+* C501A Driver Door Module (DDM)
+* C511 inline
+* C610 inline
+* C652A Passenger Door Module (PDM)
+* C1463A Power Steering Control Module (PSCM)
+* C2129 Headlamp Control Module (HCM)
+* C2431A GWM
+* C2503 Gear Shift Module (GSM)
+* C2826A Driver Status Monitor Camera Module (CMR)
+* C3245 Gear Shift Module (GSM)
+
+### Diagnostic bus 1
+
+500Kbps bitrate HS-CAN, from the Gateway Module (GWM) to the OBD DLC.
+
+Circuits `VDB33` “Diagnostic # CAN Bus High Speed Diag 1 High” and `VDB34` “Diagnostic # CAN Bus High Speed Diag 1 Low”
+
+Connectors:
+
+* C2122 DLC
+* C2431A GWM
+
+### Diagnostic bus 2
+
+500Kbps bitrate HS-CAN, from the Gateway Module (GWM) to the OBD DLC.
+
+Circuits `VDB35` “Diagnostic # CAN Bus High Speed Diag 2 High” and `VDB36` “Diagnostic # CAN Bus High Speed Diag 2 Low”
+
+Connectors:
+
+* C2122 DLC
+* C2431A GWM
+
+### HS-CAN2
+
+500Kbps bitrate HS-CAN
+
+Circuits `VDB25` “Diagnostic # CAN Bus High Speed 2 (Upper) High” and `VDB26` “Diagnostic # CAN Bus High Speed 2 (Upper) Low”
+
+Connectors:
+
+* C145 inline
+* C146 inline
+* C210 inline
+* C265 inline
+* C310B Restraints Control Module (RCM)
+* C312 inline
+* C406 inline
+* C1035G BCMC
+* C1457B DC/DC Converter Control Module
+* C1591 inline
+* C1803A Air Conditioning Control Module (ACCM)
+* C2071 All Terrain Control Module (ATCM)
+* C2431A GWM
+* C2828 Pedestrian Alert Control Module (PACM)
+* C3285 Occupant Classification System Module (OCSM)
+* C3501C DC/AC Inverter
+* C4630A DC/AC Inverter
+
+### HS-CAN3
+
+500Kbps bitrate HS-CAN
+
+Circuits `VDB29` “Diagnostic # CAN Bus High Speed 3 (Lower) High” and `VDB30` “Diagnostic # CAN Bus High Speed 3 (Lower) Low”
+
+Connectors:
+
+* C215 inline
+* C220A IPC
+* C240A Audio Front Control Module (ACM)
+* C248 inline
+* C390 Wireless Accessory Charging Module (WACM)
+* C2342B Accessory Protocol Interface Module (APIM)
+* C2383A APIM
+* C2431A GWM
+* C2498C Trailer Module (TRM)
+* C2877 Head Up Display
+* C3154A Audio DSP Module
+* C3155A Audio DSP Module
+
+### MS-CAN1
+
+125Kbps MS-CAN
+
+Circuits `VDB06` “Diagnostic # CAN Bus Medium Speed High” and `VDB07` “Diagnostic # CAN Bus Medium Speed Low”
+
+* C212 inline
+* C228A HVAC control mod
+* C263 inline
+* C311 inline
+* C312 inline
+* C341D Driver Front Seat Module (DSM)
+* C2431A GWM
+* C3050 inline
+* C3052 inline
+* C3385 Driver Multi-Contour Seat Module (SCMG)
+* C3386 Passenger Multi-Contour Seat Module (SCMH)
+* C9026 RTM
+
+### MS-CAN2
+
+125Kbps MS-CAN
+
+Circuits `VDB27` “Diagnostic # CAN Bus Medium Speed 2 High” and `VDB28` “Diagnostic # CAN Bus Medium Speed 2 Low”
+
+Connectors:
+
+* C238 inline
+* C316 inline
+* C423 inline
+* C431 trailer tow connector
+* C437 inline
+* C438 inline
+* C439 trailer tow connector
+* C2431A GWM
+* C4100 inline
+* C4623 Rear Gate Trunk Module (RGTM)
+* C4724 Rear Gate Trunk Module (RGTM)
