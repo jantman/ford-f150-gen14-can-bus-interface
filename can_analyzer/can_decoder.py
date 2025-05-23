@@ -12,6 +12,7 @@ Usage:
 Examples:
     python can_decoder.py can0
     python can_decoder.py slcan0
+    python can_decoder.py can0 --changes-only
 
 The script will use the ford_lincoln_base_pt.dbc file in the same directory
 to decode messages and log both raw and decoded messages to a timestamped log file.
@@ -35,30 +36,65 @@ FILTERED_MESSAGE_NAMES = [
 
 
 class CANDecoder:
-    def __init__(self, can_interface, dbc_file="ford_lincoln_base_pt.dbc"):
+    def __init__(self, can_interface, dbc_file="ford_lincoln_base_pt.dbc", changes_only=False):
         """
         Initialize the CAN decoder.
 
         Args:
             can_interface: CAN interface name (e.g., 'can0')
             dbc_file: Path to the DBC file for message decoding
+            changes_only: If True, only display/log messages when content changes
         """
         self.can_interface = can_interface
         self.dbc_file = dbc_file
+        self.changes_only = changes_only
         self.bus = None
         self.db = None
         self.log_file = None
         self.start_time = time.time()
         self.filtered_message_ids = set()
         
+        # Track last seen message data for change detection
+        self.last_message_data = {}  # {arbitration_id: bytes}
+        
         # Create log filename with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.log_filename = f"can_decoded_{timestamp}_{can_interface}.log"
+        mode_suffix = "_changes" if changes_only else ""
+        self.log_filename = f"can_decoded_{timestamp}_{can_interface}{mode_suffix}.log"
         
         print(f"CAN Decoder initialized")
         print(f"Interface: {can_interface}")
         print(f"DBC file: {dbc_file}")
+        print(f"Changes only mode: {'ON' if changes_only else 'OFF'}")
         print(f"Log file: {self.log_filename}")
+
+    def has_message_changed(self, msg):
+        """
+        Check if a message's content has changed since last seen.
+        
+        Args:
+            msg: python-can Message object
+            
+        Returns:
+            bool: True if this is the first time seeing this message ID or if content changed
+        """
+        msg_id = msg.arbitration_id
+        current_data = bytes(msg.data)
+        
+        # Check if we've seen this message ID before
+        if msg_id not in self.last_message_data:
+            # First time seeing this message ID
+            self.last_message_data[msg_id] = current_data
+            return True
+        
+        # Compare with last seen data
+        if self.last_message_data[msg_id] != current_data:
+            # Content has changed
+            self.last_message_data[msg_id] = current_data
+            return True
+        
+        # No change
+        return False
 
     def load_dbc(self):
         """Load the DBC file for message decoding and build message filters."""
@@ -198,7 +234,7 @@ class CANDecoder:
                 'frame_id_hex': f"0x{msg.arbitration_id:X}"
             }
 
-    def format_message_output(self, msg, decoded_data, timestamp_rel):
+    def format_message_output(self, msg, decoded_data, timestamp_rel, is_changed=None):
         """
         Format message for console output.
 
@@ -206,6 +242,7 @@ class CANDecoder:
             msg: python-can Message object
             decoded_data: Decoded message data from decode_message()
             timestamp_rel: Relative timestamp since start
+            is_changed: Whether this message has changed (for display purposes)
 
         Returns:
             str: Formatted message string
@@ -215,12 +252,20 @@ class CANDecoder:
         dlc_str = f"DLC:{msg.dlc}"
         data_str = " ".join([f"{b:02X}" for b in msg.data])
         
+        # Add change indicator if in changes-only mode
+        change_indicator = ""
+        if self.changes_only and is_changed is not None:
+            if msg.arbitration_id not in self.last_message_data or len(self.last_message_data) == 1:
+                change_indicator = " [NEW]"
+            else:
+                change_indicator = " [CHANGED]"
+        
         if decoded_data and 'message_name' in decoded_data:
             # Successfully decoded message
             msg_name = decoded_data['message_name']
             signal_count = decoded_data.get('signal_count', 0)
             
-            output = f"{timestamp_str} {frame_id_str} {dlc_str} [{data_str}] -> {msg_name} ({signal_count} signals)"
+            output = f"{timestamp_str} {frame_id_str} {dlc_str} [{data_str}]{change_indicator} -> {msg_name} ({signal_count} signals)"
             
             # Add some key signals if present (limit to avoid too much output)
             if 'signals' in decoded_data:
@@ -241,14 +286,14 @@ class CANDecoder:
             
         elif decoded_data and 'error' in decoded_data:
             # Decoding error
-            output = f"{timestamp_str} {frame_id_str} {dlc_str} [{data_str}] -> DECODE_ERROR: {decoded_data['error']}"
+            output = f"{timestamp_str} {frame_id_str} {dlc_str} [{data_str}]{change_indicator} -> DECODE_ERROR: {decoded_data['error']}"
         else:
             # Unknown message (not in DBC)
-            output = f"{timestamp_str} {frame_id_str} {dlc_str} [{data_str}] -> UNKNOWN"
+            output = f"{timestamp_str} {frame_id_str} {dlc_str} [{data_str}]{change_indicator} -> UNKNOWN"
         
         return output
 
-    def log_message(self, msg, decoded_data, timestamp_abs, timestamp_rel):
+    def log_message(self, msg, decoded_data, timestamp_abs, timestamp_rel, is_changed=False):
         """
         Log message to file in JSON format.
 
@@ -257,11 +302,13 @@ class CANDecoder:
             decoded_data: Decoded message data
             timestamp_abs: Absolute timestamp
             timestamp_rel: Relative timestamp since start
+            is_changed: Whether this message content has changed
         """
         try:
             log_entry = {
                 'timestamp_abs': timestamp_abs,
                 'timestamp_rel': timestamp_rel,
+                'is_changed': is_changed,
                 'raw_message': {
                     'arbitration_id': msg.arbitration_id,
                     'arbitration_id_hex': f"0x{msg.arbitration_id:X}",
@@ -332,6 +379,20 @@ class CANDecoder:
         
         print("\n" + "="*80)
         print("CAN MESSAGE DECODER - Listening for messages...")
+        if self.filtered_message_ids:
+            print(f"FILTERING: Only capturing {len(self.filtered_message_ids)} specific message ID(s)")
+            for msg_name in FILTERED_MESSAGE_NAMES:
+                try:
+                    msg = self.db.get_message_by_name(msg_name)
+                    print(f"  - {msg_name} (0x{msg.frame_id:X})")
+                except KeyError:
+                    pass
+        else:
+            print("NO FILTERING: Capturing all CAN messages")
+        
+        if self.changes_only:
+            print("CHANGES ONLY MODE: Only showing messages when content changes")
+        
         print("Press Ctrl+C to stop")
         print("="*80)
         print(f"{'Time':>8} {'ID':>7} {'DLC':>6} {'Data':<24} {'Decoded Message'}")
@@ -339,6 +400,7 @@ class CANDecoder:
         
         message_count = 0
         decoded_count = 0
+        displayed_count = 0  # Count of messages actually displayed (in changes-only mode)
         
         try:
             while True:
@@ -350,34 +412,50 @@ class CANDecoder:
                     timestamp_rel = current_time - self.start_time
                     timestamp_abs = datetime.now().isoformat()
                     
-                    # Decode the message
-                    decoded_data = self.decode_message(msg)
+                    # Check if message has changed (if in changes-only mode)
+                    message_changed = True  # Default to always show
+                    if self.changes_only:
+                        message_changed = self.has_message_changed(msg)
                     
-                    # Print to console
-                    output = self.format_message_output(msg, decoded_data, timestamp_rel)
-                    print(output)
-                    
-                    # Log to file
-                    self.log_message(msg, decoded_data, timestamp_abs, timestamp_rel)
+                    # Only process and display if message should be shown
+                    if message_changed or not self.changes_only:
+                        # Decode the message
+                        decoded_data = self.decode_message(msg)
+                        
+                        # Print to console
+                        output = self.format_message_output(msg, decoded_data, timestamp_rel, message_changed)
+                        print(output)
+                        
+                        # Log to file (always log when shown)
+                        self.log_message(msg, decoded_data, timestamp_abs, timestamp_rel, message_changed)
+                        
+                        displayed_count += 1
+                        if decoded_data and 'message_name' in decoded_data:
+                            decoded_count += 1
                     
                     message_count += 1
-                    if decoded_data and 'message_name' in decoded_data:
-                        decoded_count += 1
                         
-                    # Print statistics every 100 messages
+                    # Print statistics every 100 messages (based on total received)
                     if message_count % 100 == 0:
-                        decode_rate = (decoded_count / message_count) * 100
-                        print(f"\n--- Stats: {message_count} messages, {decoded_count} decoded ({decode_rate:.1f}%) ---\n")
+                        decode_rate = (decoded_count / displayed_count * 100) if displayed_count > 0 else 0
+                        if self.changes_only:
+                            print(f"\n--- Stats: {message_count} total, {displayed_count} displayed, {decoded_count} decoded ({decode_rate:.1f}%) ---\n")
+                        else:
+                            print(f"\n--- Stats: {message_count} messages, {decoded_count} decoded ({decode_rate:.1f}%) ---\n")
                         
         except KeyboardInterrupt:
             print(f"\n\nReceived Ctrl+C, stopping...")
             
         finally:
-            decode_rate = (decoded_count / message_count * 100) if message_count > 0 else 0
+            decode_rate = (decoded_count / displayed_count * 100) if displayed_count > 0 else 0
             print(f"\n" + "="*80)
             print(f"SESSION SUMMARY")
             print(f"="*80)
             print(f"Total messages received: {message_count}")
+            if self.changes_only:
+                print(f"Messages displayed (changed): {displayed_count}")
+                unique_ids = len(self.last_message_data)
+                print(f"Unique message IDs seen: {unique_ids}")
             print(f"Successfully decoded: {decoded_count}")
             print(f"Decode rate: {decode_rate:.1f}%")
             print(f"Session duration: {time.time() - self.start_time:.1f} seconds")
@@ -403,9 +481,13 @@ def main():
 Examples:
     python can_decoder.py can0
     python can_decoder.py slcan0
+    python can_decoder.py can0 --changes-only
 
 The script will use ford_lincoln_base_pt.dbc in the current directory to decode messages.
 All messages (raw and decoded) are logged to a timestamped file.
+
+With --changes-only, only messages that have changed content or are seen for the 
+first time will be displayed and logged.
         """
     )
     
@@ -420,10 +502,16 @@ All messages (raw and decoded) are logged to a timestamped file.
         help='DBC file path (default: ford_lincoln_base_pt.dbc)'
     )
     
+    parser.add_argument(
+        '--changes-only',
+        action='store_true',
+        help='Only display and log messages when their content changes or when first seen'
+    )
+    
     args = parser.parse_args()
     
     # Create and run the decoder
-    decoder = CANDecoder(args.can_interface, args.dbc)
+    decoder = CANDecoder(args.can_interface, args.dbc, args.changes_only)
     
     try:
         success = decoder.run()
