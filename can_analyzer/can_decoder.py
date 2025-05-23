@@ -275,13 +275,49 @@ class CANDecoder:
             }
             
             if decoded_data:
-                log_entry['decoded_message'] = decoded_data
+                # Make a copy of decoded_data and convert any NamedSignalValue objects
+                json_safe_decoded = {}
+                for key, value in decoded_data.items():
+                    if key == 'signals' and isinstance(value, dict):
+                        # Convert signals dictionary to JSON-safe format
+                        json_safe_signals = {}
+                        for signal_name, signal_value in value.items():
+                            json_safe_signals[signal_name] = self._make_json_safe(signal_value)
+                        json_safe_decoded[key] = json_safe_signals
+                    else:
+                        json_safe_decoded[key] = self._make_json_safe(value)
+                
+                log_entry['decoded_message'] = json_safe_decoded
             
             self.log_file.write(json.dumps(log_entry) + '\n')
             self.log_file.flush()
             
         except Exception as e:
             print(f"Error logging message: {e}")
+
+    def _make_json_safe(self, value):
+        """
+        Convert values to JSON-serializable format.
+        
+        Args:
+            value: Any value that might not be JSON serializable
+            
+        Returns:
+            JSON-serializable version of the value
+        """
+        # Handle NamedSignalValue objects from cantools
+        if hasattr(value, 'name') and hasattr(value, 'value'):
+            # This is a NamedSignalValue - return both the name and numeric value
+            return {
+                'name': str(value.name),
+                'value': value.value
+            }
+        elif hasattr(value, '__dict__'):
+            # Other objects with attributes - try to convert to string
+            return str(value)
+        else:
+            # Already JSON-safe (int, float, str, bool, None, list, dict)
+            return value
 
     def run(self):
         """Main message processing loop."""
