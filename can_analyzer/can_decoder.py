@@ -26,6 +26,13 @@ from datetime import datetime
 import can
 import cantools
 
+# Module-level constant defining which DBC messages to filter for
+# Add message names here to limit which messages are captured
+FILTERED_MESSAGE_NAMES = [
+    "BCM_Lamp_Stat_FD1",
+    "Locking_Systems_2_FD1"
+]
+
 
 class CANDecoder:
     def __init__(self, can_interface, dbc_file="ford_lincoln_base_pt.dbc"):
@@ -42,6 +49,7 @@ class CANDecoder:
         self.db = None
         self.log_file = None
         self.start_time = time.time()
+        self.filtered_message_ids = set()
         
         # Create log filename with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -53,7 +61,7 @@ class CANDecoder:
         print(f"Log file: {self.log_filename}")
 
     def load_dbc(self):
-        """Load the DBC file for message decoding."""
+        """Load the DBC file for message decoding and build message filters."""
         try:
             if not os.path.exists(self.dbc_file):
                 print(f"Error: DBC file '{self.dbc_file}' not found")
@@ -67,17 +75,68 @@ class CANDecoder:
             print(f"DBC version: {getattr(self.db, 'version', 'Unknown')}")
             print(f"Available messages: {len(self.db.messages)}")
             
+            # Build filtered message IDs from the constant
+            if FILTERED_MESSAGE_NAMES:
+                print(f"\nBuilding message filters for {len(FILTERED_MESSAGE_NAMES)} message(s):")
+                for msg_name in FILTERED_MESSAGE_NAMES:
+                    try:
+                        msg = self.db.get_message_by_name(msg_name)
+                        self.filtered_message_ids.add(msg.frame_id)
+                        print(f"  - {msg_name}: 0x{msg.frame_id:X} ({msg.frame_id})")
+                    except KeyError:
+                        print(f"  - WARNING: Message '{msg_name}' not found in DBC")
+                
+                if self.filtered_message_ids:
+                    print(f"\nFiltering enabled: Will only capture {len(self.filtered_message_ids)} message ID(s)")
+                else:
+                    print(f"\nWARNING: No valid message IDs found for filtering - will capture all messages")
+            else:
+                print(f"\nNo message filtering configured - will capture all messages")
+            
             return True
         except Exception as e:
             print(f"Error loading DBC file: {e}")
             return False
 
+    def build_can_filters(self):
+        """
+        Build CAN filters for the python-can Bus.
+        
+        Returns:
+            list: List of filter dictionaries for python-can
+        """
+        if not self.filtered_message_ids:
+            # No filtering - return None to accept all messages
+            return None
+        
+        # Build filters list - each filter accepts one specific CAN ID
+        filters = []
+        for can_id in self.filtered_message_ids:
+            filters.append({
+                "can_id": can_id,
+                "can_mask": 0x7FF,  # Exact match for 11-bit CAN ID
+                "extended": False
+            })
+        
+        return filters
+
     def connect_can(self):
-        """Connect to the CAN bus interface."""
+        """Connect to the CAN bus interface with message filtering."""
         try:
+            # Build CAN filters based on our filtered message IDs
+            can_filters = self.build_can_filters()
+            
+            if can_filters:
+                print(f"Applying CAN filters for {len(can_filters)} message ID(s)")
+                for f in can_filters:
+                    print(f"  - Filter: CAN ID 0x{f['can_id']:X}")
+            else:
+                print(f"No CAN filters applied - listening to all messages")
+            
             self.bus = can.interface.Bus(
                 channel=self.can_interface,
-                bustype='socketcan'
+                bustype='socketcan',
+                can_filters=can_filters
             )
             print(f"Successfully connected to {self.can_interface}")
             return True
