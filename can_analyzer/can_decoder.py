@@ -57,6 +57,9 @@ class CANDecoder:
         # Track last seen message data for change detection
         self.last_message_data = {}  # {arbitration_id: bytes}
         
+        # Track last seen decoded signals for signal-level change detection
+        self.last_decoded_signals = {}  # {arbitration_id: {signal_name: value}}
+        
         # Create log filename with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         mode_suffix = "_changes" if changes_only else ""
@@ -95,6 +98,47 @@ class CANDecoder:
         
         # No change
         return False
+
+    def get_changed_signals(self, msg, decoded_data):
+        """
+        Get the signals that have changed since the last time this message was seen.
+        
+        Args:
+            msg: python-can Message object
+            decoded_data: Decoded message data containing signals
+            
+        Returns:
+            dict: Dictionary of changed signals {signal_name: value}
+            bool: True if this is the first time seeing this message
+        """
+        msg_id = msg.arbitration_id
+        
+        # If no decoded signals, return empty
+        if not decoded_data or 'signals' not in decoded_data:
+            return {}, False
+        
+        current_signals = decoded_data['signals']
+        
+        # Check if we've seen this message ID before
+        if msg_id not in self.last_decoded_signals:
+            # First time seeing this message - all signals are "changed"
+            self.last_decoded_signals[msg_id] = current_signals.copy()
+            return current_signals, True
+        
+        # Find changed signals
+        changed_signals = {}
+        last_signals = self.last_decoded_signals[msg_id]
+        
+        for signal_name, current_value in current_signals.items():
+            # Check if signal is new or value has changed
+            if (signal_name not in last_signals or 
+                last_signals[signal_name] != current_value):
+                changed_signals[signal_name] = current_value
+        
+        # Update our stored signals
+        self.last_decoded_signals[msg_id] = current_signals.copy()
+        
+        return changed_signals, False
 
     def load_dbc(self):
         """Load the DBC file for message decoding and build message filters."""
@@ -267,10 +311,22 @@ class CANDecoder:
             
             output = f"{timestamp_str} {frame_id_str} {dlc_str} [{data_str}]{change_indicator} -> {msg_name} ({signal_count} signals)"
             
-            # Add some key signals if present (limit to avoid too much output)
-            if 'signals' in decoded_data:
+            # In changes-only mode, show only changed signals; otherwise show first 3
+            if self.changes_only and 'signals' in decoded_data:
+                changed_signals, is_first_time = self.get_changed_signals(msg, decoded_data)
+                signals_to_show = changed_signals
+                signal_type = "changed" if not is_first_time else "all"
+            elif 'signals' in decoded_data:
+                # Normal mode - show first 3 signals
+                signals_to_show = dict(list(decoded_data['signals'].items())[:3])
+                signal_type = "first 3"
+            else:
+                signals_to_show = {}
+                signal_type = ""
+            
+            if signals_to_show:
                 key_signals = []
-                for signal_name, value in list(decoded_data['signals'].items())[:3]:  # Show first 3 signals
+                for signal_name, value in signals_to_show.items():
                     if isinstance(value, (int, float)):
                         if isinstance(value, float):
                             key_signals.append(f"{signal_name}={value:.2f}")
@@ -279,8 +335,13 @@ class CANDecoder:
                     else:
                         key_signals.append(f"{signal_name}={value}")
                 
-                if key_signals:
-                    output += f" | {', '.join(key_signals)}"
+                output += f" | {', '.join(key_signals)}"
+                
+                # Add count info for clarity
+                if self.changes_only:
+                    if not is_first_time and len(changed_signals) < signal_count:
+                        output += f" ({len(changed_signals)}/{signal_count} changed)"
+                else:
                     if len(decoded_data['signals']) > 3:
                         output += f" (+{len(decoded_data['signals'])-3} more)"
             
