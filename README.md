@@ -40,3 +40,8 @@ sudo ip link set can0 type can bitrate 125000 listen-only on restart-ms 1000
 udo ip link set can0 up
 sudo ifconfig can0 txqueuelen 65536
 ```
+
+### What Messages Are Where?
+
+* ``BCM_Lamp_Stat_FD1`` (`0x3c3`) - **Present** on: MS-CAN1, HS-CAN2; **Not Present** on: .
+* ``Locking_Systems_2_FD1`` (``0x331``) - **Present** on: MS-CAN1; **Not Present** on: HS-CAN2.

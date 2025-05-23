@@ -40,7 +40,7 @@ Connectors:
 
 * C248 inline
 * C2431A GWM
-* C3221B Upfitter Customization Interface Module (UCIM)
+* C3221B Upfitter Customization Interface Module (UCIM) *(may not be present; isn't on my vehicle)*
 * C4803A Telematics Control Unit (TCU) Module
 
 ### FD-CAN3
@@ -100,7 +100,7 @@ Connectors:
 
 * C145 inline
 * C146 inline
-* C210 inline
+* C210 inline (behind glove box)
 * C265 inline
 * C310B Restraints Control Module (RCM)
 * C312 inline
@@ -143,18 +143,18 @@ Connectors:
 
 Circuits `VDB06` “Diagnostic # CAN Bus Medium Speed High” and `VDB07` “Diagnostic # CAN Bus Medium Speed Low”
 
-* C212 inline
+* C212 inline (behind glove box)
 * C228A HVAC control mod
-* C263 inline
-* C311 inline
-* C312 inline
+* C263 inline (driver's side A-pillar below dash)
+* C311 inline (large connector under driver's seat)
+* C312 inline (large connector under passenger seat)
 * C341D Driver Front Seat Module (DSM)
-* C2431A GWM
-* C3050 inline
-* C3052 inline
+* C2431A GWM (behind touch screen)
+* C3050 inline (inside driver's seat)
+* C3052 inline (inside passenger seat)
 * C3385 Driver Multi-Contour Seat Module (SCMG)
 * C3386 Passenger Multi-Contour Seat Module (SCMH)
-* C9026 RTM
+* C9026 RTM (above rear window, passenger side)
 
 ### MS-CAN2
 
