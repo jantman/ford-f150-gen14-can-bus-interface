@@ -1,3 +1,4 @@
 python-can>=4.1.0
 numpy>=1.21.0
 matplotlib>=3.5.0
+cantools>=39.0.0
