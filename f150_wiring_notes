@@ -5,7 +5,7 @@
 * Interior ambient lighting: FD-CAN1, HS-CAN3, and LIN.
 * Lock system: FD-CAN1, FD-CAN3, HS-CAN3, MS-CAN1
 
-## CAN Busses, Connectors, and Locations
+## CAN Busses, Circuits, and Connectors
 
 ### FD-CAN1
 
@@ -175,3 +175,13 @@ Connectors:
 * C4100 inline
 * C4623 Rear Gate Trunk Module (RGTM)
 * C4724 Rear Gate Trunk Module (RGTM)
+
+## Connector Notes
+
+* C210 - Second-from-the-left of the four inline connectors directly behind the glove box. Carries FD-CAN1 and HS-CAN2.
+* C211 - Second-from-the-right (or rightmost of the group of 3) of the four inline connectors directly behind the glove box. Does not carry any CAN.
+* C212 - Rightmost of the four inline connectors directly behind the glove box; noticeably separated to the right from closely-spaced group of C213/C210/C211. Carries MS-CAN1.
+* C213 Leftmost of the four inline connectors directly behind the glove box. Does not carry any CAN.
+* C423 - the huge (34-pin) locking black connector for the tailgate and trailer harnesses. Service pigtails are available (WPT-1606 / KU2Z-14S411-SA male and WPT-1607 / KU2Z-14S411-TA female) but very expensive.
+* C431 - this is the 12-pin black "trailer tow connector" under the bed near the tailgate, that's generally plugged into an empty connector with an OBD DLC-like connector on the other side, as a weather cap. This is used for the trailer yaw sensor and trailer camera options, and carries `MS-CAN2` (`VDB27` / `VDB28`). On my vehicle, with the ignition off, this seems to just broadcast `0x227` all the time. The connector is a Molex 33472-6324.
+* C439 - this is a different Trailer Tow Connector (upstream of C431?) and also carries `MS-CAN2`.
