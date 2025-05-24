@@ -43,5 +43,5 @@ sudo ifconfig can0 txqueuelen 65536
 
 ### What Messages Are Where?
 
-* ``BCM_Lamp_Stat_FD1`` (`0x3c3`) - **Present** on: MS-CAN1, HS-CAN2; **Not Present** on: .
-* ``Locking_Systems_2_FD1`` (``0x331``) - **Present** on: MS-CAN1; **Not Present** on: HS-CAN2.
+* ``BCM_Lamp_Stat_FD1`` (`0x3c3`) - **Present** on: MS-CAN1, HS-CAN2, HS-CAN3.
+* ``Locking_Systems_2_FD1`` (``0x331``) - **Present** on: MS-CAN1, HS-CAN3; **Not Present** on: HS-CAN2.
