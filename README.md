@@ -29,7 +29,7 @@ sudo ifconfig can0 txqueuelen 65536
 
 ```bash
 sudo ip link set can0 type can bitrate 500000 listen-only on restart-ms 1000
-udo ip link set can0 up
+sudo ip link set can0 up
 sudo ifconfig can0 txqueuelen 65536
 ```
 
@@ -37,7 +37,7 @@ sudo ifconfig can0 txqueuelen 65536
 
 ```bash
 sudo ip link set can0 type can bitrate 125000 listen-only on restart-ms 1000
-udo ip link set can0 up
+sudo ip link set can0 up
 sudo ifconfig can0 txqueuelen 65536
 ```
 
