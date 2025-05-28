@@ -36,8 +36,128 @@ DASHBOARD_CONFIG = {
     "Locking_Systems_2_FD1": {
         "signals": ["Veh_Lock_Status"],
         "refresh_rate": 0.1
+    },
+    "PowertrainData_10": {
+        "signals": [
+            "GearEngag_D_Actl", "TrnRng_D_Rq", "TrnPrkSys_D_Actl",
+            "GearLvr_D_ActlDrv", "GearPos_D_Actl"
+        ],
+        "refresh_rate": 1
+    },
+    "Gear_Shift_by_Wire_FD1": {
+        "signals": [
+            "TrnRng_D_RqGsm", "PrkBrkActv_D_RqGsmGear", "BrkSwtchPos_B_ActlGsm"
+        ],
+        "refresh_rate": 1
+    },
+    "Gear_Shift_by_Wire_3": {
+        "signals": [
+            "TrnGear_D_RqPt"
+        ],
+        "refresh_rate": 1
+    },
+    "EngVehicleSpThrottle": {
+        "signals": [
+            "EngAout3_N_Actl", "EngAout_N_Actl",
+        ],
+        "refresh_rate": 0.1
+    },
+    "APIMGPS_Data_Nav_3_FD1": {
+        "signals": [
+            "GPS_Speed"
+        ],
+        "refresh_rate": 0.1
     }
 }
+
+"""
+BO_ 374 PowertrainData_10: 8 PCM
+ SG_ GearEngag_D_Actl : 47|3@0+ (1,0) [0|7] "SED"  GWM
+ SG_ TrnRng_D_Rq : 27|4@0+ (1,0) [0|15] "SED"  SOBDMC_HPCM_FD1,ABS_ESC,IPMA_ADAS,PSCM,ECM_Diesel,GWM
+ SG_ TrnPrkSys_D_Actl : 31|4@0+ (1,0) [0|15] "SED"  SOBDMC_HPCM_FD1,ABS_ESC,IPMA_ADAS,ECM_Diesel,GWM
+ SG_ GearLvr_D_ActlDrv : 7|4@0+ (1,0) [0|15] "SED"  SOBDMC_HPCM_FD1,ABS_ESC,IPMA_ADAS,TCCM,ECM_Diesel,GWM
+ SG_ GearPos_No_Cs : 23|8@0+ (1,0) [0|255] "unitless"  SOBDMC_HPCM_FD1,IPMA_ADAS,ABS_ESC,ECM_Diesel,GWM
+ SG_ GearPos_D_Trg : 15|4@0+ (1,0) [0|15] "SED"  SOBDMC_HPCM_FD1,IPMA_ADAS,ABS_ESC,TCCM,ECM_Diesel,GWM
+ SG_ GearPos_No_Cnt : 11|4@0+ (1,0) [0|15] "unitless"  SOBDMC_HPCM_FD1,IPMA_ADAS,ABS_ESC,ECM_Diesel,GWM
+ SG_ TrnIgnOffDly_T_Rq : 39|8@0+ (4,0) [0|1020] "ms"  GWM
+ SG_ GearPos_D_Actl : 3|4@0+ (1,0) [0|15] "SED"  SOBDMC_HPCM_FD1,PSCM,IPMA_ADAS,ABS_ESC,ECM_Diesel,GWM
+
+VAL_TABLE_ GearLvr_D_ActlDrv 15 "Fault" 14 "Unknown_Position" 13 "NotUsed_2" 12 "NotUsed_1" 11 "Range6" 10 "Range5" 9 "Range4" 8 "Range3_M3_L3" 7 "Range2_M2_L2" 6 "Range1_M1_L1" 5 "Low" 4 "Sport_DriveSport_Mposition" 3 "Drive" 2 "Neutral" 1 "Reverse" 0 "Park";
+VAL_TABLE_ TrnPrkSys_D_Actl 15 "Faulty" 14 "NotUsed_5" 13 "NotUsed_4" 12 "NotUsed_3" 11 "NotUsed_2" 10 "NotUsed_1" 9 "FrequencyError" 8 "OutOfRangeHigh" 7 "OutOfRangeLow" 6 "Override" 5 "OutOfPark" 4 "TransitionCloseToOutOfPark" 3 "AtNoSpring" 2 "TransitionCloseToPark" 1 "Park" 0 "NotKnown";
+VAL_ 374 TrnRng_D_Rq 15 "Fault" 14 "Unknown_Position" 13 "NotUsed_2" 12 "NotUsed_1" 11 "Range6" 10 "Range5" 9 "Range4" 8 "Range3_M3_L3" 7 "Range2_M2_L2" 6 "Range1_M1_L1" 5 "Low" 4 "Sport_DriveSport_Mposition" 3 "Drive" 2 "Neutral" 1 "Reverse" 0 "Park";
+VAL_ 374 GearEngag_D_Actl 7 "Undefined" 6 "Fwd_Clutch_Fully_Engaged" 5 "Neutral_Idle" 4 "Disengaged_to_Neutral_Idle" 3 "Disengaged_to_Neutral_Park" 2 "Engagement_in_Progress" 1 "InitializeFwdClutchEngagmt" 0 "Park_Neutral";
+
+BO_ 90 Gear_Shift_by_Wire_FD1: 8 GWM
+ SG_ TrnGsmNtmState_D_Actl : 55|2@0+ (1,0) [0|3] "SED"  ABS_ESC,PCM,PCM_HEV,TCM_DSL
+ SG_ DrQltyDrv_D_StatGsm : 42|3@0+ (1,0) [0|7] "SED"  ABS_ESC,PCM,PCM_HEV,TCM_DSL,IPMA_ADAS
+ SG_ TrnBtsiOvrrd_B_Stat : 43|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ GsmGearMsgTxt_D_Rq : 63|2@0+ (1,0) [0|3] "SED" Vector__XXX
+ SG_ TrnRng_D_RqGsm : 51|4@0+ (1,0) [0|15] "SED"  PCM,TCM_DSL
+ SG_ PrkBrkActv_D_RqGsmGear : 53|2@0+ (1,0) [0|3] "SED"  ABS_ESC
+ SG_ TrnValidGearRq_D_Stat : 25|2@0+ (1,0) [0|3] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGearRqCnt_B_Actl : 26|1@0+ (1,0) [0|1] "unitless"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGearButtn_U_Actl : 23|8@0+ (0.05,0) [0|12.7] "VOLT"  TCM_DSL
+ SG_ TrnGearButtn_B_ActlR2 : 8|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGearButtn_B_ActlR1 : 9|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGearButtn_B_ActlR0 : 10|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGearButtn_B_ActlP2 : 11|1@0+ (1,0) [0|1] "SED"  TCM_DSL,PCM,PCM_HEV
+ SG_ TrnGearButtn_B_ActlP1 : 12|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGearButtn_B_ActlP0 : 13|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGearButtn_B_ActlN2 : 14|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGearButtn_B_ActlN1 : 15|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGearButtn_B_ActlN0 : 0|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGearButtn_B_ActlM2 : 1|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGearButtn_B_ActlM1 : 2|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGearButtn_B_ActlM0 : 3|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGearButtn_B_ActlD2 : 4|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGearButtn_B_ActlD1 : 5|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGearButtn_B_ActlD0 : 6|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGear_No_Cs : 39|8@0+ (1,0) [0|255] "Unitless"  SOBDMC_HPCM_FD1,PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGear_No_Cnt : 47|4@0+ (1,0) [0|15] "Unitless"  SOBDMC_HPCM_FD1,PCM,PCM_HEV,TCM_DSL
+ SG_ TrnGear_D_RqDrv : 31|5@0+ (1,0) [0|31] "SED"  SOBDMC_HPCM_FD1,PCM,PCM_HEV,TCM_DSL
+ SG_ BrkSwtchPos_B_ActlGsm : 7|1@0+ (1,0) [0|1] "SED"  PCM,PCM_HEV,TCM_DSL
+
+VAL_TABLE_ TrnRng_D_RqGsm 15 "Fault" 14 "UnknownPosition" 13 "Undefined_2" 12 "Undefined_1" 11 "_6" 10 "_5" 9 "_4" 8 "_3" 7 "_2" 6 "_1" 5 "Low" 4 "Sport" 3 "Drive" 2 "Neutral" 1 "Reverse" 0 "Park";
+VAL_TABLE_ PrkBrkActv_D_RqGsmGear 3 "NotUsed" 2 "RequestParkBrakeEngage" 1 "NoRequest" 0 "Null";
+
+BO_ 92 Gear_Shift_by_Wire_3: 8 PCM_HEV
+ SG_ TrnLvrV_D_Rq : 43|2@0+ (1,0) [0|3] "SED"  GWM
+ SG_ TrnSbwSysHlth_D_Actl : 1|2@0+ (1,0) [0|3] "SED"  GWM
+ SG_ TrnGearNtmAllow_B_Stat : 47|1@0+ (1,0) [0|1] "SED"  GWM
+ SG_ TrnDtpCmd_D_Actl : 46|3@0+ (1,0) [0|7] "SED"  GWM
+ SG_ GearSelLck_D_Rq : 41|2@0+ (1,0) [0|3] "SED"  GWM
+ SG_ TrnGearCmd_No_Cs : 31|8@0+ (1,0) [0|255] "Unitless"  GWM
+ SG_ TrnValidGear_D_Cnfm : 11|2@0+ (1,0) [0|3] "SED"  GWM
+ SG_ TrnNtrlTowCmd_D_Actl : 6|2@0+ (1,0) [0|3] "SED"  IPMA_ADAS,GWM,ABS_ESC
+ SG_ TrnGearCmd_Pc_ActlPt : 9|10@0+ (0.1,0) [0|102.2] "percent duty cycle"  GWM
+ SG_ TrnGear_D_RqPt : 4|3@0+ (1,0) [0|7] "SED"  GWM
+ SG_ TrnCmdState_B_Actl : 39|1@0+ (1,0) [0|1] "SED"  GWM
+ SG_ TrnCmdCnt_B_Actl : 7|1@0+ (1,0) [0|1] "unitless"  GWM
+ SG_ PrkBrkActv_D_RqTrnGear : 38|2@0+ (1,0) [0|3] "SED"  GWM,ABS_ESC
+ SG_ TrnGearMsgTxt_D_Rq : 36|5@0+ (1,0) [0|31] "SED"  GWM
+ SG_ TrnGearCmd_No_Cnt : 15|4@0+ (1,0) [0|15] "Unitless"  GWM
+
+VAL_TABLE_ TrnGear_D_RqPt 7 "Fault" 6 "NotUsed" 5 "Manual" 4 "Drive" 3 "Neutral" 2 "Reverse" 1 "Park" 0 "No_Gear";
+
+BO_ 516 EngVehicleSpThrottle: 8 PCM_HEV
+ SG_ EngAoutNActl_D_QF : 31|2@0+ (1,0) [0|3] "SED"  TCM_DSL,GWM
+ SG_ EngAout3_N_Actl : 55|16@0+ (0.25,0) [0|16383.5] "RPM"  SOBDMC_HPCM_FD1,GWM
+ SG_ ApedPos_PcRate_ActlArb : 23|8@0+ (0.04,-5) [-5|5.12] "%/ms"  TCM_DSL,GWM
+ SG_ ApedPos_Pc_ActlArb : 1|10@0+ (0.1,0) [0|102.3] "%"  VDM,CMR_DSMC,SOBDMC_HPCM_FD1,IPMA_ADAS,TCCM,ABS_ESC,PSCM,TCM_DSL,GWM
+ SG_ ApedPosPcActl_D_Qf : 7|2@0+ (1,0) [0|3] "SED"  VDM,CMR_DSMC,IPMA_ADAS,SOBDMC_HPCM_FD1,ABS_ESC,PSCM,TCM_DSL,GWM
+ SG_ EngAout_N_Actl : 28|13@0+ (2,0) [0|16382] "rpm"  VDM,ABS_ESC,PSCM,TCCM,TCM_DSL,GWM
+ SG_ ApedPosPcActl_No_Cnt : 5|4@0+ (1,0) [0|15] "Unitless"  ABS_ESC,SOBDMC_HPCM_FD1,GWM
+ SG_ ApedPosPcActl_No_Cs : 47|8@0+ (1,0) [0|255] "Unitless"  ABS_ESC,SOBDMC_HPCM_FD1,GWM
+
+BO_ 1124 APIMGPS_Data_Nav_3_FD1: 8 GWM
+ SG_ GPS_Vdop : 63|5@0+ (0.2,0) [0|5.8] "unitless"  IPMA_ADAS
+ SG_ GPS_Speed : 47|8@0+ (1,0) [0|253] "MPH" Vector__XXX
+ SG_ GPS_Sat_num_in_view : 7|5@0+ (1,0) [0|29] "unitless"  SOBDMC_HPCM_FD1
+ SG_ GPS_MSL_altitude : 15|12@0+ (10,-20460) [-20460|20470] "feet" Vector__XXX
+ SG_ GPS_Heading : 31|16@0+ (0.01,0) [0|655.33] "Degrees"  IPMA_ADAS
+ SG_ GPS_Hdop : 55|5@0+ (0.2,0) [0|5.8] "unitless"  IPMA_ADAS
+ SG_ GPS_dimension : 2|3@0+ (1,0) [0|7] "SED"  SOBDMC_HPCM_FD1
+"""
 
 class CANDashboard:
     def __init__(self, can_interface, dbc_file="ford_lincoln_base_pt.dbc"):
