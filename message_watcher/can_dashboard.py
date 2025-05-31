@@ -39,45 +39,13 @@ DASHBOARD_CONFIG = {
     },
     "PowertrainData_10": {
         "signals": [
-            "GearEngag_D_Actl", "TrnRng_D_Rq", "TrnPrkSys_D_Actl",
-            "GearLvr_D_ActlDrv", "GearPos_D_Actl"
-        ],
-        "refresh_rate": 1
-    },
-    "Gear_Shift_by_Wire_FD1": {
-        "signals": [
-            "TrnRng_D_RqGsm", "PrkBrkActv_D_RqGsmGear", "BrkSwtchPos_B_ActlGsm"
-        ],
-        "refresh_rate": 1
-    },
-    "Gear_Shift_by_Wire_3": {
-        "signals": [
-            "TrnGear_D_RqPt"
+            "TrnPrkSys_D_Actl",
         ],
         "refresh_rate": 1
     },
     "EngVehicleSpThrottle": {
         "signals": [
-            "EngAout3_N_Actl", "EngAout_N_Actl",
-        ],
-        "refresh_rate": 0.1
-    },
-    "APIMGPS_Data_Nav_3_FD1": {
-        "signals": [
-            "GPS_Speed"
-        ],
-        "refresh_rate": 0.1
-    },
-    "PowertrainData_3": {
-        "signals": [
-            "BattULoChrg_U_Cmd", "ElLoadCtl_D_Rq"
-        ],
-        "refresh_rate": 0.1
-    },
-    "Battery_Mgmt_4_FD1": {
-        "signals": [
-            "BattULoAux_U_Rq", "BattULoAuxSoc_Pc_Actl",
-            "BattULoAux_I_Actl", "BattULoAux_U_Actl"
+            "EngAout_N_Actl",
         ],
         "refresh_rate": 0.1
     },
