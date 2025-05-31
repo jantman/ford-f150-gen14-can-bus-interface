@@ -104,7 +104,7 @@ DASHBOARD_CONFIG = {
 
 
 class CANDashboard:
-    def __init__(self, can_interface, dbc_file="ford_lincoln_base_pt.dbc"):
+    def __init__(self, can_interface, dbc_file="ford_lincoln_base_pt.dbc", two_column_mode=False):
         """
         Initialize the CAN dashboard.
 
@@ -134,6 +134,7 @@ class CANDashboard:
         
         # Threading lock for data access
         self.data_lock = threading.Lock()
+        self.two_column_mode = two_column_mode
         
         print(f"CAN Dashboard initialized")
         print(f"Interface: {can_interface}")
@@ -313,42 +314,111 @@ class CANDashboard:
         runtime = current_time - self.start_time
         
         # Header
-        print("=" * 80)
-        print(f"{'CAN SIGNAL DASHBOARD':^80}")
-        print("=" * 80)
+        print("=" * 80 if not self.two_column_mode else "=" * 200)
+        print(f"{'CAN SIGNAL DASHBOARD':^80}" if not self.two_column_mode else f"{'CAN SIGNAL DASHBOARD':^200}")
+        print("=" * 80 if not self.two_column_mode else "=" * 200)
         print(f"Interface: {self.can_interface:<20} Runtime: {runtime:>8.1f}s")
         print(f"Messages: {self.stats['total_messages']:<12} Decoded: {self.stats['decoded_messages']:<12} Updates: {self.stats['dashboard_updates']}")
-        print("=" * 80)
+        print("=" * 80 if not self.two_column_mode else "=" * 200)
         
         # Dashboard data
         with self.data_lock:
-            for msg_name in DASHBOARD_CONFIG.keys():
-                print(f"\n📊 {msg_name}")
-                print("-" * 60)
-                
-                # Check if we have recent data
-                last_update = self.message_timestamps.get(msg_name)
-                if last_update is None:
-                    print("   Status: Waiting for data...")
-                else:
-                    age = current_time - last_update
-                    if age > 5.0:  # No data for 5 seconds
-                        status = f"⚠️  STALE (last: {age:.1f}s ago)"
-                    elif age > 1.0:  # No data for 1 second
-                        status = f"⏳ OLD (last: {age:.1f}s ago)"
-                    else:
-                        status = "✅ LIVE"
+            messages = list(DASHBOARD_CONFIG.keys())
+            mid_point = len(messages) // 2 if self.two_column_mode else len(messages)
+            left_column = messages[:mid_point]
+            right_column = messages[mid_point:] if self.two_column_mode else []
+
+            def display_column(column):
+                for msg_name in column:
+                    print(f"\n📊 {msg_name}")
+                    print("-" * 60)
                     
-                    print(f"   Status: {status}")
+                    # Check if we have recent data
+                    last_update = self.message_timestamps.get(msg_name)
+                    if last_update is None:
+                        print("   Status: Waiting for data...")
+                    else:
+                        age = current_time - last_update
+                        if age > 5.0:  # No data for 5 seconds
+                            status = f"⚠️  STALE (last: {age:.1f}s ago)"
+                        elif age > 1.0:  # No data for 1 second
+                            status = f"⏳ OLD (last: {age:.1f}s ago)"
+                        else:
+                            status = "✅ LIVE"
+                        
+                        print(f"   Status: {status}")
+                    
+                    # Display signals
+                    config = DASHBOARD_CONFIG[msg_name]
+                    for signal_name in config['signals']:
+                        value = self.message_data[msg_name].get(signal_name)
+                        formatted_value = self.format_signal_value(value)
+                        print(f"   {signal_name:<25}: {formatted_value}")
+
+            if self.two_column_mode:
+                left_output = []
+                right_output = []
+                for msg_name in left_column:
+                    left_output.append(f"\n📊 {msg_name}\n" + "-" * 60)
+                    
+                    # Check if we have recent data
+                    last_update = self.message_timestamps.get(msg_name)
+                    if last_update is None:
+                        left_output.append("   Status: Waiting for data...")
+                    else:
+                        age = current_time - last_update
+                        if age > 5.0:  # No data for 5 seconds
+                            status = f"⚠️  STALE (last: {age:.1f}s ago)"
+                            left_output.append(f"   Status: {status}")
+                        elif age > 1.0:  # No data for 1 second
+                            status = f"⏳ OLD (last: {age:.1f}s ago)"
+                            left_output.append(f"   Status: {status}")
+                        else:
+                            status = "✅ LIVE"
+                            left_output.append(f"   Status: {status}")
+                    
+                    # Display signals
+                    config = DASHBOARD_CONFIG[msg_name]
+                    for signal_name in config['signals']:
+                        value = self.message_data[msg_name].get(signal_name)
+                        formatted_value = self.format_signal_value(value)
+                        left_output.append(f"   {signal_name:<25}: {formatted_value}")
                 
-                # Display signals
-                config = DASHBOARD_CONFIG[msg_name]
-                for signal_name in config['signals']:
-                    value = self.message_data[msg_name].get(signal_name)
-                    formatted_value = self.format_signal_value(value)
-                    print(f"   {signal_name:<25}: {formatted_value}")
-        
-        print("\n" + "=" * 80)
+                for msg_name in right_column:
+                    right_output.append(f"\n📊 {msg_name}\n" + "-" * 60)
+                    
+                    # Check if we have recent data
+                    last_update = self.message_timestamps.get(msg_name)
+                    if last_update is None:
+                        right_output.append("   Status: Waiting for data...")
+                    else:
+                        age = current_time - last_update
+                        if age > 5.0:  # No data for 5 seconds
+                            status = f"⚠️  STALE (last: {age:.1f}s ago)"
+                            right_output.append(f"   Status: {status}")
+                        elif age > 1.0:  # No data for 1 second
+                            status = f"⏳ OLD (last: {age:.1f}s ago)"
+                            right_output.append(f"   Status: {status}")
+                        else:
+                            status = "✅ LIVE"
+                            right_output.append(f"   Status: {status}")
+                    
+                    # Display signals
+                    config = DASHBOARD_CONFIG[msg_name]
+                    for signal_name in config['signals']:
+                        value = self.message_data[msg_name].get(signal_name)
+                        formatted_value = self.format_signal_value(value)
+                        right_output.append(f"   {signal_name:<25}: {formatted_value}")
+                
+                # Print both columns
+                for i in range(max(len(left_output), len(right_output))):
+                    left_line = left_output[i] if i < len(left_output) else ""
+                    right_line = right_output[i] if i < len(right_output) else ""
+                    print(f"{left_line:<80}  {right_line}")
+            else:
+                display_column(messages)
+
+        print("\n" + "=" * 80 if not self.two_column_mode else "=" * 200)
         print("Press Ctrl+C to stop")
 
     def message_listener(self):
@@ -449,10 +519,16 @@ Current configuration monitors:
         help='DBC file path (default: ford_lincoln_base_pt.dbc)'
     )
     
+    parser.add_argument(
+        '--two-column',
+        action='store_true',
+        help='Enable two-column mode for wide terminals (200 characters)'
+    )
+    
     args = parser.parse_args()
     
     # Create and run the dashboard
-    dashboard = CANDashboard(args.can_interface, args.dbc)
+    dashboard = CANDashboard(args.can_interface, args.dbc, args.two_column)
     
     try:
         success = dashboard.run()
