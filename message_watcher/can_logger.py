@@ -264,33 +264,39 @@ class CANLogger:
         return all_signals
 
     def log_header(self):
-        """Print the CSV header."""
-        signal_names = self.get_all_signal_names()
-        header = "timestamp," + ",".join(signal_names)
-        print(header)
+        """Print a header explaining the log format."""
+        print("# CAN Signal Logger Output")
+        print("# Format: timestamp | message.signal=value | message.signal=value | ...")
+        print("# Timestamp format: YYYY-MM-DD HH:MM:SS.mmm")
+        print("# Signal values: N/A=no data, 0/1=boolean, numbers=numeric values")
+        print("#" + "="*80)
 
     def log_current_state(self):
-        """Log the current state of all signals."""
+        """Log the current state of all signals with names and values."""
         current_time = time.time()
         timestamp = datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
         
-        signal_names = self.get_all_signal_names()
-        values = []
+        log_entries = []
         
         with self.data_lock:
-            for signal_name in signal_names:
-                msg_name, sig_name = signal_name.split('.', 1)
+            for msg_name in sorted(LOGGER_CONFIG.keys()):
+                config = LOGGER_CONFIG[msg_name]
                 
                 # Check if we have data for this message
-                if msg_name in self.message_data and sig_name in self.message_data[msg_name]:
-                    value = self.message_data[msg_name][sig_name]
-                    formatted_value = self.format_signal_value(value)
+                if msg_name in self.message_data:
+                    for signal_name in config['signals']:
+                        if signal_name in self.message_data[msg_name]:
+                            value = self.message_data[msg_name][signal_name]
+                            formatted_value = self.format_signal_value(value)
+                            log_entries.append(f"{msg_name}.{signal_name}={formatted_value}")
+                        else:
+                            log_entries.append(f"{msg_name}.{signal_name}=N/A")
                 else:
-                    formatted_value = "N/A"
-                
-                values.append(formatted_value)
+                    # No data for this message yet
+                    for signal_name in config['signals']:
+                        log_entries.append(f"{msg_name}.{signal_name}=N/A")
         
-        log_line = timestamp + "," + ",".join(values)
+        log_line = f"{timestamp} | " + " | ".join(log_entries)
         print(log_line)
         
         self.stats['log_entries'] += 1
