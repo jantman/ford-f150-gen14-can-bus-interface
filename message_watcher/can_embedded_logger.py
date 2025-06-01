@@ -103,15 +103,18 @@ class Signal:
         data_bytes = list(data) + [0] * (8 - len(data))
         raw_value = 0
         
-        # For Motorola: bit range is [start_bit - length + 1, start_bit]
-        for bit_pos in range(self.start - self.length + 1, self.start + 1):
+        # For Motorola format: the start_bit is the MSB position
+        # Bits are extracted from start_bit down to (start_bit - length + 1)
+        # and assembled with MSB at the left
+        for i in range(self.length):
+            bit_pos = self.start - i
             byte_index = bit_pos // 8
             bit_index = 7 - (bit_pos % 8)
             
             if 0 <= byte_index < len(data_bytes) and 0 <= bit_index <= 7:
                 bit_value = (data_bytes[byte_index] >> bit_index) & 1
-                result_bit_pos = self.start - bit_pos
-                raw_value |= (bit_value << result_bit_pos)
+                # MSB is at position (length-1), LSB at position 0
+                raw_value |= (bit_value << (self.length - 1 - i))
         
         return raw_value
     
