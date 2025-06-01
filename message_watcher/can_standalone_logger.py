@@ -140,11 +140,16 @@ class CANStandaloneLogger:
 
     def extract_signal(self, data, start_bit, length, scale, offset, signed, enum_values=None):
         """
-        Extract a signal from CAN message data using bit manipulation.
+        Extract a signal from CAN message data using proper DBC signal format.
+        
+        Ford DBC signals use Motorola (big-endian) bit numbering where:
+        - Bit 0 is the LSB of byte 0
+        - Signals are defined by their MSB position
+        - Multi-byte signals span across bytes in big-endian fashion
         
         Args:
             data: CAN message data bytes
-            start_bit: Starting bit position (LSB = 0)
+            start_bit: Starting bit position (MSB of signal in DBC format)
             length: Signal length in bits
             scale: Scale factor
             offset: Offset value
@@ -155,16 +160,31 @@ class CANStandaloneLogger:
             Decoded signal value
         """
         try:
-            # Convert data to a 64-bit integer (assuming max 8 bytes)
-            data_int = 0
-            for i, byte in enumerate(data[:8]):
-                data_int |= byte << (i * 8)
+            # Convert data to bytes array and pad to 8 bytes if needed
+            data_bytes = list(data) + [0] * (8 - len(data))
             
-            # Extract the signal bits
-            mask = (1 << length) - 1
-            raw_value = (data_int >> start_bit) & mask
+            # For Motorola (big-endian) signals, the start_bit is the MSB position
+            # Convert to a bit array representation
+            bits = []
+            for byte_val in data_bytes:
+                for bit_pos in range(8):
+                    bits.append((byte_val >> (7 - bit_pos)) & 1)
             
-            # Handle signed values
+            # Extract the signal bits starting from start_bit (MSB) going towards LSB
+            signal_bits = []
+            for i in range(length):
+                bit_index = start_bit - i
+                if 0 <= bit_index < len(bits):
+                    signal_bits.append(bits[bit_index])
+                else:
+                    signal_bits.append(0)
+            
+            # Convert bit array to integer value (MSB first)
+            raw_value = 0
+            for i, bit in enumerate(signal_bits):
+                raw_value |= (bit << (length - 1 - i))
+            
+            # Handle signed values using two's complement
             if signed and (raw_value & (1 << (length - 1))):
                 raw_value -= (1 << length)
             
