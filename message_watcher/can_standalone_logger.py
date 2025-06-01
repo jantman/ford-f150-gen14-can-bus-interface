@@ -140,7 +140,7 @@ class CANStandaloneLogger:
             enum_values: Dictionary mapping values to names
             
         Returns:
-            Decoded signal value
+            Tuple of (raw_value, scaled_value, enum_name) or None if extraction fails
         """
         try:
             # Convert data to bytes array and pad to 8 bytes if needed
@@ -170,11 +170,30 @@ class CANStandaloneLogger:
             # Apply scale and offset
             scaled_value = raw_value * scale + offset
             
-            # Apply enumeration if provided
+            # Get enum name if provided
+            enum_name = None
             if enum_values and raw_value in enum_values:
-                return enum_values[raw_value]
+                enum_name = enum_values[raw_value]
             
-            return scaled_value
+            # Return a custom object that mimics NamedSignalValue behavior
+            class SignalValue:
+                def __init__(self, value, name=None):
+                    self.value = value
+                    self.name = name
+                    self._scaled = scaled_value
+                
+                def __str__(self):
+                    if self.name:
+                        return f"{self.name}({self.value})"
+                    return str(self._scaled)
+                
+                def __int__(self):
+                    return int(self._scaled)
+                
+                def __float__(self):
+                    return float(self._scaled)
+            
+            return SignalValue(raw_value, enum_name)
             
         except Exception as e:
             return None
@@ -233,10 +252,20 @@ class CANStandaloneLogger:
             return "N/A"
         elif isinstance(value, bool):
             return "1" if value else "0"
+        elif hasattr(value, 'name') and hasattr(value, 'value'):
+            # Handle NamedSignalValue objects (both from cantools and our custom SignalValue)
+            if value.name:
+                return f"{value.name}({value.value})"
+            else:
+                # No enum name, just return the scaled value
+                if isinstance(value._scaled, float):
+                    return f"{value._scaled:.0f}" if value._scaled.is_integer() else f"{value._scaled:.2f}"
+                else:
+                    return str(value._scaled)
         elif isinstance(value, int):
             return str(value)
         elif isinstance(value, float):
-            return f"{value:.2f}"
+            return f"{value:.0f}" if value.is_integer() else f"{value:.2f}"
         else:
             return str(value)
 
