@@ -33,20 +33,21 @@ import struct
 # Format: message_name: {can_id, signals: {signal_name: (start_bit, length, scale, offset, signed, enum_values)}}
 MESSAGE_CONFIG = {
     "BCM_Lamp_Stat_FD1": {
-        "can_id": 0x3C3,
+        "can_id": 0x3C3,  # 963 in decimal from DBC
         "signals": {
             "PudLamp_D_Rq": (11, 2, 1.0, 0.0, False, {0: "OFF", 1: "ON", 2: "RAMP_UP", 3: "RAMP_DOWN"}),
-            "Dr_Courtesy_Light_Stat": (49, 2, 1.0, 0.0, False, {0: "Off", 1: "On", 2: "Unknown", 3: "Invalid"})
+            "Dr_Courtesy_Light_Stat": (49, 2, 1.0, 0.0, False, {0: "Off", 1: "On", 2: "Unknown", 3: "Invalid"}),
+            "Illuminated_Entry_Stat": (63, 2, 1.0, 0.0, False, {0: "Off", 1: "On", 2: "Unknown", 3: "Invalid"})
         }
     },
     "Locking_Systems_2_FD1": {
-        "can_id": 0x331,
+        "can_id": 0x331,  # 817 in decimal from DBC
         "signals": {
             "Veh_Lock_Status": (34, 2, 1.0, 0.0, False, {0: "LOCK_DBL", 1: "LOCK_ALL", 2: "UNLOCK_ALL", 3: "UNLOCK_DRV"})
         }
     },
     "PowertrainData_10": {
-        "can_id": 0x176,
+        "can_id": 0x176,  # 374 in decimal from DBC
         "signals": {
             "TrnPrkSys_D_Actl": (31, 4, 1.0, 0.0, False, {
                 0: "NotKnown", 1: "Park", 2: "TransitionCloseToPark", 3: "AtNoSpring",
@@ -57,28 +58,10 @@ MESSAGE_CONFIG = {
             })
         }
     },
-    "EngVehicleSpThrottle": {
-        "can_id": 0x204,
-        "signals": {
-            "EngAout_N_Actl": (28, 13, 2.0, 0.0, False, None)  # RPM signal
-        }
-    },
-    "Body_Info_4_FD1": {
-        "can_id": 0x242,  # This is an example ID - needs verification
-        "signals": {
-            # We can add specific signals from this message if needed
-        }
-    },
     "Battery_Mgmt_3_FD1": {
-        "can_id": 0x43C,  # This is an example ID - needs verification
+        "can_id": 0x43C,  # 1084 in decimal from DBC
         "signals": {
             "BSBattSOC": (22, 7, 1.0, 0.0, False, None)  # Battery SOC percentage
-        }
-    },
-    "Battery_Mgmt_2_FD1": {
-        "can_id": 0x42C,  # This is an example ID - needs verification
-        "signals": {
-            # We can add specific signals from this message if needed
         }
     }
 }
