@@ -1,0 +1,61 @@
+VERSION ""
+
+
+NS_ :
+    NS_DESC_
+    CM_
+    BA_DEF_
+    BA_
+    VAL_
+    CAT_DEF_
+    CAT_
+    FILTER
+    BA_DEF_DEF_
+    EV_DATA_
+    ENVVAR_DATA_
+    SGTYPE_
+    SGTYPE_VAL_
+    BA_DEF_SGTYPE_
+    BA_SGTYPE_
+    SIG_TYPE_REF_
+    VAL_TABLE_
+    SIG_GROUP_
+    SIG_VALTYPE_
+    SIGTYPE_VALTYPE_
+    BO_TX_BU_
+    BA_DEF_REL_
+    BA_REL_
+    BA_DEF_DEF_REL_
+    BU_SG_REL_
+    BU_EV_REL_
+    BU_BO_REL_
+    SG_MUL_VAL_
+
+BS_:
+
+BU_: VDM CMR_DSMC SOBDMC_HPCM_FD1 IPMA_ADAS PSCM ABS_ESC TCCM TCM_DSL PCM_HEV PCM ECM_Diesel GENERIC_GWMWakeup GWM _delete TSTR
+
+VAL_TABLE_ PudLamp_D_Rq 3 "RAMP_DOWN" 2 "RAMP_UP" 1 "ON" 0 "OFF";
+VAL_TABLE_ Veh_Lock_Status 3 "UNLOCK_DRV" 2 "UNLOCK_ALL" 1 "LOCK_ALL" 0 "LOCK_DBL";
+VAL_TABLE_ TrnPrkSys_D_Actl 15 "Faulty" 14 "NotUsed_5" 13 "NotUsed_4" 12 "NotUsed_3" 11 "NotUsed_2" 10 "NotUsed_1" 9 "FrequencyError" 8 "OutOfRangeHigh" 7 "OutOfRangeLow" 6 "Override" 5 "OutOfPark" 4 "TransitionCloseToOutOfPark" 3 "AtNoSpring" 2 "TransitionCloseToPark" 1 "Park" 0 "NotKnown";
+
+BO_ 963 BCM_Lamp_Stat_FD1: 8 GWM
+ SG_ Illuminated_Entry_Stat : 63|2@0+ (1,0) [0|3] "SED" Vector__XXX
+ SG_ Dr_Courtesy_Light_Stat : 49|2@0+ (1,0) [0|3] "SED" Vector__XXX
+ SG_ PudLamp_D_Rq : 11|2@0+ (1,0) [0|3] "SED" Vector__XXX
+
+BO_ 817 Locking_Systems_2_FD1: 8 GWM
+ SG_ Veh_Lock_Status : 34|2@0+ (1,0) [0|3] "SED" CMR_DSMC
+
+BO_ 374 PowertrainData_10: 8 PCM
+ SG_ TrnPrkSys_D_Actl : 31|4@0+ (1,0) [0|15] "SED"  SOBDMC_HPCM_FD1,ABS_ESC,IPMA_ADAS,ECM_Diesel,GWM
+
+BO_ 1084 Battery_Mgmt_3_FD1: 8 GWM
+ SG_ BSBattSOC : 22|7@0+ (1,0) [0|127] "%"  ECM_Diesel,PCM,PCM_HEV
+
+VAL_ 817 Veh_Lock_Status 3 "UNLOCK_DRV" 2 "UNLOCK_ALL" 1 "LOCK_ALL" 0 "LOCK_DBL";
+
+VAL_ 963 Illuminated_Entry_Stat 3 "Invalid" 2 "Unknown" 1 "On" 0 "Off";
+VAL_ 963 Dr_Courtesy_Light_Stat 3 "Invalid" 2 "Unknown" 1 "On" 0 "Off";
+VAL_ 963 PudLamp_D_Rq 3 "RAMP_DOWN" 2 "RAMP_UP" 1 "ON" 0 "OFF";
+VAL_ 374 TrnPrkSys_D_Actl 15 "Faulty" 14 "NotUsed_5" 13 "NotUsed_4" 12 "NotUsed_3" 11 "NotUsed_2" 10 "NotUsed_1" 9 "FrequencyError" 8 "OutOfRangeHigh" 7 "OutOfRangeLow" 6 "Override" 5 "OutOfPark" 4 "TransitionCloseToOutOfPark" 3 "AtNoSpring" 2 "TransitionCloseToPark" 1 "Park" 0 "NotKnown";

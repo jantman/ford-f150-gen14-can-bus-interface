@@ -38,19 +38,9 @@ LOGGER_CONFIG = {
     "PowertrainData_10": {
         "signals": ["TrnPrkSys_D_Actl"]
     },
-    "EngVehicleSpThrottle": {
-        "signals": ["EngAout_N_Actl"]
-    },
-    "Body_Info_4_FD1": {
-        "signals": ["BattULo_U_Actl"]
-    },
     "Battery_Mgmt_3_FD1": {
         "signals": ["BSBattSOC"]
     },
-    "Battery_Mgmt_2_FD1": {
-        "signals": ["Shed_T_Eng_Off_B", "Shed_Drain_Eng_Off_B",
-                   "Shed_Level_Req", "Batt_Lo_SoC_B", "Batt_Crit_SoC_B"]
-    }
 }
 
 

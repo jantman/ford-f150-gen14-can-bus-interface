@@ -43,31 +43,12 @@ DASHBOARD_CONFIG = {
         ],
         "refresh_rate": 1
     },
-    "EngVehicleSpThrottle": {
-        "signals": [
-            "EngAout_N_Actl",
-        ],
-        "refresh_rate": 0.1
-    },
-    "Body_Info_4_FD1": {
-        "signals": [
-            "BattULo_U_Actl"
-        ],
-        "refresh_rate": 0.1
-    },
     "Battery_Mgmt_3_FD1": {
         "signals": [
             "BSBattSOC"
         ],
         "refresh_rate": 0.1
     },
-    "Battery_Mgmt_2_FD1": {
-        "signals": [
-            "Shed_T_Eng_Off_B", "Shed_Drain_Eng_Off_B",
-            "Shed_Level_Req", "Batt_Lo_SoC_B", "Batt_Crit_SoC_B"
-        ],
-        "refresh_rate": 0.1
-    }
 }
 
 
