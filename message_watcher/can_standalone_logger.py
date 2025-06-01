@@ -125,10 +125,8 @@ class CANStandaloneLogger:
         """
         Extract a signal from CAN message data using proper DBC signal format.
         
-        Ford DBC signals use Motorola (big-endian) bit numbering where:
-        - Bit numbering: byte0[7:0], byte1[15:8], byte2[23:16], etc.
-        - start_bit is the MSB (most significant bit) position of the signal
-        - Signals are read from MSB to LSB in big-endian fashion
+        This implementation matches cantools' bit extraction for Motorola (big-endian) format.
+        For a signal with start_bit=11, length=2, the bits are [10, 11].
         
         Args:
             data: CAN message data bytes
@@ -140,28 +138,27 @@ class CANStandaloneLogger:
             enum_values: Dictionary mapping values to names
             
         Returns:
-            Tuple of (raw_value, scaled_value, enum_name) or None if extraction fails
+            SignalValue object with raw value and enum name
         """
         try:
             # Convert data to bytes array and pad to 8 bytes if needed
             data_bytes = list(data) + [0] * (8 - len(data))
             
-            # Convert bytes to a continuous bit stream (MSB first)
-            # For Motorola byte order: bit 0 = byte0[7], bit 1 = byte0[6], ..., bit 7 = byte0[0], bit 8 = byte1[7], etc.
+            # For Motorola (big-endian) byte order, the bit range is:
+            # range(start_bit - length + 1, start_bit + 1)
             raw_value = 0
             
-            for i in range(length):
-                # Calculate which bit position we need (counting from MSB of signal)
-                bit_position = start_bit - i
-                
-                # Convert bit position to byte and bit index
-                byte_index = bit_position // 8
-                bit_index = 7 - (bit_position % 8)  # Bit index within byte (7=MSB, 0=LSB)
+            for bit_pos in range(start_bit - length + 1, start_bit + 1):
+                # Convert global bit position to byte and bit index
+                byte_index = bit_pos // 8
+                bit_index = 7 - (bit_pos % 8)  # Bit index within byte (7=MSB, 0=LSB)
                 
                 # Extract the bit if within bounds
                 if 0 <= byte_index < len(data_bytes) and 0 <= bit_index <= 7:
                     bit_value = (data_bytes[byte_index] >> bit_index) & 1
-                    raw_value |= (bit_value << (length - 1 - i))
+                    # Position this bit in the result (MSB = start_bit position)
+                    result_bit_pos = start_bit - bit_pos
+                    raw_value |= (bit_value << result_bit_pos)
             
             # Handle signed values using two's complement
             if signed and length > 0 and (raw_value & (1 << (length - 1))):
