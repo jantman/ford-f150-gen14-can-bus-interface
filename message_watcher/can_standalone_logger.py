@@ -35,54 +35,50 @@ MESSAGE_CONFIG = {
     "BCM_Lamp_Stat_FD1": {
         "can_id": 0x3C3,
         "signals": {
-            "PudLamp_D_Rq": (8, 2, 1, 0, False, {0: "OFF", 1: "ON", 2: "RAMP_UP", 3: "RAMP_DOWN"}),
-            "Illuminated_Entry_Stat": (10, 1, 1, 0, False, {0: "Off", 1: "On"}),
-            "Dr_Courtesy_Light_Stat": (11, 2, 1, 0, False, {0: "Off", 1: "On", 2: "Unknown", 3: "Invalid"})
+            "PudLamp_D_Rq": (11, 2, 1.0, 0.0, False, {0: "OFF", 1: "ON", 2: "RAMP_UP", 3: "RAMP_DOWN"}),
+            "Dr_Courtesy_Light_Stat": (49, 2, 1.0, 0.0, False, {0: "Off", 1: "On", 2: "Unknown", 3: "Invalid"})
         }
     },
     "Locking_Systems_2_FD1": {
         "can_id": 0x331,
         "signals": {
-            "Veh_Lock_Status": (0, 2, 1, 0, False, {0: "LOCK_DBL", 1: "LOCK_ALL", 2: "UNLOCK_ALL", 3: "UNLOCK_DRV"})
+            "Veh_Lock_Status": (34, 2, 1.0, 0.0, False, {0: "LOCK_DBL", 1: "LOCK_ALL", 2: "UNLOCK_ALL", 3: "UNLOCK_DRV"})
         }
     },
     "PowertrainData_10": {
-        "can_id": 0x91,  # This is an example ID - needs verification
+        "can_id": 0x176,
         "signals": {
-            "TrnPrkSys_D_Actl": (4, 4, 1, 0, False, {
+            "TrnPrkSys_D_Actl": (31, 4, 1.0, 0.0, False, {
                 0: "NotKnown", 1: "Park", 2: "TransitionCloseToPark", 3: "AtNoSpring",
                 4: "TransitionCloseToOutOfPark", 5: "OutOfPark", 6: "Override",
                 7: "OutOfRangeLow", 8: "OutOfRangeHigh", 9: "FrequencyError",
-                15: "Faulty"
+                10: "NotUsed_1", 11: "NotUsed_2", 12: "NotUsed_3", 13: "NotUsed_4",
+                14: "NotUsed_5", 15: "Faulty"
             })
         }
     },
     "EngVehicleSpThrottle": {
-        "can_id": 0x204,  # This is an example ID - needs verification
+        "can_id": 0x204,
         "signals": {
-            "EngAout_N_Actl": (16, 16, 0.25, 0, False, None)  # RPM signal
+            "EngAout_N_Actl": (28, 13, 2.0, 0.0, False, None)  # RPM signal
         }
     },
     "Body_Info_4_FD1": {
-        "can_id": 0x3D7,  # This is an example ID - needs verification
+        "can_id": 0x242,  # This is an example ID - needs verification
         "signals": {
-            "BattULo_U_Actl": (0, 16, 0.1, 0, False, None)  # Battery voltage
+            # We can add specific signals from this message if needed
         }
     },
     "Battery_Mgmt_3_FD1": {
-        "can_id": 0x3EF,  # This is an example ID - needs verification
+        "can_id": 0x43C,  # This is an example ID - needs verification
         "signals": {
-            "BSBattSOC": (0, 8, 0.4, 0, False, None)  # Battery SOC percentage
+            "BSBattSOC": (22, 7, 1.0, 0.0, False, None)  # Battery SOC percentage
         }
     },
     "Battery_Mgmt_2_FD1": {
-        "can_id": 0x3EE,  # This is an example ID - needs verification
+        "can_id": 0x42C,  # This is an example ID - needs verification
         "signals": {
-            "Shed_T_Eng_Off_B": (0, 1, 1, 0, False, {0: "False", 1: "True"}),
-            "Shed_Drain_Eng_Off_B": (1, 1, 1, 0, False, {0: "False", 1: "True"}),
-            "Shed_Level_Req": (8, 4, 1, 0, False, {0: "Normal", 1: "Level1", 2: "Level2"}),
-            "Batt_Lo_SoC_B": (12, 1, 1, 0, False, {0: "False", 1: "True"}),
-            "Batt_Crit_SoC_B": (13, 1, 1, 0, False, {0: "False", 1: "True"})
+            # We can add specific signals from this message if needed
         }
     }
 }
