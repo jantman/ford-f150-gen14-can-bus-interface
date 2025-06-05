@@ -1,0 +1,11 @@
+Id	Description	Qty	Unit	Designators
+1	Cable, 1 wires	0	m	12v1cbl
+2	Connector, JST PH 2.0mm, male, 4 pins	1		X1
+3	Connector, JST SM, male, 4 pins	1		JST-SM-4
+4	Connector, butt splices, 4 pins	1		Splice1
+5	Connector, quick disconnect, 1 pins	1		12v1
+6	Wire, BK	0	m	Splice-JST-SM-4, X1-Splice1
+7	Wire, BU	0	m	Splice-JST-SM-4
+8	Wire, RD	0	m	Splice-JST-SM-4, X1-Splice1
+9	Wire, WH	0	m	Splice-JST-SM-4, X1-Splice1
+10	Wire, YE	0	m	X1-Splice1

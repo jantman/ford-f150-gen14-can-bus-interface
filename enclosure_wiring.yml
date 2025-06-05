@@ -1,0 +1,49 @@
+# wiring diagram for use with https://github.com/wireviz/WireViz
+connectors:
+  X1:
+    type: JST PH 2.0mm
+    subtype: male
+    pinlabels: ["+12VDC", "CAN-H", "CAN-L", "GND"]
+    image:
+      src: images/jst-ph-4pin.png
+    notes: X1 connector on ESP32-CAN-X2
+
+  Splice1:
+    type: butt splices
+    pincount: 4
+
+  JST-SM-4:
+    type: JST SM
+    subtype: male
+    pinlabels: ["+12VDC", "GND", "CAN-L", "CAN-H"]
+    image:
+      src: images/jst-sm-4pin-housing.png
+
+  12v1:
+    type: quick disconnect
+    pincount: 1
+
+cables:
+  X1-Splice1:
+    category: bundle
+    colors: [YE, WH, RD, BK]
+  Splice-JST-SM-4:
+    category: bundle
+    colors: [RD, BK, BU, WH]
+  12v1cbl:
+    category: single
+    colors: [RD]
+
+connections:
+  - 
+    - X1: [1-4]
+    - X1-Splice1: [1-4]
+    - Splice1: [1-4]
+  - 
+    - X1: [1]
+    - 12v1cbl: [1]
+    - 12v1: [1]
+  -
+    - Splice1: [1, 2, 3, 4]
+    - Splice-JST-SM-4: [1, 4, 3, 2]
+    - JST-SM-4: [1, 4, 3, 2]
