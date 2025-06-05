@@ -22,6 +22,20 @@ connectors:
   12v1:
     type: quick disconnect
     pincount: 1
+  
+  JST-SM-4-blunt:
+    type: JST SM
+    subtype: female
+    pinlabels: ["SBA40 +12VDC", "GD348 GND", "VDB30 HS-CAN3 Low", "VDB29 HS-CAN3 High"]
+    image:
+      src: images/jst-sm-4pin-plug.png
+
+  GX16-8-Female:
+    type: GX-16-8
+    subtype: female
+    pinlabels: ["One-RD", "two-YE", "three-BU", "four-PU", "five-OR", "six-GN", "seven-WH"]
+    image:
+      src: images/gx16-8-female.png
 
 cables:
   X1-Splice1:
@@ -33,6 +47,9 @@ cables:
   12v1cbl:
     category: single
     colors: [RD]
+  JST-SM-4-to-blunt:
+    category: bundle
+    colors: [RD, BK, BU, WH]
 
 connections:
   - 
@@ -47,3 +64,8 @@ connections:
     - Splice1: [1, 2, 3, 4]
     - Splice-JST-SM-4: [1, 4, 3, 2]
     - JST-SM-4: [1, 4, 3, 2]
+  -
+    - JST-SM-4: [1-4]
+    - JST-SM-4-to-blunt: [1-4]
+    - JST-SM-4-blunt: [1-4]
+
