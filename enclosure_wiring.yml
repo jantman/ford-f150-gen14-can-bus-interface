@@ -12,27 +12,57 @@ connectors:
     type: butt splices
     pincount: 4
 
-  JST-SM-4:
+  JST-SM-4-male:
     type: JST SM
     subtype: male
     pinlabels: ["+12VDC", "GND", "CAN-L", "CAN-H"]
     image:
       src: images/jst-sm-4pin-housing.png
 
+  JST-SM-4-female:
+    type: JST SM
+    subtype: female
+    pinlabels: ["+12VDC", "GND", "CAN-L", "CAN-H"]
+    image:
+      src: images/jst-sm-4pin-plug.png
+
   12v1:
     type: quick disconnect
     pincount: 1
+
+  VDB29:
+    style: simple
+    type: butt splice
+    notes: "VDB29 HS-CAN3 High; C3154A pin 1, GN-BU"
+
+  VDB30:
+    style: simple
+    type: butt splice
+    notes: "VDB30 HS-CAN3 Low; C3154A pin 11, WH-GN"
+
+  SBA40:
+    style: simple
+    type: butt splice
+    notes: "SBA40 Fuse 40 +12VDC; C3154B pin 4 and 8, RD"
+
+  GND348:
+    style: simple
+    type: butt splice
+    notes: "GND348 Ground; C3154B pin 1 and 5, BK"
 
 cables:
   X1-Splice1:
     category: bundle
     colors: [YE, WH, RD, BK]
-  Splice-JST-SM-4:
+  Splice-JST-SM-4-male:
     category: bundle
     colors: [RD, BK, BU, WH]
   12v1cbl:
     category: single
     colors: [RD]
+  JST-SM-4-female-blunt:
+    category: bundle
+    colors: [RD, BK, BU, WH]
 
 connections:
   - 
@@ -45,5 +75,9 @@ connections:
     - 12v1: [1]
   -
     - Splice1: [1, 2, 3, 4]
-    - Splice-JST-SM-4: [1, 4, 3, 2]
-    - JST-SM-4: [1, 4, 3, 2]
+    - Splice-JST-SM-4-male: [1, 4, 3, 2]
+    - JST-SM-4-male: [1, 4, 3, 2]
+    - ==>
+    - JST-SM-4-female: [1, 2, 3, 4]
+    - JST-SM-4-female-blunt: [1, 2, 3, 4]
+    - [SBA40., GND348., VDB30., VDB29.]
