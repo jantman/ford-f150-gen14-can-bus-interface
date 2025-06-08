@@ -8,7 +8,7 @@ import os
 import sys
 from PIL import Image
 
-def scale_image(input_path, output_path, target_size=(640, 640)):
+def scale_image(input_path, output_path, target_size):
     """
     Scale an image to fit within target_size while maintaining aspect ratio.
     Only scales down, never scales up.
@@ -35,9 +35,9 @@ def scale_image(input_path, output_path, target_size=(640, 640)):
             return False
 
 def main():
-    # Use current directory since script is now in the images directory
-    images_dir = "."
-    target_size = (640, 640)
+    # Use the same directory that the script itself is in
+    images_dir = os.path.dirname(__file__)
+    target_size = (200, 200)
     
     if not os.path.exists(images_dir):
         print(f"Error: Directory {images_dir} not found")
