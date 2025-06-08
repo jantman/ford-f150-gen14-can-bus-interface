@@ -12,6 +12,10 @@ connectors:
     type: butt splices
     pincount: 4
 
+  Splice2:
+    type: butt splices
+    pincount: 4
+
   JST-SM-4-male:
     type: JST SM
     subtype: male
@@ -25,10 +29,6 @@ connectors:
     pinlabels: ["+12VDC", "GND", "CAN-L", "CAN-H"]
     image:
       src: images/jst-sm-4pin-plug.png
-
-  12v1:
-    type: quick disconnect
-    pincount: 1
 
   VDB29:
     style: simple
@@ -50,6 +50,64 @@ connectors:
     type: butt splice
     notes: "GND348 Ground; C3154B pin 1 and 5, BK"
 
+  GX16-8-female:
+    type: GX16-8
+    subtype: female
+    pinlabels: ["SBA40 +12VDC", "GPIO18", "GPIO17", "GPIO16", "GPIO15", "GPIO5", "GPIO4", ""]
+    image:
+      src: images/gx16-8-female.png
+
+  GX16-8-male:
+    type: GX16-8
+    subtype: male
+    pinlabels: ["SBA40 +12VDC", "GPIO18", "GPIO17", "GPIO16", "GPIO15", "GPIO5", "GPIO4", ""]
+    image:
+      src: images/gx16-8-male.png
+
+  JST-XH-6pin:
+    type: JST XH
+    subtype: 6-pin male plug
+    pinlabels: ["SV2#6 GPIO18", "SV2#5 GPIO17", "SV2#4 GPIO16", "SV2#3 GPIO15", "SV2#2 GPIO5", "SV2#1 GPIO4"]
+    image:
+      src: images/jst-xh-6pin-housing.png
+
+  12vTap:
+    style: simple
+    type: Tap
+    notes: "Tap used by GX16-8-female pin 1"
+
+  12vQD:
+    style: simple
+    type: Quick Disconnect
+    notes: "Quick Disconnect to tap off of X1"
+
+  blunt:
+    style: simple
+    type: blunt end
+
+  JST-XH-4pin:
+    type: JST XH
+    subtype: 4-pin male plug
+    pinlabels: ["SV2#7 GPIO8", "SV2#9 GPIO9", "SV1#20 GPIO1", "SV1#7 GPIO14"]
+    image:
+      src: images/jst-xh-4pin-housing.png
+
+  waterproof5pin-plug:
+    type: waterproof 5-pin
+    subtype: female plug
+    pinlabels: ["", "GPIO9", "GPIO14", "GPIO1", "GPIO8"]
+    pincount: 5
+    image:
+      src: images/5pinwaterproof-plug.png
+
+  waterproof5pin-housing:
+    type: waterproof 5-pin
+    subtype: male housing
+    pinlabels: ["", "GPIO9", "GPIO14", "GPIO1", "GPIO8"]
+    pincount: 5
+    image:
+      src: images/5pinwaterproof-housing.png
+
 cables:
   X1-Splice1:
     category: bundle
@@ -57,12 +115,24 @@ cables:
   Splice-JST-SM-4-male:
     category: bundle
     colors: [RD, BK, BU, WH]
-  12v1cbl:
-    category: single
-    colors: [RD]
   JST-SM-4-female-blunt:
     category: bundle
     colors: [RD, BK, BU, WH]
+  GX16-8-jst:
+    category: bundle
+    colors: [RD, YE, BU, VT, OG, GN, WH]
+  12vTap-QD:
+    category: simple
+    colors: [RD]
+  JST-XH-4pin-wire:
+    category: bundle
+    colors: [BK, BU, RD, OG]
+  Splice2-JST-XH-4:
+    category: bundle
+    colors: [GN, BU, YE, RD, BK]
+  5pinHousing:
+    category: bundle
+    colors: [GN, BU, YE, RD, BK]
 
 connections:
   - 
@@ -71,8 +141,8 @@ connections:
     - Splice1: [1-4]
   - 
     - X1: [1]
-    - 12v1cbl: [1]
-    - 12v1: [1]
+    - 12vTap-QD: [1]
+    - 12vTap.
   -
     - Splice1: [1, 2, 3, 4]
     - Splice-JST-SM-4-male: [1, 4, 3, 2]
@@ -81,3 +151,35 @@ connections:
     - JST-SM-4-female: [1, 2, 3, 4]
     - JST-SM-4-female-blunt: [1, 2, 3, 4]
     - [SBA40., GND348., VDB30., VDB29.]
+  -
+    - JST-XH-6pin: [1, 2, 3, 4, 5, 6]
+    - GX16-8-jst: [2, 3, 4, 5, 6, 7]
+    - GX16-8-female: [2, 3, 4, 5, 6, 7]
+  - 
+    - 12vQD.
+    - GX16-8-jst: [1]
+    - GX16-8-female: [1]
+  -
+    - GX16-8-female: [1-7]
+    - ==>
+    - GX16-8-male: [1-7]
+  - 
+    - JST-XH-4pin: [1-4]
+    - JST-XH-4pin-wire: [1-4]
+    - Splice2: [1-4]
+  -
+    - Splice2: [2, 4, 3, 1]
+    - Splice2-JST-XH-4: [2, 3, 4, 5]
+    - waterproof5pin-plug: [2, 3, 4, 5]
+  -
+    - blunt.
+    - Splice2-JST-XH-4: [1]
+    - waterproof5pin-plug: [1]
+  -
+    - waterproof5pin-plug: [1-5]
+    - ==>
+    - waterproof5pin-housing: [1-5]
+  -
+    - waterproof5pin-housing: [1-5]
+    - 5pinHousing: [1-5]
+    - blunt.
