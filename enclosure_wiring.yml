@@ -133,6 +133,9 @@ cables:
   5pinHousing:
     category: bundle
     colors: [GN, BU, YE, RD, BK]
+  GX16-8-truck:
+    category: bundle
+    colors: [RD, BU, YE, BK, BUYE, GN, WH]
 
 connections:
   - 
@@ -182,4 +185,8 @@ connections:
   -
     - waterproof5pin-housing: [1-5]
     - 5pinHousing: [1-5]
+    - blunt.
+  -
+    - GX16-8-male: [1-7]
+    - GX16-8-truck: [1-7]
     - blunt.
