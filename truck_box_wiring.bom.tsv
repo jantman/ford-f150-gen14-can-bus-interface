@@ -1,0 +1,8 @@
+Id	Description	Qty	Unit	Designators
+1	Connector, Deutsch DT8, male, 8 pins	1		DT8-male
+2	Connector, GX16-8, male, 8 pins	1		GX16-8-male
+3	Connector, butt splices, 8 pins	1		Splice1
+4	Wire, BK	0	m	Splice-DT8
+5	Wire, BU	0	m	Splice-DT8
+6	Wire, RD	0	m	Splice-DT8
+7	Wire, YE	0	m	GX16-7-yellow, Splice-DT8

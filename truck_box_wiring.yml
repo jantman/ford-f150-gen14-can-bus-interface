@@ -1,0 +1,42 @@
+# wiring diagram for use with https://github.com/wireviz/WireViz
+connectors:
+  GX16-8-male:
+    type: GX16-8
+    subtype: male
+    pinlabels: ["SBA40 +12VDC", "GPIO18", "GPIO17", "GPIO16", "GPIO15", "GPIO5", "GPIO4", ""]
+    image:
+      src: images/gx16-8-male.png
+
+  Splice1:
+    type: butt splices
+    pincount: 8
+
+  DT8-male:
+    type: Deutsch DT8
+    subtype: male
+    pinlabels: ["GPIO4", "GPIO15", "GPIO17", "", "GPIO5", "GPIO16", "GPIO18", "SBA40 +12VDC"]
+    image:
+      src: images/DT8-male.png
+
+cables:
+  GX16-7-yellow:
+    category: bundle
+    colors: [YE, YE, YE, YE, YE, YE, YE]
+    
+  Splice-DT8:
+    category: bundle
+    colors: [RD, BK, YE, YE, BK, BU, RD, BU]
+
+connections:
+  - 
+    - GX16-8-male: [1, 2, 3, 4, 5, 6, 7]
+    - GX16-7-yellow: [1, 2, 3, 4, 5, 6, 7]
+    - Splice1: [1, 2, 3, 4, 5, 6, 7]
+  -
+    - Splice1: [1, 2, 3, 4, 5, 6, 7]
+    - Splice-DT8: [1, 2, 3, 4, 5, 6, 7]
+    - DT8-male: [8, 7, 3, 6, 2, 5, 1]
+  -
+    - Splice1: [8]
+    - Splice-DT8: [8]
+    - DT8-male: [4]
