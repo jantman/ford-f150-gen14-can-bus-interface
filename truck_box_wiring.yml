@@ -18,6 +18,111 @@ connectors:
     image:
       src: images/DT8-male.png
 
+  DT8-female:
+    type: Deutsch DT8
+    subtype: female
+    pinlabels: ["GPIO4", "GPIO15", "GPIO17", "", "GPIO5", "GPIO16", "GPIO18", "SBA40 +12VDC"]
+    image:
+      src: images/DT8-female.png
+
+  gpio16-gland:
+    style: simple
+    type: blunt cut
+    notes: "GPIO16"
+
+  gpio16-gland-2:
+    style: simple
+    type: blunt cut
+    notes: "GPIO16"
+
+  gpio15-gland:
+    style: simple
+    type: blunt cut
+    notes: "GPIO15"
+
+  gpio15-gland-2:
+    style: simple
+    type: blunt cut
+    notes: "GPIO15"
+
+
+  gpio5-gland:
+    style: simple
+    type: blunt cut
+    notes: "GPIO5"
+  gpio5-gland-2:
+    style: simple
+    type: blunt cut
+    notes: "GPIO5"
+
+
+  gpio4-gland:
+    style: simple
+    type: blunt cut
+    notes: "GPIO4"
+
+  gpio4-gland-2:
+    style: simple
+    type: blunt cut
+    notes: "GPIO4"
+
+  sba40-gland:
+    style: simple
+    type: blunt cut
+    notes: "SBA40 +12V"
+    pinlabels: ["SBA40 +12VDC"]
+
+  sba40-gland-2:
+    style: simple
+    type: blunt cut
+    notes: "SBA40 +12V"
+    pinlabels: ["SBA40 +12VDC"]
+
+  gpio17-gland:
+    style: simple
+    type: blunt cut
+    notes: "GPIO17"
+
+  gpio18-gland:
+    style: simple
+    type: blunt cut
+    notes: "GPIO18"
+
+  relay-vcc:
+    style: simple
+    type: blunt cut
+    notes: "Relay Vcc"
+
+  gpio16-out:
+    style: simple
+    type: blunt cut
+    notes: "GPIO16 out (Parked LED)"
+  
+  gpio15-out:
+    style: simple
+    type: blunt cut
+    notes: "GPIO15 out (Unlocked LED)"
+  
+  gpio5-out:
+    style: simple
+    type: blunt cut
+    notes: "GPIO5 out (Bed Lights LED)"
+  
+  gpio4-out:
+    style: simple
+    type: blunt cut
+    notes: "GPIO4 out (Toolbox LED)"
+
+  12vdc:
+    style: simple
+    type: blunt cut
+    notes: "12VDC In"
+
+  ground:
+    style: simple
+    type: blunt cut
+    notes: "Ground"
+
 cables:
   GX16-7-yellow:
     category: bundle
@@ -26,6 +131,18 @@ cables:
   Splice-DT8:
     category: bundle
     colors: [RD, BK, YE, YE, BK, BU, RD, BU]
+
+  DT8-female-cable:
+    category: bundle
+    colors: [RD, BK, YE, BU, BU, YE, BK, RD]
+
+  Enclosure-Gland-A:
+    category: bundle
+    colors: [RD, YE, YE, YE, YE]
+
+  Enclosure-Gland-B:
+    category: bundle
+    colors: [BU, BU, BU, BU, RD, GN, BK]
 
 connections:
   - 
@@ -40,3 +157,70 @@ connections:
     - Splice1: [8]
     - Splice-DT8: [8]
     - DT8-male: [4]
+  -
+    - DT8-female: [4]
+    - DT8-female-cable: [4]
+  -
+    - DT8-female: [1]
+    - DT8-female-cable: [1]
+    - gpio4-gland.
+    - -->
+    - gpio4-gland-2.
+    - Enclosure-Gland-A: [5]
+  -
+    - DT8-female: [2]
+    - DT8-female-cable: [2]
+    - gpio15-gland.
+    - -->
+    - gpio15-gland-2.
+    - Enclosure-Gland-A: [3]
+  -
+    - DT8-female: [3]
+    - DT8-female-cable: [3]
+    - gpio17-gland.
+  -
+    - DT8-female: [5]
+    - DT8-female-cable: [5]
+    - gpio5-gland.
+    - -->
+    - gpio5-gland-2.
+    - Enclosure-Gland-A: [4]
+  -
+    - DT8-female: [6]
+    - DT8-female-cable: [6]
+    - gpio16-gland.
+    - -->
+    - gpio16-gland-2.
+    - Enclosure-Gland-A: [2]
+  -
+    - DT8-female: [7]
+    - DT8-female-cable: [7]
+    - gpio18-gland.
+    - -->
+    - relay-vcc.
+    - Enclosure-Gland-A: [1]
+  -
+    - DT8-female: [8]
+    - DT8-female-cable: [8]
+    - sba40-gland.
+    - -->
+    - sba40-gland-2.
+    - Enclosure-Gland-B: [5]
+  -
+    - gpio16-out.
+    - Enclosure-Gland-B: [1]
+  -
+    - gpio15-out.
+    - Enclosure-Gland-B: [2]
+  -
+    - gpio5-out.
+    - Enclosure-Gland-B: [3]
+  -
+    - gpio4-out.
+    - Enclosure-Gland-B: [4]
+  -
+    - 12vdc.
+    - Enclosure-Gland-B: [6]
+  -
+    - ground.
+    - Enclosure-Gland-B: [7]
