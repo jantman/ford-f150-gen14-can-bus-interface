@@ -12,7 +12,7 @@ This is an application that will run on the AutoSport Labs ESP32-CAN-X2 developm
 
 - **MCU**: ESP32-S3-WROOM-1-N8R8
 - **CAN Controllers**: 
-  - Built-in TWAI (Two-Wire Automotive Interface) controller
+  - Built-in TWAI (Two-Wire Automotive Interface) controller (this is the one we wish to target, called "X1" on the board)
   - External MCP2515 CAN controller via SPI
 - **Target Application**: Ford F150 Gen14 CAN bus interface for bed lights and toolbox control
 
@@ -27,13 +27,19 @@ High-level functionality:
 * `TOOLBOX_BUTTON_PIN` is an input pin, which should have the internal pullup activated.
 * When `PudLamp_D_Rq` changes to `RAMP_UP` or `ON`, turn on the `BEDLIGHT_PIN` output.
 * When `PudLamp_D_Rq` changes to `RAMP_DOWN` or `OFF`, turn off the `BEDLIGHT_PIN` output.
-* Read `TOOLBOX_BUTTON_PIN` as an input with debouncing. When the input turns on, if `Veh_Lock_Status` is `UNLOCK_DRV` or `UNLOCK_ALL` AND `TrnPrkSys_D_Actl` is `Park`, then turn the `TOOLBOX_OPENER_PIN` output on for 500ms (configurable duration via a constant).
+* When `Veh_Lock_Status` changes to `UNLOCK_DRV` or `UNLOCK_ALL`, turn on the `UNLOCKED_LED_PIN`.
+* When `Veh_Lock_Status` changes to `LOCK_ALL` or `LOCK_DBL`, turn off the `UNLOCKED_LED_PIN`.
+* Read `TOOLBOX_BUTTON_PIN` as an input with debouncing, pulled high. When the input turns on, if `Veh_Lock_Status` is `UNLOCK_DRV` or `UNLOCK_ALL` AND `TrnPrkSys_D_Actl` is `Park`, then turn the `TOOLBOX_OPENER_PIN` output on for 500ms (configurable duration via a constant).
+* When `TrnPrkSys_D_Actl` changes to `Park`, turn on the `PARKED_LED_PIN`.
+* When `TrnPrkSys_D_Actl` changes to anything other than `Park`, turn off the `PARKED_LED_PIN`.
 * All changes to inputs and CAN signal state should be logged.
 
 ## Implementation Details
 
 The GPIO pin numbers specified above should be defined as constants, so that it's easy to change a pin number in only one place if needed. Initially, we will have the following assignments:
 
-* `BEDLIGHT_PIN` GPIO4
-* `TOOLBOX_OPENER_PIN` GPIO5
-* `TOOLBOX_BUTTON_PIN` GPIO15
+* `BEDLIGHT_PIN` GPIO5
+* `PARKED_LED_PIN` GPIO16
+* `UNLOCKED_LED_PIN` GPIO15
+* `TOOLBOX_OPENER_PIN` GPIO4
+* `TOOLBOX_BUTTON_PIN` GPIO17
