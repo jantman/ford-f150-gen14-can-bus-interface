@@ -2,10 +2,11 @@ Id	Description	Qty	Unit	Designators
 1	Connector, Deutsch DT8, female, 8 pins	1		DT8-female
 2	Connector, Deutsch DT8, male, 8 pins	1		DT8-male
 3	Connector, GX16-8, male, 8 pins	1		GX16-8-male
-4	Connector, blunt cut	19		
+4	Connector, blunt cut	20		
 5	Connector, butt splices, 8 pins	1		Splice1
-6	Wire, BK	0	m	DT8-female-cable, Enclosure-Gland-B, Splice-DT8
-7	Wire, BU	0	m	DT8-female-cable, Enclosure-Gland-B, Splice-DT8
-8	Wire, GN	0	m	Enclosure-Gland-B
-9	Wire, RD	0	m	DT8-female-cable, Enclosure-Gland-A, Enclosure-Gland-B, Splice-DT8
-10	Wire, YE	0	m	DT8-female-cable, Enclosure-Gland-A, GX16-7-yellow, Splice-DT8
+6	Connector, button	1		
+7	Wire, BK	0	m	DT8-female-cable, Enclosure-Gland-B, Splice-DT8
+8	Wire, BU	0	m	DT8-female-cable, Enclosure-Gland-B, Splice-DT8
+9	Wire, GN	0	m	Enclosure-Gland-B
+10	Wire, RD	0	m	DT8-female-cable, Enclosure-Gland-A, Enclosure-Gland-B, Splice-DT8
+11	Wire, YE	0	m	DT8-female-cable, Enclosure-Gland-A, GX16-7-yellow, Splice-DT8

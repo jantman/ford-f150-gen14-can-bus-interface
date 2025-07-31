@@ -123,6 +123,11 @@ connectors:
     type: blunt cut
     notes: "Ground"
 
+  toolbox-button:
+    style: simple
+    type: button
+    notes: "Toolbox Button"
+
 cables:
   GX16-7-yellow:
     category: bundle
@@ -178,6 +183,10 @@ connections:
     - DT8-female: [3]
     - DT8-female-cable: [3]
     - gpio17-gland.
+    - -->
+    - toolbox-button.
+    - -->
+    - ground.
   -
     - DT8-female: [5]
     - DT8-female-cable: [5]
