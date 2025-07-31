@@ -7,6 +7,10 @@
 * Interior ambient lighting: FD-CAN1, HS-CAN3, and LIN.
 * Lock system: FD-CAN1, FD-CAN3, HS-CAN3, MS-CAN1
 
+## Audio DSP (C3154A & C3154B) Tee Harness
+
+**TBD**
+
 ## CAN Busses, Circuits, and Connectors
 
 The easiest places to access the various busses for testing/experimentation are:

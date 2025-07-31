@@ -19,7 +19,21 @@ TBD.
 
 ## Hardware
 
-TBD.
+### In-Cab Enclosure
+
+**TBD - Need Photo**
+
+A small project box enclosure containing an [AutoSport Labs ESP32-CAN-X2](https://www.autosportlabs.com/product/esp32-can-x2-dual-can-bus-automotive-grade-development-board/) development board, which combines an ESP32, dual can transceivers, and an automotive-grade 12-40VDC power supply. The ESP mounts to headers on a carrier board (simple 70x90cm protoboard) with connectors for IO, so that the ESP and/or carrier board can be removed from the enclosure without soldering. The enclosure exposes:
+
+* A 4-pin connector for connection to the vehicle wiring harness +12VDC, ground, and the pair of CAN bus lines. In my specific vehicle, this uses a tee adapter that inserts between the factory wiring harness and the Audio DSP (amplifier) on the rear wall of the cab behind the rear passenger side seat.
+* A 5-pin IO connector that exposes four GPIO pins as well as a blunt-cut wire inside the enclosure, for future use controlling devices in the cab or taking direct input.
+* An 8-pin (7 populated) connector for a 7-wire harness that goes into the toolbox mounted in the bed of the truck, carrying six GPIO lines as well as a tap from an in-cab +12VDC circuit (SBA40) that is controlled by the ECU load-shedding logic. This will ensure that aftermarket accessories can't drain the battery too low.
+
+Wiring diagrams for this enclosure can be seen in [PNG](./enclosure_wiring.png) or [SVG](./enclosure_wiring.svg).
+
+### Bed Toolbox Enclosure
+
+**TBD - Need Photo**
 
 ## History of Project
 
