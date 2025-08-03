@@ -80,13 +80,21 @@ Based on the minimal.dbc file, we need to monitor:
 - Add error handling and recovery
 - Implement watchdog functionality
 
-### Step 9: Testing and Validation
-- Create test scenarios for each function
-- Validate CAN message parsing accuracy
-- Test all output control logic
-- Verify timing requirements (500ms toolbox opener)
+### Step 9: Host-Based Unit Testing (NEW)
+- **Remove embedded test suite** - Delete test_suite.h/cpp and embedded test functions
+- **Set up PlatformIO Native Testing** - Configure native test environment 
+- **Create comprehensive host-based tests** - Test all critical logic on development machine
+- **Extract testable logic** - Separate pure logic from hardware dependencies
+- **Focus on future-proof areas** - Prioritize testing logic likely to change (new messages, outputs, hardware)
 
-### Step 10: Documentation and Deployment
+### Step 10: Testing Implementation
+- **Message Parsing Tests** - Comprehensive bit extraction and CAN parsing validation
+- **State Management Tests** - Vehicle state transitions and condition logic
+- **Output Control Tests** - Output decision logic separated from hardware calls
+- **Error Recovery Tests** - Watchdog and recovery decision logic
+- **CI Integration** - Automated testing on commits
+
+### Step 11: Documentation and Deployment
 - Update README.md with build and flash instructions
 - Add troubleshooting guide
 - Create configuration constants for easy customization
@@ -100,6 +108,8 @@ Based on the minimal.dbc file, we need to monitor:
 4. **Extensive Logging**: Log all state changes and significant events for debugging
 5. **Configurable Constants**: Make timing, pins, and other parameters easily configurable
 6. **Memory Efficiency**: Optimize for ESP32 memory constraints
+7. **Testable Architecture**: Separate pure logic from hardware dependencies for comprehensive host-based testing
+8. **Future-Proof Design**: Structure code to easily accommodate new CAN messages, outputs, and hardware changes
 
 ## Libraries Required
 
@@ -118,6 +128,25 @@ src/
 ├── gpio_controller.h/cpp # GPIO initialization and control
 ├── state_manager.h/cpp   # Vehicle state tracking and change detection
 └── logger.h/cpp          # Logging utilities
+
+test/
+├── native/               # Host-based unit tests (PlatformIO Native)
+│   ├── test_message_parser/
+│   │   ├── test_bit_extraction.cpp      # Core bit manipulation tests
+│   │   ├── test_can_parsing.cpp         # CAN message parsing tests
+│   │   └── test_edge_cases.cpp          # Invalid/boundary data tests
+│   ├── test_state_manager/
+│   │   ├── test_state_transitions.cpp   # State change logic tests
+│   │   ├── test_vehicle_conditions.cpp  # Output decision logic tests
+│   │   └── test_timeout_handling.cpp    # Timing logic tests
+│   ├── test_output_control/
+│   │   ├── test_output_decisions.cpp    # Pure logic tests (hardware-independent)
+│   │   └── test_integration.cpp         # Cross-module integration tests
+│   └── test_error_recovery/
+│       └── test_recovery_logic.cpp      # Error handling and watchdog logic
+└── mocks/
+    ├── mock_arduino.h                   # Arduino function mocks
+    └── mock_logging.h                   # Logging function mocks
 ```
 
 ## Success Criteria
