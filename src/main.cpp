@@ -414,12 +414,12 @@ void handleErrorRecovery() {
     
     // Recovery Step 1: Restart CAN bus if needed
     if (!isCANConnected()) {
-        LOG_INFO("Recovery: Reinitializing CAN bus...");
-        if (initializeCAN()) {
-            LOG_INFO("Recovery: CAN bus reinitialized successfully");
+        LOG_INFO("Recovery: Performing full CAN system recovery...");
+        if (recoverCANSystem()) {
+            LOG_INFO("Recovery: CAN system recovered successfully");
             systemHealth.canErrors = 0; // Reset CAN error count
         } else {
-            LOG_ERROR("Recovery: CAN bus reinitialization failed");
+            LOG_ERROR("Recovery: CAN system recovery failed");
         }
     }
     

@@ -35,9 +35,29 @@ bool initializeCAN() {
     LOG_INFO("Initializing CAN bus (TWAI) in LISTEN-ONLY mode...");
     LOG_INFO("Note: TX/RX pins connect ESP32 to CAN transceiver, not directly to CAN_H/CAN_L");
     
+    // Check if driver is already installed
+    if (canInitialized) {
+        LOG_WARN("CAN driver already initialized, skipping installation");
+        return isCANConnected();
+    }
+    
     // Install TWAI driver
     esp_err_t result = twai_driver_install(&g_config, &t_config, &f_config);
-    if (result != ESP_OK) {
+    if (result == ESP_ERR_INVALID_STATE) {
+        LOG_WARN("TWAI driver already installed, attempting to start...");
+        // Driver already installed, try to start it
+        result = twai_start();
+        if (result == ESP_OK) {
+            canInitialized = true;
+            canConnected = true;
+            lastCANActivity = millis();
+            LOG_INFO("CAN bus started successfully (driver was already installed)");
+            return true;
+        } else {
+            LOG_ERROR("Failed to start existing TWAI driver: %s", esp_err_to_name(result));
+            return false;
+        }
+    } else if (result != ESP_OK) {
         LOG_ERROR("Failed to install TWAI driver: %s", esp_err_to_name(result));
         return false;
     }
@@ -92,6 +112,12 @@ bool receiveCANMessage(CANMessage& message) {
         return true;
     } else if (result == ESP_ERR_TIMEOUT) {
         // No message available, this is normal
+        return false;
+    } else if (result == ESP_ERR_INVALID_STATE) {
+        // Driver not in correct state - mark as disconnected
+        LOG_ERROR("CAN receive failed - driver invalid state");
+        canConnected = false;
+        canErrors++;
         return false;
     } else {
         canErrors++;
@@ -148,6 +174,22 @@ bool isCANConnected() {
         return false;
     }
     
+    // Check TWAI driver state first
+    twai_status_info_t status;
+    esp_err_t result = twai_get_status_info(&status);
+    if (result != ESP_OK) {
+        LOG_WARN("Failed to get TWAI status: %s", esp_err_to_name(result));
+        canConnected = false;
+        return false;
+    }
+    
+    // Check if driver is in a healthy state
+    if (status.state != TWAI_STATE_RUNNING) {
+        LOG_WARN("TWAI driver not running (state: %d)", status.state);
+        canConnected = false;
+        return false;
+    }
+    
     // Check if we've received any activity recently
     unsigned long timeSinceActivity = millis() - lastCANActivity;
     if (timeSinceActivity > CAN_TIMEOUT_MS) {
@@ -156,15 +198,8 @@ bool isCANConnected() {
         return false;
     }
     
-    // Check TWAI driver state
-    twai_status_info_t status;
-    esp_err_t result = twai_get_status_info(&status);
-    if (result == ESP_OK) {
-        canConnected = (status.state == TWAI_STATE_RUNNING);
-        return canConnected;
-    }
-    
-    return false;
+    canConnected = true;
+    return true;
 }
 
 void handleCANError() {
@@ -193,6 +228,56 @@ void handleCANError() {
         LOG_ERROR("CAN bus recovery failed: %s", esp_err_to_name(result));
         canConnected = false;
     }
+}
+
+// Full CAN system recovery - uninstalls and reinstalls the driver
+bool recoverCANSystem() {
+    LOG_INFO("Attempting full CAN system recovery...");
+    
+    // First try to stop if running
+    if (canInitialized) {
+        esp_err_t result = twai_stop();
+        if (result != ESP_OK && result != ESP_ERR_INVALID_STATE) {
+            LOG_WARN("Failed to stop TWAI driver during recovery: %s", esp_err_to_name(result));
+        }
+        
+        // Uninstall the driver
+        result = twai_driver_uninstall();
+        if (result != ESP_OK && result != ESP_ERR_INVALID_STATE) {
+            LOG_ERROR("Failed to uninstall TWAI driver during recovery: %s", esp_err_to_name(result));
+            return false;
+        }
+        
+        canInitialized = false;
+        canConnected = false;
+        LOG_INFO("TWAI driver uninstalled for recovery");
+    }
+    
+    // Wait a bit for hardware to settle
+    delay(200);
+    
+    // Reinstall and start the driver
+    esp_err_t result = twai_driver_install(&g_config, &t_config, &f_config);
+    if (result != ESP_OK) {
+        LOG_ERROR("Failed to reinstall TWAI driver during recovery: %s", esp_err_to_name(result));
+        return false;
+    }
+    
+    result = twai_start();
+    if (result != ESP_OK) {
+        LOG_ERROR("Failed to start TWAI driver during recovery: %s", esp_err_to_name(result));
+        twai_driver_uninstall();
+        return false;
+    }
+    
+    canInitialized = true;
+    canConnected = true;
+    lastCANActivity = millis();
+    messagesReceived = 0;
+    canErrors = 0;
+    
+    LOG_INFO("Full CAN system recovery successful");
+    return true;
 }
 
 // Utility functions for monitoring and debugging

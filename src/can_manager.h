@@ -18,6 +18,7 @@ bool receiveCANMessage(CANMessage& message);
 void processPendingCANMessages();
 bool isCANConnected();
 void handleCANError();
+bool recoverCANSystem();
 
 // Utility functions for monitoring and debugging
 void printCANStatistics();
