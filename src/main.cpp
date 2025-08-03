@@ -73,11 +73,6 @@ void setup() {
     initializeStateManager();
     LOG_INFO("State management initialization successful");
     
-    // Test message parsing functions
-    if (!testBitExtraction()) {
-        LOG_ERROR("Bit extraction test failed - message parsing may not work correctly");
-    }
-    
     systemInitialized = true;
     
     // Initialize system health tracking
@@ -86,9 +81,6 @@ void setup() {
     systemHealth.lastSystemOK = currentTime;
     
     LOG_INFO("System initialization complete");
-    
-    // Uncomment the line below to test all GPIO outputs on startup
-    // testAllOutputs();
     
     // Print pin configuration for verification
     LOG_INFO("Pin Configuration:");

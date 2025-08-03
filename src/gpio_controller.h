@@ -24,8 +24,7 @@ bool readToolboxButton();
 void updateToolboxOpenerTiming();
 GPIOState getGPIOState();
 
-// Utility functions for testing and debugging
-void testAllOutputs();
+// Utility functions for debugging
 void printGPIOStatus();
 
 #endif // GPIO_CONTROLLER_H

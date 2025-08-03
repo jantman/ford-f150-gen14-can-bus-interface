@@ -127,36 +127,7 @@ GPIOState getGPIOState() {
     return gpioState;
 }
 
-// Additional utility functions for debugging and testing
-void testAllOutputs() {
-    LOG_INFO("Testing all GPIO outputs...");
-    
-    // Test each output for 500ms
-    const uint16_t testDuration = 500;
-    
-    LOG_INFO("Testing bedlight...");
-    setBedlight(true);
-    delay(testDuration);
-    setBedlight(false);
-    
-    LOG_INFO("Testing parked LED...");
-    setParkedLED(true);
-    delay(testDuration);
-    setParkedLED(false);
-    
-    LOG_INFO("Testing unlocked LED...");
-    setUnlockedLED(true);
-    delay(testDuration);
-    setUnlockedLED(false);
-    
-    LOG_INFO("Testing toolbox opener...");
-    setToolboxOpener(true);
-    delay(testDuration);
-    setToolboxOpener(false);
-    
-    LOG_INFO("GPIO output test complete");
-}
-
+// Additional utility functions for debugging
 void printGPIOStatus() {
     GPIOState state = getGPIOState();
     

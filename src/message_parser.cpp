@@ -167,26 +167,3 @@ void printCANMessageBinary(const CANMessage& message) {
         LOG_DEBUG("  Byte %d: %s (0x%02X)", i, binaryStr, message.data[i]);
     }
 }
-
-// Test function to validate bit extraction
-bool testBitExtraction() {
-    LOG_INFO("Testing bit extraction functions...");
-    
-    // Test data: 0x12 0x34 0x56 0x78 0x9A 0xBC 0xDE 0xF0
-    uint8_t testData[8] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
-    
-    // Test extracting various bit ranges
-    uint8_t result1 = extractBits(testData, 0, 4);   // Should extract 0x2 (lower 4 bits of 0x12)
-    uint8_t result2 = extractBits(testData, 4, 4);   // Should extract 0x1 (upper 4 bits of 0x12)
-    uint8_t result3 = extractBits(testData, 8, 8);   // Should extract 0x34 (full second byte)
-    
-    LOG_INFO("Bit extraction test results:");
-    LOG_INFO("  extractBits(testData, 0, 4) = 0x%X (expected 0x2)", result1);
-    LOG_INFO("  extractBits(testData, 4, 4) = 0x%X (expected 0x1)", result2);
-    LOG_INFO("  extractBits(testData, 8, 8) = 0x%X (expected 0x34)", result3);
-    
-    bool success = (result1 == 0x2) && (result2 == 0x1) && (result3 == 0x34);
-    LOG_INFO("Bit extraction test: %s", success ? "PASSED" : "FAILED");
-    
-    return success;
-}
