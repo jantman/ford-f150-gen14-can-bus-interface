@@ -1,0 +1,40 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'platformio.ini'
+      - 'src/**'
+      - 'test/**'
+      - 'include/**'
+      - 'lib/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'platformio.ini'
+      - 'src/**'
+      - 'test/**' 
+      - 'include/**'
+      - 'lib/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install PlatformIO
+      run: pip install platformio
+        
+    - name: Run Native Tests
+      run: pio test -e native
+        
+    - name: Build ESP32-S3 Firmware  
+      run: pio run -e esp32-s3-devkitc-1

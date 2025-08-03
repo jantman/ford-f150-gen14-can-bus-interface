@@ -1,5 +1,7 @@
 # Ford F150 Gen14 CAN bus Interface
 
+[![CI](https://github.com/jantman/ford-f150-gen14-can-bus-interface/actions/workflows/ci.yml/badge.svg)](https://github.com/jantman/ford-f150-gen14-can-bus-interface/actions/workflows/ci.yml)
+
 Interface for doing various things in response to messages on the CAN bus of my 2025 (Generation 14) Ford F150, along with details of construction, initial investigation/experiments, wiring info, etc.
 
 ## What does it do?
@@ -25,6 +27,27 @@ This project implements a Ford F150 Gen14 CAN bus interface using Arduino Framew
 * Provides secure toolbox unlock functionality (only when vehicle is unlocked and in park)
 * Comprehensive logging and error handling
 * Modular, maintainable code architecture
+
+### Testing
+
+This project includes comprehensive automated testing:
+
+* **Native Unit Tests**: 49 tests covering GPIO control, CAN message parsing, state management, and integration scenarios
+* **Continuous Integration**: Automated testing on all pushes and pull requests
+* **Build Verification**: Automatic ESP32-S3 firmware build validation
+
+Run tests locally:
+```bash
+# Run all native tests
+pio test -e native
+
+# Run tests with verbose output
+pio test -e native -v
+
+# Run specific test categories
+pio test -e native --filter "test_gpio*"
+pio test -e native --filter "test_can_protocol*"
+```
 
 ### Building and Flashing
 
