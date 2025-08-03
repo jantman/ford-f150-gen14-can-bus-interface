@@ -23,7 +23,7 @@
 #define CAN_IRQ_PIN 3           // MCP2515 Interrupt pin
 #define CAN_BAUDRATE 500000     // 500kbps - standard automotive rate
 
-// CAN Message IDs (from minimal.dbc)
+// CAN Message IDs (from minimal.dbc and validated with Python can_embedded_logger.py)
 #define BCM_LAMP_STAT_FD1_ID 0x3C3      // 963 decimal
 #define LOCKING_SYSTEMS_2_FD1_ID 0x331  // 817 decimal
 #define POWERTRAIN_DATA_10_ID 0x176     // 374 decimal

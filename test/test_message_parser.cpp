@@ -1,0 +1,446 @@
+#include <gtest/gtest.h>
+#include "mocks/mock_arduino.h"
+#include "common/test_config.h"
+
+// Import production code structures and functions
+extern "C" {
+    #include "../src/can_protocol.h"
+}
+
+/**
+ * Message Parser Test Suite
+ * 
+ * These tests validate our C++ message parsing logic against the Python implementation
+ * in can_embedded_logger.py. The Python code defines the exact bit positions and 
+ * expected values for each CAN message we're interested in:
+ * 
+ * - BCM_Lamp_Stat_FD1 (0x3C3): PudLamp_D_Rq, Illuminated_Entry_Stat, Dr_Courtesy_Light_Stat
+ * - Locking_Systems_2_FD1 (0x331): Veh_Lock_Status  
+ * - PowertrainData_10 (0x176): TrnPrkSys_D_Actl
+ * - Battery_Mgmt_3_FD1 (0x43C): BSBattSOC
+ * 
+ * The Python implementation uses Intel (little-endian) byte order with DBC bit positioning.
+ */
+
+class MessageParserTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        ArduinoMock::instance().reset();
+    }
+    
+    void TearDown() override {
+        ArduinoMock::instance().reset();
+    }
+    
+    // Helper to create CAN frame with specific data pattern
+    CANFrame createCANFrame(uint32_t id, const uint8_t data[8]) {
+        CANFrame frame;
+        frame.id = id;
+        frame.length = 8;
+        memcpy(frame.data, data, 8);
+        return frame;
+    }
+    
+    // Helper to set specific bits in data array (little-endian, DBC-style bit positioning)
+    void setSignalValue(uint8_t data[8], uint8_t startBit, uint8_t length, uint32_t value) {
+        // Clear data first
+        memset(data, 0, 8);
+        
+        // Convert to 64-bit integer for bit manipulation (little-endian)
+        uint64_t dataValue = 0;
+        memcpy(&dataValue, data, 8);
+        
+        // Calculate bit position (DBC uses MSB bit numbering)
+        uint8_t bitPos = startBit - length + 1;
+        
+        // Create mask and set value
+        uint64_t mask = ((1ULL << length) - 1) << bitPos;
+        dataValue = (dataValue & ~mask) | ((uint64_t)value << bitPos);
+        
+        // Copy back to data array
+        memcpy(data, &dataValue, 8);
+    }
+    
+    // Helper to verify bit extraction matches Python implementation
+    uint32_t pythonExtractBits(const uint8_t data[8], uint8_t startBit, uint8_t length) {
+        // Convert 8 bytes to 64-bit integer (little-endian)
+        uint64_t dataInt = 0;
+        memcpy(&dataInt, data, 8);
+        
+        // Calculate bit position from MSB (DBC uses MSB bit numbering)
+        uint8_t bitPos = startBit - length + 1;
+        
+        // Create mask and extract value
+        uint64_t mask = (1ULL << length) - 1;
+        uint32_t value = (dataInt >> bitPos) & mask;
+        
+        return value;
+    }
+};
+
+// ===============================================
+// Test Suite: CAN Message ID Recognition
+// ===============================================
+
+TEST_F(MessageParserTest, CorrectMessageIDsFromPython) {
+    // Verify our C++ constants match the Python CAN_MESSAGES dictionary
+    
+    // BCM_Lamp_Stat_FD1 (0x3C3, 963 decimal)
+    EXPECT_EQ(BCM_LAMP_STAT_FD1_ID, 0x3C3);
+    EXPECT_EQ(BCM_LAMP_STAT_FD1_ID, 963);
+    
+    // Locking_Systems_2_FD1 (0x331, 817 decimal)
+    EXPECT_EQ(LOCKING_SYSTEMS_2_FD1_ID, 0x331);
+    EXPECT_EQ(LOCKING_SYSTEMS_2_FD1_ID, 817);
+    
+    // PowertrainData_10 (0x176, 374 decimal)
+    EXPECT_EQ(POWERTRAIN_DATA_10_ID, 0x176);
+    EXPECT_EQ(POWERTRAIN_DATA_10_ID, 374);
+    
+    // Battery_Mgmt_3_FD1 (0x43C, 1084 decimal)
+    EXPECT_EQ(BATTERY_MGMT_3_FD1_ID, 0x43C);
+    EXPECT_EQ(BATTERY_MGMT_3_FD1_ID, 1084);
+    
+    printf("Message ID Constants Validation:\n");
+    printf("  BCM_Lamp_Stat_FD1: 0x%03X (%d)\n", BCM_LAMP_STAT_FD1_ID, BCM_LAMP_STAT_FD1_ID);
+    printf("  Locking_Systems_2_FD1: 0x%03X (%d)\n", LOCKING_SYSTEMS_2_FD1_ID, LOCKING_SYSTEMS_2_FD1_ID);
+    printf("  PowertrainData_10: 0x%03X (%d)\n", POWERTRAIN_DATA_10_ID, POWERTRAIN_DATA_10_ID);
+    printf("  Battery_Mgmt_3_FD1: 0x%03X (%d)\n", BATTERY_MGMT_3_FD1_ID, BATTERY_MGMT_3_FD1_ID);
+}
+
+TEST_F(MessageParserTest, TargetMessageRecognition) {
+    // Test isTargetCANMessage() function
+    
+    // Test target messages
+    EXPECT_TRUE(isTargetCANMessage(BCM_LAMP_STAT_FD1_ID));
+    EXPECT_TRUE(isTargetCANMessage(LOCKING_SYSTEMS_2_FD1_ID));
+    EXPECT_TRUE(isTargetCANMessage(POWERTRAIN_DATA_10_ID));
+    EXPECT_TRUE(isTargetCANMessage(BATTERY_MGMT_3_FD1_ID));
+    
+    // Test non-target messages
+    EXPECT_FALSE(isTargetCANMessage(0x100));
+    EXPECT_FALSE(isTargetCANMessage(0x200));
+    EXPECT_FALSE(isTargetCANMessage(0x7FF));
+    EXPECT_FALSE(isTargetCANMessage(0x000));
+    
+    // Test the old wrong IDs that were in the code before our fix
+    EXPECT_FALSE(isTargetCANMessage(0x3B3)); // Old BCM_LAMP_STAT_FD1_ID
+    EXPECT_FALSE(isTargetCANMessage(0x3B8)); // Old LOCKING_SYSTEMS_2_FD1_ID  
+    EXPECT_FALSE(isTargetCANMessage(0x204)); // Old POWERTRAIN_DATA_10_ID
+    EXPECT_FALSE(isTargetCANMessage(0x3D2)); // Old BATTERY_MGMT_3_FD1_ID
+}
+
+// ===============================================
+// Test Suite: BCM_Lamp_Stat_FD1 Message Parsing
+// ===============================================
+
+TEST_F(MessageParserTest, BCMLampStatusBasicParsing) {
+    // Test basic BCM_Lamp_Stat_FD1 message parsing
+    // Python defines: PudLamp_D_Rq (bits 11-12, 2 bits)
+    
+    uint8_t testData[8] = {0};
+    setSignalValue(testData, 12, 2, 1); // PudLamp_D_Rq = ON (1)
+    
+    CANFrame frame = createCANFrame(BCM_LAMP_STAT_FD1_ID, testData);
+    BCMLampData result = parseBCMLampFrame(&frame);
+    
+    EXPECT_TRUE(result.valid);
+    EXPECT_EQ(result.pudLampRequest, 1); // PUDLAMP_ON
+}
+
+TEST_F(MessageParserTest, BCMLampStatusPythonValueMapping) {
+    // Test Python value mappings for PudLamp_D_Rq:
+    // {0: "OFF", 1: "ON", 2: "RAMP_UP", 3: "RAMP_DOWN"}
+    
+    struct TestCase {
+        uint8_t rawValue;
+        uint8_t expectedConstant;
+        const char* description;
+    };
+    
+    TestCase testCases[] = {
+        {0, PUDLAMP_OFF, "OFF"},
+        {1, PUDLAMP_ON, "ON"}, 
+        {2, PUDLAMP_RAMP_UP, "RAMP_UP"},
+        {3, PUDLAMP_RAMP_DOWN, "RAMP_DOWN"}
+    };
+    
+    for (const auto& testCase : testCases) {
+        uint8_t testData[8] = {0};
+        setSignalValue(testData, 12, 2, testCase.rawValue);
+        
+        CANFrame frame = createCANFrame(BCM_LAMP_STAT_FD1_ID, testData);
+        BCMLampData result = parseBCMLampFrame(&frame);
+        
+        EXPECT_TRUE(result.valid) << "Failed for " << testCase.description;
+        EXPECT_EQ(result.pudLampRequest, testCase.expectedConstant) << "Value mismatch for " << testCase.description;
+        
+        // Verify our bit extraction matches Python implementation
+        uint32_t pythonValue = pythonExtractBits(testData, 12, 2);
+        EXPECT_EQ(pythonValue, testCase.rawValue) << "Python extraction mismatch for " << testCase.description;
+    }
+}
+
+TEST_F(MessageParserTest, BCMLampStatusInvalidMessage) {
+    // Test invalid message ID
+    uint8_t testData[8] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
+    CANFrame frame = createCANFrame(0x999, testData); // Wrong ID
+    BCMLampData result = parseBCMLampFrame(&frame);
+    
+    EXPECT_FALSE(result.valid);
+    
+    // Test invalid length
+    frame.id = BCM_LAMP_STAT_FD1_ID;
+    frame.length = 4; // Wrong length
+    
+    result = parseBCMLampFrame(&frame);
+    EXPECT_FALSE(result.valid);
+}
+
+// ===============================================
+// Test Suite: Locking_Systems_2_FD1 Message Parsing  
+// ===============================================
+
+TEST_F(MessageParserTest, LockingSystemsBasicParsing) {
+    // Test Locking_Systems_2_FD1 message parsing
+    // Python defines: Veh_Lock_Status (bits 34-35, 2 bits)
+    
+    uint8_t testData[8] = {0};
+    setSignalValue(testData, 35, 2, 2); // Veh_Lock_Status = UNLOCK_ALL (2)
+    
+    CANFrame frame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, testData);
+    LockingSystemsData result = parseLockingSystemsFrame(&frame);
+    
+    EXPECT_TRUE(result.valid);
+    EXPECT_EQ(result.vehicleLockStatus, 2); // VEH_UNLOCK_ALL
+}
+
+TEST_F(MessageParserTest, LockingSystemsPythonValueMapping) {
+    // Test Python value mappings for Veh_Lock_Status:
+    // {0: "LOCK_DBL", 1: "LOCK_ALL", 2: "UNLOCK_ALL", 3: "UNLOCK_DRV"}
+    
+    struct TestCase {
+        uint8_t rawValue;
+        uint8_t expectedConstant;
+        const char* description;
+    };
+    
+    TestCase testCases[] = {
+        {0, VEH_LOCK_DBL, "LOCK_DBL"},
+        {1, VEH_LOCK_ALL, "LOCK_ALL"},
+        {2, VEH_UNLOCK_ALL, "UNLOCK_ALL"},
+        {3, VEH_UNLOCK_DRV, "UNLOCK_DRV"}
+    };
+    
+    for (const auto& testCase : testCases) {
+        uint8_t testData[8] = {0};
+        setSignalValue(testData, 35, 2, testCase.rawValue);
+        
+        CANFrame frame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, testData);
+        LockingSystemsData result = parseLockingSystemsFrame(&frame);
+        
+        EXPECT_TRUE(result.valid) << "Failed for " << testCase.description;
+        EXPECT_EQ(result.vehicleLockStatus, testCase.expectedConstant) << "Value mismatch for " << testCase.description;
+        
+        // Verify our bit extraction matches Python implementation
+        uint32_t pythonValue = pythonExtractBits(testData, 35, 2);
+        EXPECT_EQ(pythonValue, testCase.rawValue) << "Python extraction mismatch for " << testCase.description;
+    }
+}
+
+// ===============================================
+// Test Suite: PowertrainData_10 Message Parsing
+// ===============================================
+
+TEST_F(MessageParserTest, PowertrainDataBasicParsing) {
+    // Test PowertrainData_10 message parsing
+    // Python defines: TrnPrkSys_D_Actl (bits 31-34, 4 bits)
+    
+    uint8_t testData[8] = {0};
+    setSignalValue(testData, 34, 4, 1); // TrnPrkSys_D_Actl = PARK (1)
+    
+    CANFrame frame = createCANFrame(POWERTRAIN_DATA_10_ID, testData);
+    PowertrainData result = parsePowertrainFrame(&frame);
+    
+    EXPECT_TRUE(result.valid);
+    EXPECT_EQ(result.transmissionParkStatus, 1); // TRNPRKSTS_PARK
+}
+
+TEST_F(MessageParserTest, PowertrainDataPythonValueMapping) {
+    // Test Python value mappings for TrnPrkSys_D_Actl:
+    // {0: "NotKnown", 1: "Park", 2: "TransitionCloseToPark", 3: "AtNoSpring", 
+    //  4: "TransitionCloseToOutOfPark", 5: "OutOfPark", 6: "Override", 7: "OutOfRangeLow",
+    //  8: "OutOfRangeHigh", 9: "FrequencyError", 15: "Faulty"}
+    
+    struct TestCase {
+        uint8_t rawValue;
+        uint8_t expectedConstant;
+        const char* description;
+    };
+    
+    TestCase testCases[] = {
+        {0, TRNPRKSTS_UNKNOWN, "NotKnown"},
+        {1, TRNPRKSTS_PARK, "Park"},
+        {2, TRNPRKSTS_TRANSITION_CLOSE_TO_PARK, "TransitionCloseToPark"},
+        {3, TRNPRKSTS_AT_NO_SPRING, "AtNoSpring"},
+        {4, TRNPRKSTS_TRANSITION_CLOSE_TO_OUT_OF_PARK, "TransitionCloseToOutOfPark"},
+        {5, TRNPRKSTS_OUT_OF_PARK, "OutOfPark"},
+        // Test some higher values that should still parse correctly
+        {6, 6, "Override"},
+        {15, 15, "Faulty"}
+    };
+    
+    for (const auto& testCase : testCases) {
+        uint8_t testData[8] = {0};
+        setSignalValue(testData, 34, 4, testCase.rawValue);
+        
+        CANFrame frame = createCANFrame(POWERTRAIN_DATA_10_ID, testData);
+        PowertrainData result = parsePowertrainFrame(&frame);
+        
+        EXPECT_TRUE(result.valid) << "Failed for " << testCase.description;
+        EXPECT_EQ(result.transmissionParkStatus, testCase.expectedConstant) << "Value mismatch for " << testCase.description;
+        
+        // Verify our bit extraction matches Python implementation
+        uint32_t pythonValue = pythonExtractBits(testData, 34, 4);
+        EXPECT_EQ(pythonValue, testCase.rawValue) << "Python extraction mismatch for " << testCase.description;
+    }
+}
+
+// ===============================================
+// Test Suite: Battery_Mgmt_3_FD1 Message Parsing
+// ===============================================
+
+TEST_F(MessageParserTest, BatteryManagementBasicParsing) {
+    // Test Battery_Mgmt_3_FD1 message parsing
+    // Python defines: BSBattSOC (bits 22-28, 7 bits) - Raw percentage value
+    
+    uint8_t testData[8] = {0};
+    setSignalValue(testData, 28, 7, 85); // Battery SOC = 85%
+    
+    CANFrame frame = createCANFrame(BATTERY_MGMT_3_FD1_ID, testData);
+    BatteryData result = parseBatteryFrame(&frame);
+    
+    EXPECT_TRUE(result.valid);
+    EXPECT_EQ(result.batterySOC, 85);
+}
+
+TEST_F(MessageParserTest, BatteryManagementRangeValues) {
+    // Test various battery percentage values (0-127% as defined by 7-bit field)
+    
+    struct TestCase {
+        uint8_t rawValue;
+        const char* description;
+    };
+    
+    TestCase testCases[] = {
+        {0, "0% - Empty"},
+        {50, "50% - Half"},
+        {85, "85% - Typical"},
+        {100, "100% - Full"},
+        {127, "127% - Maximum (7-bit)"}
+    };
+    
+    for (const auto& testCase : testCases) {
+        uint8_t testData[8] = {0};
+        setSignalValue(testData, 28, 7, testCase.rawValue);
+        
+        CANFrame frame = createCANFrame(BATTERY_MGMT_3_FD1_ID, testData);
+        BatteryData result = parseBatteryFrame(&frame);
+        
+        EXPECT_TRUE(result.valid) << "Failed for " << testCase.description;
+        EXPECT_EQ(result.batterySOC, testCase.rawValue) << "Value mismatch for " << testCase.description;
+        
+        // Verify our bit extraction matches Python implementation
+        uint32_t pythonValue = pythonExtractBits(testData, 28, 7);
+        EXPECT_EQ(pythonValue, testCase.rawValue) << "Python extraction mismatch for " << testCase.description;
+    }
+}
+
+// ===============================================
+// Test Suite: Decision Logic Functions
+// ===============================================
+
+TEST_F(MessageParserTest, VehicleStateDecisionLogic) {
+    // Test shouldActivateToolbox logic
+    EXPECT_TRUE(shouldActivateToolbox(true, true, true));   // All conditions met
+    EXPECT_FALSE(shouldActivateToolbox(false, true, true)); // System not ready
+    EXPECT_FALSE(shouldActivateToolbox(true, false, true)); // Not parked
+    EXPECT_FALSE(shouldActivateToolbox(true, true, false)); // Not unlocked
+    EXPECT_FALSE(shouldActivateToolbox(false, false, false)); // No conditions met
+    
+    // Test shouldEnableBedlight logic (ON or RAMP_UP)
+    EXPECT_FALSE(shouldEnableBedlight(PUDLAMP_OFF));
+    EXPECT_TRUE(shouldEnableBedlight(PUDLAMP_ON));
+    EXPECT_TRUE(shouldEnableBedlight(PUDLAMP_RAMP_UP));
+    EXPECT_FALSE(shouldEnableBedlight(PUDLAMP_RAMP_DOWN));
+    
+    // Test isVehicleUnlocked logic (UNLOCK_ALL or UNLOCK_DRV)
+    EXPECT_FALSE(isVehicleUnlocked(VEH_LOCK_DBL));
+    EXPECT_FALSE(isVehicleUnlocked(VEH_LOCK_ALL));
+    EXPECT_TRUE(isVehicleUnlocked(VEH_UNLOCK_ALL));
+    EXPECT_TRUE(isVehicleUnlocked(VEH_UNLOCK_DRV));
+    
+    // Test isVehicleParked logic (only PARK)
+    EXPECT_FALSE(isVehicleParked(TRNPRKSTS_UNKNOWN));
+    EXPECT_TRUE(isVehicleParked(TRNPRKSTS_PARK));
+    EXPECT_FALSE(isVehicleParked(TRNPRKSTS_TRANSITION_CLOSE_TO_PARK));
+    EXPECT_FALSE(isVehicleParked(TRNPRKSTS_OUT_OF_PARK));
+}
+
+// ===============================================
+// Test Suite: Comprehensive Message Validation
+// ===============================================
+
+TEST_F(MessageParserTest, ComprehensiveMessageValidation) {
+    // Test all message types with a single comprehensive test
+    // This ensures the parsing pipeline works end-to-end
+    
+    // Create test messages for all types
+    uint8_t bcmData[8] = {0};
+    setSignalValue(bcmData, 12, 2, PUDLAMP_ON);
+    CANFrame bcmFrame = createCANFrame(BCM_LAMP_STAT_FD1_ID, bcmData);
+    
+    uint8_t lockData[8] = {0};
+    setSignalValue(lockData, 35, 2, VEH_UNLOCK_ALL);
+    CANFrame lockFrame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, lockData);
+    
+    uint8_t powerData[8] = {0};
+    setSignalValue(powerData, 34, 4, TRNPRKSTS_PARK);
+    CANFrame powerFrame = createCANFrame(POWERTRAIN_DATA_10_ID, powerData);
+    
+    uint8_t battData[8] = {0};
+    setSignalValue(battData, 28, 7, 95);
+    CANFrame battFrame = createCANFrame(BATTERY_MGMT_3_FD1_ID, battData);
+    
+    // Parse all messages
+    BCMLampData bcmResult = parseBCMLampFrame(&bcmFrame);
+    LockingSystemsData lockResult = parseLockingSystemsFrame(&lockFrame);
+    PowertrainData powerResult = parsePowertrainFrame(&powerFrame);
+    BatteryData battResult = parseBatteryFrame(&battFrame);
+    
+    // Validate all parsed values
+    EXPECT_TRUE(bcmResult.valid);
+    EXPECT_EQ(bcmResult.pudLampRequest, PUDLAMP_ON);
+    
+    EXPECT_TRUE(lockResult.valid);
+    EXPECT_EQ(lockResult.vehicleLockStatus, VEH_UNLOCK_ALL);
+    
+    EXPECT_TRUE(powerResult.valid);
+    EXPECT_EQ(powerResult.transmissionParkStatus, TRNPRKSTS_PARK);
+    
+    EXPECT_TRUE(battResult.valid);
+    EXPECT_EQ(battResult.batterySOC, 95);
+    
+    // Test the decision logic with these parsed values
+    bool bedlightShouldBeOn = shouldEnableBedlight(bcmResult.pudLampRequest);
+    bool vehicleIsUnlocked = isVehicleUnlocked(lockResult.vehicleLockStatus);
+    bool vehicleIsParked = isVehicleParked(powerResult.transmissionParkStatus);
+    bool toolboxShouldOpen = shouldActivateToolbox(true, vehicleIsParked, vehicleIsUnlocked);
+    
+    EXPECT_TRUE(bedlightShouldBeOn);  // PUDLAMP_ON
+    EXPECT_TRUE(vehicleIsUnlocked);   // VEH_UNLOCK_ALL
+    EXPECT_TRUE(vehicleIsParked);     // TRNPRKSTS_PARK
+    EXPECT_TRUE(toolboxShouldOpen);   // All conditions met
+}
+
+// Main function removed - using unified test runner in test_main.cpp

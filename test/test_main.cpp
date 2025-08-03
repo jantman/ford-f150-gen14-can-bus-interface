@@ -253,6 +253,21 @@ TEST_F(ArduinoTest, ErrorHandlingRobustness) {
 }
 
 // ===============================================
+// Integration with Message Parser Test Suites
+// ===============================================
+//
+// NOTE: This test file focuses on basic Arduino functionality and integration tests.
+// More comprehensive message parsing tests are located in:
+//
+// - test_can_bit_extraction.cpp: Validates bit extraction logic against Python implementation
+// - test_message_parser.cpp: Tests message parsing functions with real CAN data 
+// - test_vehicle_state_management.cpp: Tests state management logic and decision making
+// - test_can_message_recognition.cpp: Tests CAN message filtering and recognition
+//
+// These additional test suites provide comprehensive validation of our CAN message
+// processing pipeline against the working Python can_embedded_logger.py implementation.
+
+// ===============================================
 // State Management Integration Tests (HIGH PRIORITY)
 // ===============================================
 

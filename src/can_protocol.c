@@ -148,3 +148,11 @@ bool isVehicleUnlocked(uint8_t vehicleLockStatus) {
 bool isVehicleParked(uint8_t transmissionParkStatus) {
     return (transmissionParkStatus == 1);  // Park
 }
+
+// Check if a CAN message ID is one of our target messages (matching Python implementation)
+bool isTargetCANMessage(uint32_t messageId) {
+    return (messageId == BCM_LAMP_STAT_FD1_ID ||
+            messageId == LOCKING_SYSTEMS_2_FD1_ID ||
+            messageId == POWERTRAIN_DATA_10_ID ||
+            messageId == BATTERY_MGMT_3_FD1_ID);
+}
