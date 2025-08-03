@@ -14,8 +14,8 @@
 #define TOOLBOX_BUTTON_PIN 17   // Input: Toolbox unlock button (with pullup)
 
 // CAN Bus Configuration
-#define CAN_TX_PIN 21           // ESP32-S3 CAN TX (adjust for your board)
-#define CAN_RX_PIN 22           // ESP32-S3 CAN RX (adjust for your board)
+#define CAN_TX_PIN 20           // ESP32-S3 TWAI TX (check your specific board)
+#define CAN_RX_PIN 19           // ESP32-S3 TWAI RX (check your specific board)
 #define CAN_BAUDRATE 500000     // 500kbps - standard automotive rate
 
 // CAN Message IDs (from minimal.dbc)

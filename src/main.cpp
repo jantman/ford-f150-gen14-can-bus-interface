@@ -3,7 +3,7 @@
 
 // Module includes (will be created in subsequent steps)
 // #include "can_manager.h"
-// #include "gpio_controller.h"
+#include "gpio_controller.h"
 // #include "message_parser.h"
 // #include "state_manager.h"
 // #include "logger.h"
@@ -24,8 +24,11 @@ void setup() {
     LOG_INFO("Starting initialization...");
     
     // Initialize GPIO (Step 2)
-    // TODO: Initialize GPIO pins
-    LOG_INFO("TODO: Initialize GPIO pins");
+    if (!initializeGPIO()) {
+        LOG_ERROR("Failed to initialize GPIO pins");
+        return;
+    }
+    LOG_INFO("GPIO initialization successful");
     
     // Initialize CAN bus (Step 3)
     // TODO: Initialize CAN bus
@@ -37,6 +40,9 @@ void setup() {
     
     systemInitialized = true;
     LOG_INFO("System initialization complete");
+    
+    // Uncomment the line below to test all GPIO outputs on startup
+    // testAllOutputs();
     
     // Print pin configuration for verification
     LOG_INFO("Pin Configuration:");
@@ -68,6 +74,9 @@ void loop() {
     
     // Handle button input (Step 6)
     // TODO: Process toolbox button with debouncing
+    
+    // Update GPIO timing (toolbox opener auto-shutoff)
+    updateToolboxOpenerTiming();
     
     // Update outputs (Step 7)
     // TODO: Update all output pins based on current state
