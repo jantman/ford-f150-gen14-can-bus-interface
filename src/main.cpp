@@ -12,8 +12,25 @@
 bool systemInitialized = false;
 unsigned long lastHeartbeat = 0;
 unsigned long lastCANStats = 0;
+unsigned long lastOutputUpdate = 0;
 const unsigned long HEARTBEAT_INTERVAL = 10000; // 10 seconds
 const unsigned long CAN_STATS_INTERVAL = 30000; // 30 seconds
+const unsigned long OUTPUT_UPDATE_INTERVAL = 100; // 100ms for output updates
+
+// Output control state tracking
+struct OutputState {
+    bool bedlightActive;
+    bool parkedLEDActive;
+    bool unlockedLEDActive;
+    bool prevBedlightActive;
+    bool prevParkedLEDActive;
+    bool prevUnlockedLEDActive;
+};
+static OutputState outputState = {false, false, false, false, false, false};
+
+// Function declarations
+void updateOutputControlLogic();
+void printSystemInfo();
 
 void setup() {
     // Initialize serial communication
@@ -155,11 +172,105 @@ void loop() {
     // Update GPIO timing (toolbox opener auto-shutoff)
     updateToolboxOpenerTiming();
     
-    // Update outputs (Step 7)
-    // TODO: Update all output pins based on current state
+    // Update outputs based on vehicle state (Step 7)
+    updateOutputControlLogic();
     
     // Small delay to prevent overwhelming the CPU
     delay(10);
+}
+
+// Output Control Logic (Step 7) - Update all GPIO outputs based on vehicle state
+void updateOutputControlLogic() {
+    if (!systemInitialized) {
+        return;
+    }
+    
+    unsigned long currentTime = millis();
+    
+    // Throttle output updates to avoid excessive GPIO operations
+    if (currentTime - lastOutputUpdate < OUTPUT_UPDATE_INTERVAL) {
+        return;
+    }
+    lastOutputUpdate = currentTime;
+    
+    // Get current vehicle state
+    VehicleState vehicleState = getCurrentState();
+    
+    // Store previous output states for change detection
+    outputState.prevBedlightActive = outputState.bedlightActive;
+    outputState.prevParkedLEDActive = outputState.parkedLEDActive;
+    outputState.prevUnlockedLEDActive = outputState.unlockedLEDActive;
+    
+    // === Bed Light Control Logic ===
+    // Control bedlight based on PudLamp_D_Rq signal from BCM_Lamp_Stat_FD1
+    if (vehicleState.systemReady) {
+        outputState.bedlightActive = vehicleState.bedlightShouldBeOn;
+    } else {
+        // If system not ready, turn off bedlight for safety
+        outputState.bedlightActive = false;
+    }
+    
+    // === Parked LED Control Logic ===
+    // Control parked LED based on TrnPrkSys_D_Actl signal from PowertrainData_10
+    if (vehicleState.systemReady) {
+        outputState.parkedLEDActive = vehicleState.isParked;
+    } else {
+        // If system not ready, turn off parked LED
+        outputState.parkedLEDActive = false;
+    }
+    
+    // === Unlocked LED Control Logic ===
+    // Control unlocked LED based on Veh_Lock_Status signal from Locking_Systems_2_FD1
+    if (vehicleState.systemReady) {
+        outputState.unlockedLEDActive = vehicleState.isUnlocked;
+    } else {
+        // If system not ready, turn off unlocked LED
+        outputState.unlockedLEDActive = false;
+    }
+    
+    // === Apply GPIO Changes (only if state changed to minimize GPIO operations) ===
+    
+    // Update bedlight if state changed
+    if (outputState.bedlightActive != outputState.prevBedlightActive) {
+        setBedlight(outputState.bedlightActive);
+        LOG_INFO("Bedlight %s (PudLamp state: %d)", 
+                 outputState.bedlightActive ? "ON" : "OFF", 
+                 vehicleState.pudLampRequest);
+    }
+    
+    // Update parked LED if state changed
+    if (outputState.parkedLEDActive != outputState.prevParkedLEDActive) {
+        setParkedLED(outputState.parkedLEDActive);
+        LOG_INFO("Parked LED %s (transmission park status: %d)", 
+                 outputState.parkedLEDActive ? "ON" : "OFF", 
+                 vehicleState.transmissionParkStatus);
+    }
+    
+    // Update unlocked LED if state changed
+    if (outputState.unlockedLEDActive != outputState.prevUnlockedLEDActive) {
+        setUnlockedLED(outputState.unlockedLEDActive);
+        LOG_INFO("Unlocked LED %s (vehicle lock status: %d)", 
+                 outputState.unlockedLEDActive ? "ON" : "OFF", 
+                 vehicleState.vehicleLockStatus);
+    }
+    
+    // === Toolbox Opener Logic ===
+    // Toolbox opener is handled by button press events in the main loop
+    // The timing shutoff is handled by updateToolboxOpenerTiming()
+    // No additional logic needed here as it's event-driven
+    
+    // Periodic status logging (every 30 seconds when outputs are active)
+    static unsigned long lastStatusLog = 0;
+    if (currentTime - lastStatusLog >= 30000) {
+        if (outputState.bedlightActive || outputState.parkedLEDActive || outputState.unlockedLEDActive) {
+            LOG_DEBUG("Output Status: Bedlight=%s, ParkedLED=%s, UnlockedLED=%s, System=%s",
+                      outputState.bedlightActive ? "ON" : "OFF",
+                      outputState.parkedLEDActive ? "ON" : "OFF", 
+                      outputState.unlockedLEDActive ? "ON" : "OFF",
+                      vehicleState.systemReady ? "READY" : "NOT_READY");
+        }
+        lastStatusLog = currentTime;
+    }
 }
 
 // Helper function to print system information
