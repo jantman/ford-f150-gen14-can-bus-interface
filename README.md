@@ -15,7 +15,89 @@ Interface for doing various things in response to messages on the CAN bus of my 
 
 ## Software
 
-TBD.
+This project implements a Ford F150 Gen14 CAN bus interface using Arduino Framework with PlatformIO on the AutoSport Labs ESP32-CAN-X2 development board.
+
+### Features
+
+* Monitors CAN bus messages for bed lights, door locks, transmission park status, and battery state
+* Controls bed light relay based on vehicle puddle lamp status
+* Controls status LEDs for vehicle lock and park status
+* Provides secure toolbox unlock functionality (only when vehicle is unlocked and in park)
+* Comprehensive logging and error handling
+* Modular, maintainable code architecture
+
+### Building and Flashing
+
+#### Prerequisites
+
+1. **Install PlatformIO Core** or **PlatformIO IDE**:
+   - **Option A - PlatformIO Core (Command Line)**:
+     ```bash
+     pip install platformio
+     ```
+   - **Option B - PlatformIO IDE**: Install the PlatformIO extension in VS Code
+
+2. **Hardware Requirements**:
+   - AutoSport Labs ESP32-CAN-X2 development board
+   - USB cable for programming
+   - CAN bus connection to vehicle (HS-CAN3 at 500kbps)
+
+#### Building the Project
+
+1. **Clone and navigate to the project**:
+   ```bash
+   git clone <repository-url>
+   cd ford-f150-gen14-can-bus-interface
+   ```
+
+2. **Build the project**:
+   ```bash
+   pio run
+   ```
+
+#### Flashing to ESP32
+
+1. **Connect the ESP32-CAN-X2 board** via USB
+
+2. **Flash the firmware**:
+   ```bash
+   pio run --target upload
+   ```
+
+3. **Monitor serial output**:
+   ```bash
+   pio device monitor
+   ```
+
+#### Configuration
+
+Before flashing, you may want to adjust the pin assignments in `src/config.h`:
+
+```cpp
+#define BEDLIGHT_PIN 5          // Output: Controls bed light relay
+#define PARKED_LED_PIN 16       // Output: LED indicating vehicle is parked  
+#define UNLOCKED_LED_PIN 15     // Output: LED indicating vehicle is unlocked
+#define TOOLBOX_OPENER_PIN 4    // Output: Controls toolbox opener relay
+#define TOOLBOX_BUTTON_PIN 17   // Input: Toolbox unlock button
+```
+
+#### Troubleshooting
+
+- **Upload fails**: Ensure the ESP32 is in download mode (hold BOOT button while pressing RESET)
+- **CAN messages not received**: Verify CAN bus connections and 120Ω termination
+- **No serial output**: Check that `ARDUINO_USB_CDC_ON_BOOT=1` is set in platformio.ini
+- **Memory issues**: Monitor free heap in serial output; reduce debug level if needed
+
+#### Development
+
+The code is organized into modules:
+- `main.cpp` - Main application loop
+- `config.h` - Pin definitions and constants
+- `can_manager.h/cpp` - CAN bus communication
+- `message_parser.h/cpp` - DBC message parsing
+- `gpio_controller.h/cpp` - GPIO control
+- `state_manager.h/cpp` - Vehicle state tracking
+- `logger.h/cpp` - Logging utilities
 
 ## Hardware
 
