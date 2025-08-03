@@ -103,5 +103,5 @@ void cmd_system_info() {
     LOG_INFO("Parked LED: %s", gpioState.parkedLED ? "ON" : "OFF");
     LOG_INFO("Unlocked LED: %s", gpioState.unlockedLED ? "ON" : "OFF");
     LOG_INFO("Toolbox Opener: %s", gpioState.toolboxOpener ? "ACTIVE" : "INACTIVE");
-    LOG_INFO("Button State: %s", gpioState.buttonPressed ? "PRESSED" : "RELEASED");
+    LOG_INFO("Button State: %s", gpioState.toolboxButton ? "PRESSED" : "RELEASED");
 }
