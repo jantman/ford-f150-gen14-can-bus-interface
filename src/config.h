@@ -16,8 +16,9 @@
 // CAN Bus Configuration (Listen-Only Mode)
 // Note: Both TX and RX pins needed for TWAI controller, even in listen-only mode
 // TX/RX refer to the ESP32↔transceiver connection, not the actual CAN_H/CAN_L bus
-#define CAN_TX_PIN 20           // ESP32-S3 TWAI TX to transceiver (verify with your ESP32-CAN-X2 board)
-#define CAN_RX_PIN 19           // ESP32-S3 TWAI RX from transceiver (verify with your ESP32-CAN-X2 board)
+// Pin assignments for AutoSport Labs ESP32-CAN-X2 board (X1/CAN1 interface)
+#define CAN_TX_PIN 7            // ESP32-S3 TWAI TX to onboard CAN transceiver (X1/CAN1)
+#define CAN_RX_PIN 6            // ESP32-S3 TWAI RX from onboard CAN transceiver (X1/CAN1)
 #define CAN_BAUDRATE 500000     // 500kbps - standard automotive rate
 
 // CAN Message IDs (from minimal.dbc)
