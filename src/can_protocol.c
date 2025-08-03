@@ -1,4 +1,5 @@
 #include "can_protocol.h"
+#include "config.h"
 
 // Pure bit manipulation (no Arduino dependencies)
 uint8_t extractBits(const uint8_t* data, uint8_t startBit, uint8_t length) {

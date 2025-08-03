@@ -55,12 +55,6 @@ bool isVehicleUnlocked(uint8_t vehicleLockStatus);
 bool isVehicleParked(uint8_t transmissionParkStatus);
 bool isTargetCANMessage(uint32_t messageId);
 
-// CAN message ID constants (validated against working Python implementation)
-#define BCM_LAMP_STAT_FD1_ID    0x3C3  // 963 decimal - BCM_Lamp_Stat_FD1
-#define LOCKING_SYSTEMS_2_FD1_ID 0x331  // 817 decimal - Locking_Systems_2_FD1
-#define POWERTRAIN_DATA_10_ID   0x176  // 374 decimal - PowertrainData_10
-#define BATTERY_MGMT_3_FD1_ID   0x43C  // 1084 decimal - Battery_Mgmt_3_FD1
-
 #ifdef __cplusplus
 }
 #endif

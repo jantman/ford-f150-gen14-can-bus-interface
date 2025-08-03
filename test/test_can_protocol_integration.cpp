@@ -3,6 +3,7 @@
 // Include the ACTUAL production code (pure logic, no Arduino dependencies)
 extern "C" {
     #include "../src/can_protocol.h"
+    #include "../src/config.h"  // For CAN message ID constants
 }
 
 class CANProtocolTest : public ::testing::Test {
