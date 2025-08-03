@@ -1,0 +1,293 @@
+# Ford F150 Gen14 CAN Bus Technical Documentation
+
+## CAN Message Specifications
+
+This document details the specific CAN messages and signals used by the Ford F150 Gen14 CAN Bus Interface.
+
+## CAN Bus Configuration
+
+- **Speed**: 500 kbps
+- **Frame Format**: Standard CAN 2.0A (11-bit identifiers)
+- **Bus**: High-Speed CAN (HS-CAN)
+- **Termination**: 120Ω (verify termination requirements for your specific installation)
+
+## Monitored CAN Messages
+
+### BCM_Lamp_Stat_FD1 (0x3B3)
+**Body Control Module Lamp Status**
+
+| Field | Start Bit | Length | Values | Description |
+|-------|-----------|--------|---------|-------------|
+| PudLamp_D_Rq | 11 | 2 bits | 0=OFF, 1=ON, 2=RAMP_UP, 3=RAMP_DOWN | Puddle lamp request status |
+| IlluminatedEntry_D_Stat | 13 | 2 bits | Status values | Illuminated entry status |
+| DrCourtesyLight_D_Stat | 15 | 2 bits | Status values | Driver courtesy light status |
+
+**Usage**: Controls bedlight based on PudLamp_D_Rq signal
+- Bedlight ON when PudLamp_D_Rq = 1 (ON) or 2 (RAMP_UP)
+- Bedlight OFF when PudLamp_D_Rq = 0 (OFF) or 3 (RAMP_DOWN)
+
+### Locking_Systems_2_FD1 (0x3B8)
+**Vehicle Locking Systems Status**
+
+| Field | Start Bit | Length | Values | Description |
+|-------|-----------|--------|---------|-------------|
+| Veh_Lock_Status | 34 | 2 bits | 0=DBL_LOCK, 1=LOCK_ALL, 2=UNLOCK_ALL, 3=UNLOCK_DRV | Vehicle lock status |
+
+**Usage**: Controls unlocked LED and toolbox activation logic
+- Unlocked LED ON when Veh_Lock_Status = 2 (UNLOCK_ALL) or 3 (UNLOCK_DRV)
+- Required for toolbox activation (must be unlocked)
+
+### PowertrainData_10 (0x204)
+**Powertrain Data Message**
+
+| Field | Start Bit | Length | Values | Description |
+|-------|-----------|--------|---------|-------------|
+| TrnPrkSys_D_Actl | 31 | 4 bits | 0=UNKNOWN, 1=PARK, others=NOT_PARK | Transmission park system status |
+
+**Usage**: Controls parked LED and toolbox activation logic
+- Parked LED ON when TrnPrkSys_D_Actl = 1 (PARK)
+- Required for toolbox activation (must be parked)
+
+### Battery_Mgmt_3_FD1 (0x3D2)
+**Battery Management Status**
+
+| Field | Start Bit | Length | Values | Description |
+|-------|-----------|--------|---------|-------------|
+| Battery_SOC | Various | 8 bits | 0-100 | Battery state of charge percentage |
+
+**Usage**: System health monitoring (timeout detection)
+
+## Signal Processing Logic
+
+### Bit Extraction Algorithm
+The application uses a robust bit extraction function that handles:
+- Cross-byte boundary extraction
+- Proper bit ordering (LSB first)
+- Bounds checking and validation
+- Support for 1-8 bit fields
+
+### Message Validation
+Each CAN message is validated for:
+- Correct message ID
+- Proper message length (8 bytes)
+- Signal value ranges
+- Timestamp freshness (5-second timeout)
+
+### State Management
+The system maintains comprehensive state tracking:
+
+```c
+typedef struct {
+    // Current signal values
+    uint8_t pudLampRequest;
+    uint8_t vehicleLockStatus;
+    uint8_t transmissionParkStatus;
+    uint8_t batterySOC;
+    
+    // Previous values for change detection
+    uint8_t prevPudLampRequest;
+    uint8_t prevVehicleLockStatus;
+    uint8_t prevTransmissionParkStatus;
+    uint8_t prevBatterySOC;
+    
+    // Timestamps for timeout detection
+    unsigned long lastBCMLampUpdate;
+    unsigned long lastLockingSystemsUpdate;
+    unsigned long lastPowertrainUpdate;
+    unsigned long lastBatteryUpdate;
+    
+    // Derived states
+    bool isUnlocked;
+    bool isParked;
+    bool bedlightShouldBeOn;
+    bool systemReady;
+} VehicleState;
+```
+
+## Decision Logic Functions
+
+### Bedlight Control
+```c
+bool shouldEnableBedlight(uint8_t pudLampRequest) {
+    return (pudLampRequest == 1 || pudLampRequest == 2);  // ON or RAMP_UP
+}
+```
+
+### Vehicle Status Detection
+```c
+bool isVehicleUnlocked(uint8_t vehicleLockStatus) {
+    return (vehicleLockStatus == 2 || vehicleLockStatus == 3);  // UNLOCK_ALL or UNLOCK_DRV
+}
+
+bool isVehicleParked(uint8_t transmissionParkStatus) {
+    return (transmissionParkStatus == 1);  // PARK
+}
+```
+
+### Toolbox Activation Logic
+```c
+bool shouldActivateToolbox(bool systemReady, bool isParked, bool isUnlocked) {
+    return systemReady && isParked && isUnlocked;
+}
+```
+
+## System Health Monitoring
+
+### Timeout Detection
+- **Timeout Period**: 5000ms (5 seconds)
+- **Monitored Messages**: All four CAN messages
+- **Action**: System marked as "not ready" if any message times out
+- **Recovery**: Automatic when fresh messages received
+
+### Error Handling
+- **CAN Bus Errors**: Automatic reinitialization
+- **GPIO Errors**: Automatic reinitialization  
+- **Critical Errors**: Safe shutdown mode (all outputs disabled)
+- **Watchdog**: System health monitoring every loop cycle
+
+## Performance Characteristics
+
+### Memory Usage
+- **RAM**: 20,316 bytes (6.2% of 327,680 bytes available)
+- **Flash**: 346,624 bytes (26.4% of 1,310,720 bytes available)
+- **Stack**: Optimized for embedded operation
+
+### Timing Performance
+- **Loop Cycle**: Non-blocking operation
+- **Message Processing**: Up to 10 messages per cycle
+- **Button Debouncing**: 50ms debounce time
+- **Toolbox Pulse**: 500ms with automatic shutoff
+- **Status Updates**: Throttled to 100ms intervals
+
+### CAN Bus Statistics
+The system tracks comprehensive CAN statistics:
+- Messages received per message type
+- Total bytes processed
+- Error counts and types
+- Bus health status
+- Queue utilization
+
+## Testing and Validation
+
+### Test Coverage
+The application includes 49 comprehensive tests:
+
+#### GPIO/Output Control Tests (22 tests)
+- GPIO initialization and pin configuration
+- Output control (bedlight, LEDs, toolbox opener)
+- Button input handling and debouncing
+- Timing control and rollover handling
+- Integration scenarios
+
+#### State Management Tests (19 tests)
+- CAN message parsing and validation
+- State transition logic
+- Decision logic validation
+- System health monitoring
+- Timeout detection
+
+#### Production Code Integration Tests (8 tests)
+- Direct testing of actual production bit extraction
+- CAN parsing function validation
+- Decision logic function testing
+- End-to-end scenario validation
+- Change detection verification
+
+### Test Execution
+```bash
+# Run all tests
+pio test -e native
+
+# Expected output:
+# 49 test cases: 49 succeeded
+```
+
+## Development Notes
+
+### Architecture Principles
+- **Modular Design**: Clear separation of concerns
+- **Error Resilience**: Comprehensive error handling and recovery
+- **Resource Efficiency**: Minimal memory and CPU usage
+- **Testability**: Pure logic functions for comprehensive testing
+
+### Code Organization
+```
+src/
+├── main.cpp              # Main application entry point
+├── can_manager.cpp/h     # CAN bus interface and statistics
+├── can_protocol.c/h      # Pure CAN message parsing logic
+├── gpio_controller.cpp/h # GPIO control and button handling
+├── message_parser.cpp/h  # Legacy message parsing (being phased out)
+├── state_manager.cpp/h   # Vehicle state tracking and logic
+└── config.h             # Pin definitions and constants
+```
+
+### Build Configuration
+- **Platform**: ESP32-S3 (Espressif 32)
+- **Framework**: Arduino
+- **Build System**: PlatformIO
+- **Compiler**: GCC with optimizations
+- **Libraries**: ArduinoJson (minimal usage)
+
+## Troubleshooting Guide
+
+### CAN Bus Issues
+1. **No Messages Received**
+   - Check CAN H/L wiring
+   - Verify 500kbps bus speed
+   - Check termination resistors
+   - Monitor serial output for CAN errors
+
+2. **Invalid Message Data**
+   - Verify message IDs match specification
+   - Check bit positions in signal extraction
+   - Validate message length (8 bytes)
+
+3. **Timeout Errors**
+   - Check for intermittent connections
+   - Verify vehicle is generating expected messages
+   - Check for bus overload conditions
+
+### GPIO Issues
+1. **Outputs Not Working**
+   - Verify GPIO pin assignments
+   - Check output current requirements
+   - Test with multimeter/oscilloscope
+   - Review serial debug output
+
+2. **Button Not Responding**
+   - Check pullup resistor (internal pullup enabled)
+   - Verify button wiring (active low)
+   - Check debouncing in serial output
+
+### System Issues
+1. **Frequent Resets**
+   - Check power supply stability
+   - Monitor for watchdog triggers
+   - Review error recovery logs
+
+2. **Memory Issues**
+   - Monitor heap usage
+   - Check for memory leaks
+   - Verify stack usage
+
+## Future Enhancements
+
+### Potential Improvements
+- Additional CAN message support
+- Configurable timeout values
+- Remote monitoring capabilities
+- Enhanced error logging
+- Additional safety features
+
+### Hardware Considerations
+- External CAN transceiver support
+- Power management improvements
+- Additional I/O expansion
+- Wireless connectivity options
+
+---
+
+**Document Version**: 1.0.0  
+**Last Updated**: August 3, 2025  
+**Application Version**: 1.0.0
