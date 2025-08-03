@@ -111,6 +111,46 @@ Before flashing, you may want to adjust the pin assignments in `src/config.h`:
 - **No serial output**: Check that `ARDUINO_USB_CDC_ON_BOOT=1` is set in platformio.ini
 - **Memory issues**: Monitor free heap in serial output; reduce debug level if needed
 
+#### Interactive Serial Commands
+
+The firmware includes interactive debugging commands accessible via the serial monitor. Connect at 115200 baud and type commands to diagnose issues:
+
+**Available Commands:**
+
+- `help` or `h` - Show available commands
+- `can_status` or `cs` - Display detailed CAN bus status and diagnostics
+- `can_debug` or `cd` - Monitor ALL CAN messages for 10 seconds (useful for verifying bus activity)
+- `can_reset` or `cr` - Perform full CAN system recovery/reset
+- `system_info` or `si` - Show system information (memory, GPIO states, etc.)
+
+**Example Usage:**
+
+```bash
+# Open serial monitor
+pio device monitor
+
+# In the serial monitor, type commands:
+help                    # Show all available commands
+can_status             # Check CAN bus health
+can_debug              # Monitor all CAN traffic for 10 seconds
+```
+
+**Debugging CAN Issues:**
+
+If you're seeing "CAN bus timeout - no activity" errors:
+
+1. **Check hardware connections**: Use `can_status` to see raw TWAI driver state
+2. **Monitor bus activity**: Use `can_debug` to see if ANY messages are being received
+3. **Verify target messages**: Look for `[TARGET]` markers in debug output indicating your desired message IDs
+4. **Check error counters**: High RX/TX error counts in `can_status` indicate bus issues
+5. **Reset if needed**: Use `can_reset` to recover from driver errors
+
+The diagnostic output shows:
+- TWAI driver state (should be "1" for RUNNING)
+- Messages in RX queue (indicates bus activity even if not processed)
+- Error counters (should be low, <128 for healthy operation)
+- Raw message traffic with IDs and data bytes
+
 #### Development
 
 The code is organized into modules:

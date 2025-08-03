@@ -6,6 +6,7 @@
 #include "gpio_controller.h"
 #include "message_parser.h"
 #include "state_manager.h"
+#include "diagnostic_commands.h"
 // #include "logger.h"
 
 // Global variables for application state
@@ -104,6 +105,9 @@ void loop() {
         return;
     }
     
+    // Process serial diagnostic commands
+    processSerialCommands();
+    
     // Heartbeat message
     unsigned long currentTime = millis();
     if (currentTime - lastHeartbeat >= HEARTBEAT_INTERVAL) {
@@ -111,12 +115,18 @@ void loop() {
         lastHeartbeat = currentTime;
     }
     
-    // Periodic CAN statistics
+    // Periodic CAN statistics and diagnostics
     if (currentTime - lastCANStats >= CAN_STATS_INTERVAL) {
         if (isCANConnected()) {
             LOG_DEBUG("CAN bus status: Connected");
         } else {
             LOG_WARN("CAN bus status: Disconnected");
+            // Print detailed diagnostics when disconnected
+            printCANStatistics();
+            
+            // Enable debug message monitoring when having connection issues
+            LOG_INFO("=== DEBUG: Attempting to receive ANY CAN messages ===");
+            debugReceiveAllMessages();
         }
         lastCANStats = currentTime;
     }

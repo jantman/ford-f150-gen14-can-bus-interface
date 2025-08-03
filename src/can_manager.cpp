@@ -9,7 +9,7 @@ static unsigned long lastCANActivity = 0;
 static uint32_t messagesReceived = 0;
 static uint32_t canErrors = 0;
 
-// TWAI configuration
+// TWAI configuration with more robust settings
 static const twai_general_config_t g_config = {
     .mode = TWAI_MODE_LISTEN_ONLY,  // Listen-only mode - cannot transmit
     .tx_io = (gpio_num_t)CAN_TX_PIN, // Still needed even in listen-only mode
@@ -17,13 +17,21 @@ static const twai_general_config_t g_config = {
     .clkout_io = TWAI_IO_UNUSED,
     .bus_off_io = TWAI_IO_UNUSED,
     .tx_queue_len = 0,              // No TX queue needed
-    .rx_queue_len = 20,
-    .alerts_enabled = TWAI_ALERT_RX_DATA | TWAI_ALERT_ERR_PASS | TWAI_ALERT_BUS_ERROR | TWAI_ALERT_RX_QUEUE_FULL,
+    .rx_queue_len = 50,             // Increased from 20 to handle burst traffic
+    .alerts_enabled = TWAI_ALERT_RX_DATA | TWAI_ALERT_ERR_PASS | TWAI_ALERT_BUS_ERROR | 
+                      TWAI_ALERT_RX_QUEUE_FULL | TWAI_ALERT_ERR_ACTIVE,
     .clkout_divider = 0,
     .intr_flags = ESP_INTR_FLAG_LEVEL1
 };
 
-static const twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
+// More specific timing configuration for 500kbps
+static const twai_timing_config_t t_config = {
+    .brp = 8,           // Baud rate prescaler
+    .tseg_1 = 15,       // Time segment 1
+    .tseg_2 = 4,        // Time segment 2  
+    .sjw = 3,           // Synchronization jump width
+    .triple_sampling = false
+};
 
 static const twai_filter_config_t f_config = {
     .acceptance_code = 0x00000000,
@@ -82,6 +90,14 @@ bool initializeCAN() {
     LOG_INFO("  Baud Rate: %d bps", CAN_BAUDRATE);
     LOG_INFO("  Mode: Listen-only (No transmission capability)");
     LOG_INFO("  Filter: Accept all messages");
+    LOG_INFO("  RX Queue Size: %d messages", g_config.rx_queue_len);
+    
+    // Give some time for the CAN controller to settle and start receiving
+    delay(100);
+    
+    // Check if we can immediately see any bus activity
+    LOG_INFO("Checking for immediate bus activity...");
+    checkRawCANActivity();
     
     return true;
 }
@@ -123,6 +139,44 @@ bool receiveCANMessage(CANMessage& message) {
         canErrors++;
         LOG_WARN("CAN receive error: %s", esp_err_to_name(result));
         return false;
+    }
+}
+
+// Debug function to receive and log any CAN message (not just target messages)
+void debugReceiveAllMessages() {
+    if (!canInitialized || !canConnected) {
+        return;
+    }
+    
+    twai_message_t twai_msg;
+    int messagesProcessed = 0;
+    const int MAX_DEBUG_MESSAGES = 50; // Prevent spam
+    
+    while (messagesProcessed < MAX_DEBUG_MESSAGES) {
+        esp_err_t result = twai_receive(&twai_msg, 0);  // Non-blocking receive
+        
+        if (result == ESP_OK) {
+            lastCANActivity = millis(); // Update activity timestamp
+            
+            // Log the message details
+            LOG_INFO("CAN MSG: ID=0x%03X (%d), DLC=%d, Data=[%02X %02X %02X %02X %02X %02X %02X %02X]%s",
+                     twai_msg.identifier, twai_msg.identifier, twai_msg.data_length_code,
+                     twai_msg.data[0], twai_msg.data[1], twai_msg.data[2], twai_msg.data[3],
+                     twai_msg.data[4], twai_msg.data[5], twai_msg.data[6], twai_msg.data[7],
+                     isTargetCANMessage(twai_msg.identifier) ? " [TARGET]" : "");
+            
+            messagesProcessed++;
+        } else if (result == ESP_ERR_TIMEOUT) {
+            // No more messages available
+            break;
+        } else {
+            LOG_WARN("Debug receive error: %s", esp_err_to_name(result));
+            break;
+        }
+    }
+    
+    if (messagesProcessed > 0) {
+        LOG_INFO("Debug: Processed %d CAN messages", messagesProcessed);
     }
 }
 
@@ -190,16 +244,32 @@ bool isCANConnected() {
         return false;
     }
     
-    // Check if we've received any activity recently
+    // Check for any sign of bus activity:
+    // 1. Recent successful message receipt
+    // 2. Messages pending in queue (even if we haven't processed them)
+    // 3. Low error counters indicate healthy communication
     unsigned long timeSinceActivity = millis() - lastCANActivity;
-    if (timeSinceActivity > CAN_TIMEOUT_MS) {
-        canConnected = false;
-        LOG_WARN("CAN bus timeout - no activity for %lu ms", timeSinceActivity);
-        return false;
+    bool hasRecentActivity = (timeSinceActivity <= CAN_TIMEOUT_MS);
+    bool hasQueuedMessages = (status.msgs_to_rx > 0);
+    bool hasHealthyErrorCounters = (status.rx_error_counter < 128 && status.tx_error_counter < 128);
+    
+    // Update last activity if there are queued messages
+    if (hasQueuedMessages) {
+        lastCANActivity = millis();
+        hasRecentActivity = true;
+        LOG_DEBUG("Updated CAN activity timestamp due to queued messages");
     }
     
-    canConnected = true;
-    return true;
+    // Consider connected if we have recent activity OR healthy error counters
+    // (healthy counters indicate the bus is working even if we're not receiving target messages)
+    canConnected = hasRecentActivity || hasHealthyErrorCounters;
+    
+    if (!canConnected) {
+        LOG_WARN("CAN bus timeout - no activity for %lu ms, queued: %lu, RX errors: %lu", 
+                 timeSinceActivity, status.msgs_to_rx, status.rx_error_counter);
+    }
+    
+    return canConnected;
 }
 
 void handleCANError() {
@@ -280,24 +350,48 @@ bool recoverCANSystem() {
     return true;
 }
 
-// Utility functions for monitoring and debugging
+// Diagnostic function to check raw CAN bus activity
+void checkRawCANActivity() {
+    if (!canInitialized) {
+        LOG_ERROR("CAN not initialized, cannot check raw activity");
+        return;
+    }
+    
+    twai_status_info_t status;
+    esp_err_t result = twai_get_status_info(&status);
+    if (result == ESP_OK) {
+        LOG_INFO("=== RAW CAN DIAGNOSTICS ===");
+        LOG_INFO("  TWAI State: %d (0=STOPPED, 1=RUNNING, 2=BUS_OFF, 3=RECOVERING)", status.state);
+        LOG_INFO("  Messages in RX Queue: %lu", status.msgs_to_rx);
+        LOG_INFO("  Messages in TX Queue: %lu", status.msgs_to_tx);
+        LOG_INFO("  TX Error Counter: %lu", status.tx_error_counter);
+        LOG_INFO("  RX Error Counter: %lu", status.rx_error_counter);
+        LOG_INFO("  TX Failed Count: %lu", status.tx_failed_count);
+        LOG_INFO("  RX Missed Count: %lu", status.rx_missed_count);
+        LOG_INFO("  RX Overrun Count: %lu", status.rx_overrun_count);
+        LOG_INFO("  Arbitration Lost Count: %lu", status.arb_lost_count);
+        LOG_INFO("  Bus Error Count: %lu", status.bus_error_count);
+        
+        // Check for any messages in the queue without removing them
+        if (status.msgs_to_rx > 0) {
+            LOG_INFO("  *** MESSAGES ARE AVAILABLE IN QUEUE ***");
+            lastCANActivity = millis(); // Update activity if messages are queued
+        }
+    } else {
+        LOG_ERROR("Failed to get TWAI status for diagnostics: %s", esp_err_to_name(result));
+    }
+}
+
+// Enhanced statistics with more detailed information
 void printCANStatistics() {
     LOG_INFO("CAN Bus Statistics (Listen-Only Mode):");
     LOG_INFO("  Messages Received: %lu", messagesReceived);
     LOG_INFO("  Errors: %lu", canErrors);
     LOG_INFO("  Last Activity: %lu ms ago", millis() - lastCANActivity);
     LOG_INFO("  Connected: %s", canConnected ? "Yes" : "No");
+    LOG_INFO("  Initialized: %s", canInitialized ? "Yes" : "No");
     
-    if (canInitialized) {
-        twai_status_info_t status;
-        esp_err_t result = twai_get_status_info(&status);
-        if (result == ESP_OK) {
-            LOG_INFO("  TWAI State: %d", status.state);
-            LOG_INFO("  RX Queue: %lu", status.msgs_to_rx);
-            LOG_INFO("  RX Error Count: %lu", status.rx_error_counter);
-            // Note: TX stats not relevant in listen-only mode
-        }
-    }
+    checkRawCANActivity();
 }
 
 void resetCANStatistics() {

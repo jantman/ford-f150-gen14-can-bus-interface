@@ -24,5 +24,7 @@ bool recoverCANSystem();
 void printCANStatistics();
 void resetCANStatistics();
 bool isTargetCANMessage(uint32_t messageId);
+void checkRawCANActivity();
+void debugReceiveAllMessages();
 
 #endif // CAN_MANAGER_H
