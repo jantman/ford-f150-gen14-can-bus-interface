@@ -2,7 +2,7 @@
 #include "config.h"
 
 // Module includes (will be created in subsequent steps)
-// #include "can_manager.h"
+#include "can_manager.h"
 #include "gpio_controller.h"
 // #include "message_parser.h"
 // #include "state_manager.h"
@@ -11,7 +11,9 @@
 // Global variables for application state
 bool systemInitialized = false;
 unsigned long lastHeartbeat = 0;
+unsigned long lastCANStats = 0;
 const unsigned long HEARTBEAT_INTERVAL = 10000; // 10 seconds
+const unsigned long CAN_STATS_INTERVAL = 30000; // 30 seconds
 
 void setup() {
     // Initialize serial communication
@@ -31,8 +33,11 @@ void setup() {
     LOG_INFO("GPIO initialization successful");
     
     // Initialize CAN bus (Step 3)
-    // TODO: Initialize CAN bus
-    LOG_INFO("TODO: Initialize CAN bus");
+    if (!initializeCAN()) {
+        LOG_ERROR("Failed to initialize CAN bus");
+        return;
+    }
+    LOG_INFO("CAN bus initialization successful");
     
     // Initialize state management (Step 5)
     // TODO: Initialize state management
@@ -66,8 +71,19 @@ void loop() {
         lastHeartbeat = currentTime;
     }
     
+    // Periodic CAN statistics
+    if (currentTime - lastCANStats >= CAN_STATS_INTERVAL) {
+        if (isCANConnected()) {
+            LOG_DEBUG("CAN bus status: Connected");
+        } else {
+            LOG_WARN("CAN bus status: Disconnected");
+        }
+        lastCANStats = currentTime;
+    }
+    
     // Process CAN messages (Step 3-4)
-    // TODO: Process incoming CAN messages
+    processPendingCANMessages();
+    // TODO: Parse received messages and update state
     
     // Update state management (Step 5)
     // TODO: Check for state changes and update accordingly

@@ -12,12 +12,16 @@ struct CANMessage {
     unsigned long timestamp;
 };
 
-// Function declarations (to be implemented in Step 3)
+// Function declarations
 bool initializeCAN();
-bool sendCANMessage(const CANMessage& message);
 bool receiveCANMessage(CANMessage& message);
 void processPendingCANMessages();
 bool isCANConnected();
 void handleCANError();
+
+// Utility functions for monitoring and debugging
+void printCANStatistics();
+void resetCANStatistics();
+bool isTargetCANMessage(uint32_t messageId);
 
 #endif // CAN_MANAGER_H

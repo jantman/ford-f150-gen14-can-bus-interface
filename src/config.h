@@ -13,9 +13,11 @@
 #define TOOLBOX_OPENER_PIN 4    // Output: Controls toolbox opener relay
 #define TOOLBOX_BUTTON_PIN 17   // Input: Toolbox unlock button (with pullup)
 
-// CAN Bus Configuration
-#define CAN_TX_PIN 20           // ESP32-S3 TWAI TX (check your specific board)
-#define CAN_RX_PIN 19           // ESP32-S3 TWAI RX (check your specific board)
+// CAN Bus Configuration (Listen-Only Mode)
+// Note: Both TX and RX pins needed for TWAI controller, even in listen-only mode
+// TX/RX refer to the ESP32↔transceiver connection, not the actual CAN_H/CAN_L bus
+#define CAN_TX_PIN 20           // ESP32-S3 TWAI TX to transceiver (verify with your ESP32-CAN-X2 board)
+#define CAN_RX_PIN 19           // ESP32-S3 TWAI RX from transceiver (verify with your ESP32-CAN-X2 board)
 #define CAN_BAUDRATE 500000     // 500kbps - standard automotive rate
 
 // CAN Message IDs (from minimal.dbc)
