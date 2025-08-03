@@ -1,220 +1,132 @@
-# Ford F150 Gen14 CAN Bus Interface
+# Ford F150 Gen14 CAN bus Interface
 
-A comprehensive CAN bus interface for 2021-2023 Ford F150 trucks that provides automated control of aftermarket accessories based on real-time vehicle state monitoring.
+Interface for doing various things in response to messages on the CAN bus of my 2025 (Generation 14) Ford F150, along with details of construction, initial investigation/experiments, wiring info, etc.
 
-## 🚛 Overview
+## What does it do?
 
-This production-ready system monitors Ford's CAN bus messages to intelligently control aftermarket accessories:
+* Trigger a relay for OEM-style aftermarket bed lights, when the CHMSL bed lights are on.
+* Allow the truck bed toolbox to be unlocked via two buttons, only when the doors are unlocked and the vehicle is in park.
+* ... whatever else I think of in the future? (there's substantial room for expansion built-in)
 
-- **🔆 Automatic Bedlight Control**: Synchronized with factory puddle lamp operation
-- **📍 Visual Status Indicators**: Green LED for Park status, Blue LED for Unlock status
-- **📦 Smart Toolbox Opener**: Conditional activation with manual override capability
+## Contents - What's Here?
 
-### Key Features
-- **Real-time CAN Monitoring**: Processes 4 critical Ford CAN messages at 500kbps
-- **Intelligent State Management**: Advanced decision logic with safety interlocks
-- **Robust Error Handling**: Comprehensive timeout and error recovery systems
-- **Low Resource Usage**: Only 6.2% RAM and 26.4% Flash utilization
-- **Production Ready**: 49/49 tests passing with comprehensive validation
+* [experiments/](experiments/) - Initial investigation and experiments with the CAN bus as well as vehicle-specific wiring and connector information.
+* [f150_wiring_notes.md](f150_wiring_notes.md) - Information for my 2025 F150 Lariat V8 on what circuits are in what connectors, etc.
 
-## 🏗️ Architecture
+## Software
 
-Built on ESP32-S3 with professional-grade software architecture:
+This project implements a Ford F150 Gen14 CAN bus interface using Arduino Framework with PlatformIO on the AutoSport Labs ESP32-CAN-X2 development board.
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   CAN Manager   │ -> │  Message Parser  │ -> │  State Manager  │
-│   (500kbps)     │    │  (Signal Extract)│    │ (Decision Logic)│
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                        │                        │
-    ┌────v────┐              ┌────v────┐              ┌────v────┐
-    │ BCM Lamp│              │ Locking │              │Powertrain│
-    │ (0x3B3) │              │ (0x3B8) │              │ (0x204) │
-    └─────────┘              └─────────┘              └─────────┘
-                                       │
-                                  ┌────v────┐
-                                  │ Battery │
-                                  │ (0x3D2) │
-                                  └─────────┘
-```
+### Features
 
-## 📋 Project Status
+* Monitors CAN bus messages for bed lights, door locks, transmission park status, and battery state
+* Controls bed light relay based on vehicle puddle lamp status
+* Controls status LEDs for vehicle lock and park status
+* Provides secure toolbox unlock functionality (only when vehicle is unlocked and in park)
+* Comprehensive logging and error handling
+* Modular, maintainable code architecture
 
-**✅ COMPLETE - PRODUCTION READY**
+### Building and Flashing
 
-All development phases completed with comprehensive testing and documentation:
+#### Prerequisites
 
-- **Steps 1-9**: ✅ Complete - Core implementation with 49/49 tests passing
-- **Step 10**: ✅ Complete - Comprehensive documentation and deployment guides
+1. **Install PlatformIO Core** or **PlatformIO IDE**:
+   - **Option A - PlatformIO Core (Command Line)**:
+     ```bash
+     pip install platformio
+     ```
+   - **Option B - PlatformIO IDE**: Install the PlatformIO extension in VS Code
 
-## 📚 Documentation
+2. **Hardware Requirements**:
+   - AutoSport Labs ESP32-CAN-X2 development board
+   - USB cable for programming
+   - CAN bus connection to vehicle (HS-CAN3 at 500kbps)
 
-Comprehensive documentation package for production deployment:
+#### Building the Project
 
-| Document | Purpose | Target Audience |
-|----------|---------|-----------------|
-| **[User Manual](USER_MANUAL.md)** | Installation, operation, troubleshooting | End users, installers |
-| **[Hardware Guide](HARDWARE_GUIDE.md)** | Wiring diagrams, connections, safety | Technicians, installers |
-| **[Technical Documentation](TECHNICAL_DOCUMENTATION.md)** | CAN specifications, architecture details | Developers, engineers |
-| **[Deployment Guide](DEPLOYMENT_GUIDE.md)** | Production deployment procedures | System administrators |
+1. **Clone and navigate to the project**:
+   ```bash
+   git clone <repository-url>
+   cd ford-f150-gen14-can-bus-interface
+   ```
 
-## 🔧 Quick Start
+2. **Build the project**:
+   ```bash
+   pio run
+   ```
 
-### Prerequisites
-- ESP32-S3 development board with CAN transceiver
-- PlatformIO development environment
-- Access to Ford F150 CAN bus signals
+#### Flashing to ESP32
 
-### Installation
-```bash
-# Clone repository
-git clone <repository-url>
-cd ford-f150-gen14-can-bus-interface
+1. **Connect the ESP32-CAN-X2 board** via USB
 
-# Build and test
-pio test -e native      # Run all 49 tests
-pio run -e esp32-s3-devkitc-1  # Build firmware
-pio run -e esp32-s3-devkitc-1 --target upload  # Deploy
+2. **Flash the firmware**:
+   ```bash
+   pio run --target upload
+   ```
 
-# Monitor operation
-pio device monitor
-```
+3. **Monitor serial output**:
+   ```bash
+   pio device monitor
+   ```
 
-### Expected Output
-```
-[INFO] Ford F150 CAN Interface Starting...
-[INFO] GPIO initialization completed successfully  
-[INFO] CAN bus initialized at 500kbps
-[INFO] System ready - monitoring CAN messages
-[INFO] CAN: Received BCM_Lamp_Stat_FD1 (0x3B3) - 8 bytes
-[INFO] State: Park=ON, Unlocked=OFF, Bedlight=AUTO
-```
+#### Configuration
 
-## 🧪 Testing Excellence
+Before flashing, you may want to adjust the pin assignments in `src/config.h`:
 
-World-class testing infrastructure with 100% production code coverage:
-
-### Test Categories
-- **Unit Tests**: Individual component validation (GPIO, parsing, state logic)
-- **Integration Tests**: Cross-component interaction testing  
-- **Production Tests**: Actual production code validation
-- **Mock Framework**: Complete Arduino environment simulation
-
-### Test Execution
-```bash
-# Run all tests
-pio test -e native
-
-# Specific test categories  
-pio test -e native --filter "test_gpio*"          # GPIO tests
-pio test -e native --filter "test_can_protocol*"  # CAN parsing tests
-pio test -e native --filter "test_integration*"   # Integration tests
-```
-
-### Test Results
-```
-✅ GPIO Controller Tests: 12/12 passing
-✅ CAN Protocol Tests: 15/15 passing  
-✅ State Manager Tests: 10/10 passing
-✅ Integration Tests: 12/12 passing
-✅ TOTAL: 49/49 tests passing (100%)
-```
-
-## 🔌 Hardware Configuration
-
-### ESP32-S3 Pin Assignment
 ```cpp
-// Output Controls
-#define BEDLIGHT_PIN        GPIO_NUM_2   // Bedlight relay/MOSFET
-#define PARKED_LED_PIN      GPIO_NUM_4   // Green LED (Park status)
-#define UNLOCKED_LED_PIN    GPIO_NUM_5   // Blue LED (Unlock status) 
-#define TOOLBOX_OPENER_PIN  GPIO_NUM_16  // Toolbox opener relay
-
-// Input Controls
-#define MANUAL_BUTTON_PIN   GPIO_NUM_17  // Manual toolbox button
-
-// CAN Interface  
-#define CAN_TX_PIN          GPIO_NUM_21  // CAN transceiver TX
-#define CAN_RX_PIN          GPIO_NUM_22  // CAN transceiver RX
+#define BEDLIGHT_PIN 5          // Output: Controls bed light relay
+#define PARKED_LED_PIN 16       // Output: LED indicating vehicle is parked  
+#define UNLOCKED_LED_PIN 15     // Output: LED indicating vehicle is unlocked
+#define TOOLBOX_OPENER_PIN 4    // Output: Controls toolbox opener relay
+#define TOOLBOX_BUTTON_PIN 17   // Input: Toolbox unlock button
 ```
 
-### Resource Utilization
-- **RAM Usage**: 20,316 bytes (6.2% of 327,680 bytes)
-- **Flash Usage**: 346,624 bytes (26.4% of 1,310,720 bytes)
-- **Performance**: <1ms message processing latency
+#### Troubleshooting
 
-## 🚗 Supported Vehicles
+- **Upload fails**: Ensure the ESP32 is in download mode (hold BOOT button while pressing RESET)
+- **CAN messages not received**: Verify CAN bus connections and 120Ω termination
+- **No serial output**: Check that `ARDUINO_USB_CDC_ON_BOOT=1` is set in platformio.ini
+- **Memory issues**: Monitor free heap in serial output; reduce debug level if needed
 
-**Primary Target**: Ford F150 Generation 14 (2021-2023)
-- Regular Cab, SuperCab, SuperCrew configurations
-- All trim levels (XL, XLT, Lariat, King Ranch, Platinum, Limited, Raptor)
-- Both gasoline and hybrid powertrains
+#### Development
 
-**CAN Message Compatibility**:
-- BCM_Lamp_Stat_FD1 (0x3B3): Puddle lamp status
-- Locking_Systems_2_FD1 (0x3B8): Door lock status
-- PowertrainData_10 (0x204): Park gear status  
-- Battery_Mgmt_3_FD1 (0x3D2): System voltage monitoring
+The code is organized into modules:
+- `main.cpp` - Main application loop
+- `config.h` - Pin definitions and constants
+- `can_manager.h/cpp` - CAN bus communication
+- `message_parser.h/cpp` - DBC message parsing
+- `gpio_controller.h/cpp` - GPIO control
+- `state_manager.h/cpp` - Vehicle state tracking
+- `logger.h/cpp` - Logging utilities
 
-## 🛡️ Safety & Legal
+## Hardware
 
-### Safety Considerations
-- ⚠️ **Vehicle Modification Warning**: Modifying vehicle electrical systems may void warranties
-- 🔌 **Electrical Safety**: Use proper fusing and wiring practices
-- 🔧 **Professional Installation**: Consider professional installation for complex integrations
-- 📖 **Follow Documentation**: Strictly follow hardware guide and safety procedures
+### In-Cab Enclosure
 
-### Legal Compliance
-- 📚 **Educational Purpose**: Project intended for educational and research use
-- ⚖️ **Local Regulations**: Comply with all local laws and vehicle modification regulations
-- 🛡️ **Liability**: Users assume all responsibility for modifications and installations
+**TBD - Need Photo**
 
-## 🤝 Contributing
+A small project box enclosure containing an [AutoSport Labs ESP32-CAN-X2](https://www.autosportlabs.com/product/esp32-can-x2-dual-can-bus-automotive-grade-development-board/) development board, which combines an ESP32, dual can transceivers, and an automotive-grade 12-40VDC power supply. The ESP mounts to headers on a carrier board (simple 70x90cm protoboard) with connectors for IO, so that the ESP and/or carrier board can be removed from the enclosure without soldering. The enclosure exposes:
 
-We welcome contributions! Please ensure:
+* A 4-pin connector for connection to the vehicle wiring harness +12VDC, ground, and the pair of CAN bus lines. In my specific vehicle, this uses a tee adapter that inserts between the factory wiring harness and the Audio DSP (amplifier) on the rear wall of the cab behind the rear passenger side seat.
+* A 5-pin IO connector that exposes four GPIO pins as well as a blunt-cut wire inside the enclosure, for future use controlling devices in the cab or taking direct input.
+* An 8-pin (7 populated) connector for a 7-wire harness that goes into the toolbox mounted in the bed of the truck, carrying six GPIO lines as well as a tap from an in-cab +12VDC circuit (SBA40) that is controlled by the ECU load-shedding logic. This will ensure that aftermarket accessories can't drain the battery too low.
 
-1. **All tests pass**: `pio test -e native` shows 49/49 passing
-2. **Code standards**: Follow existing code formatting and documentation standards  
-3. **Documentation**: Update relevant documentation for any changes
-4. **Safety first**: Any hardware changes must include safety analysis
+Wiring diagrams for this enclosure can be seen in [PNG](./enclosure_wiring.png) or [SVG](./enclosure_wiring.svg).
 
-### Development Workflow
-```bash
-# Setup development environment
-git clone <repository>
-cd ford-f150-gen14-can-bus-interface
+### Bed Toolbox Enclosure
 
-# Make changes and validate
-pio test -e native  # Ensure all tests pass
-pio run -e esp32-s3-devkitc-1  # Verify build
+**TBD - Need Photo**
 
-# Submit pull request with test results
-```
+## History of Project
 
-## 📜 Project History
+Vehicles have more and more intelligent components over time and fewer and fewer simple circuits. It was hard enough for me to find a truck that met most of what I wanted, and I was in a bit of a rush to get rid of my previous vehicle, so I ended up buying a truck with the 501A Mid trim package (no interior ambient lighting) and without the Bed Utility Package (no factory bed lighting, and no wiring for it). Beyond that, I also wanted the truck bed toolbox to... not have a giant key, and not have to be manually re-locked after unlocking. WeatherGuard makes a lock actuator kit that fits the toolbox, but on Gen 14 F150s only the low trim lines have a separate lock circuit for the tailgate (the Remote Release and Power Tailgate have more complicated systems controlled by a module inside the tailgate).
 
-This project began as a personal solution for aftermarket bedlight control and toolbox automation on a 2025 Ford F150 Lariat. The journey involved reverse-engineering Ford's CAN bus messages using OpenPilot's DBC files, developing a comprehensive testing framework, and creating production-ready firmware.
+So, I set out to try and use the vehicle's CAN busses to do what I want. I knew from the factory service manual a pretty good idea of what the various busses are and where their circuits are accessible, and a vague idea of which busses would carry the messages I'm interested in, but not much more than that. I tried tapping into the busses using a Raspberry Pi with a [Waveshare CAN-FD HAT](https://www.waveshare.com/wiki/2-CH_CAN_FD_HAT), and quickly determined that my first choice connection point at the rear of the vehicle near the trailer connector didn't seem to be broadcasting any useful messages (at least when the vehicle wasn't running), so I resorted to doing my initial experimentation by back-probing the inline connectors behind the glove box.
 
-**Key Milestones**:
-- Initial CAN bus experimentation with Python tools
-- Discovery of OpenPilot DBC files for message specifications  
-- Development of comprehensive Arduino mocking framework
-- Achievement of 49/49 tests passing with production code validation
-- Complete documentation package for production deployment
+After doing a bunch of research and not being able to find any write-ups on what I wanted (and specifically nothing on the exact CAN messages for door locks, bed lights, etc.), I resorted to writing (or, having GitHub CoPilot / Claude Sonnet) write me a small Python program ([can_action_analyzer.py](experiments/can_analyzer/can_action_analyzer.py)) to run on the Pi that would capture CAN traffic while I repeatedly toggled the door locks and bed lights, and would attempt to analyze the results for patterns clearly related to the toggling of state. I wasted most of a weekend on this without any reliable results.
 
-**Original Hardware Setup**: AutoSport Labs ESP32-CAN-X2 development board connected to HS-CAN3 via the audio amplifier connector (C3154A) behind the rear passenger seat, providing non-invasive vehicle integration.
+The real breakthrough came when someone at work (thanks, Wolfy!) mentioned to me that they were playing around with [OpenPilot](https://github.com/commaai/openpilot), that it's Python based and knows how to do _all sorts_ of things with supported vehicles, and that the current-generation (Gen14) F150 is very well supported. That led me to the [opendbc](https://github.com/commaai/opendbc) project and then to [ford_lincoln_base_pt.dbc](https://github.com/commaai/opendbc/blob/ca8673cbc8f4709700ad223914dc359ed63a4835/opendbc/dbc/ford_lincoln_base_pt.dbc) which contains message information for everything I needed and much, much more! After that it was just a matter of asking CoPilot to write a console-based program to display the values of the signals I was interested in ([can_dashboard.py](experiments/message_watcher/can_dashboard.py)) to let me confirm that they change as expected - and they did!
 
-For detailed project history and technical evolution, see the `experiments/` directory and `f150_wiring_notes.md`.
+Since I bought this truck brand new and intended to buy an extended warranty and keep it for quite a while, I was rather obsessed with not modifying the factory wiring at all - everything had to be able to be un-done, which meant making adapter harnesses to fit factory connectors. I determined that HS-CAN3 was the bus that carried all of the signals I was interested in, so it was another trip back to the service manual to enumerate all of the connectors that carry HS-CAN3 (see [f150_wiring_notes.md](f150_wiring_notes.md)). I ended up determining that the best for my needs was C3154A, the main connector for the audio amplifier mounted on the rear wall of the cab behind the rear passenger seat. This not only carries HS-CAN3 but also has power and ground available on the nearby C3154B connector, and the area behind the rear seat provides more than enough space to locate an enclosure for a small microcontroller as well as easy access to run wiring to the bed via the rear cab vents.
 
-## 📄 License
-
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
----
-
-**Project Status**: ✅ Production Ready  
-**Test Coverage**: 49/49 Tests Passing (100%)  
-**Documentation**: Complete  
-**Last Updated**: August 3, 2025
-
-**For detailed installation and operation instructions, start with the [User Manual](USER_MANUAL.md).**
+With that done, it was just a matter of sourcing the proper connectors, programming a microcontroller, and wiring everything up. See the relevant hardware and software sections above for the details.
