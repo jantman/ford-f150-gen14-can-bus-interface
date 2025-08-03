@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 // Version information
-#define FIRMWARE_VERSION "1.0.0"
+// FIRMWARE_VERSION is automatically generated at build time from git commit hash
 #define BUILD_DATE __DATE__
 #define BUILD_TIME __TIME__
 

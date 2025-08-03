@@ -49,6 +49,7 @@ void setup() {
     delay(1000); // Allow serial to stabilize
     
     LOG_INFO("=== Ford F150 Gen14 CAN Bus Interface ===");
+    LOG_INFO("Project: https://github.com/jantman/ford-f150-gen14-can-bus-interface");
     LOG_INFO("Firmware Version: %s", FIRMWARE_VERSION);
     LOG_INFO("Build Date: %s %s", BUILD_DATE, BUILD_TIME);
     LOG_INFO("Starting initialization...");
