@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "mocks/mock_arduino.h"
+#include "../src/can_protocol.h"
 
 // Since we're in NATIVE_ENV, use our test config
 #ifdef NATIVE_ENV
@@ -16,36 +17,8 @@ extern "C" {
         unsigned long timestamp;
     };
     
-    // Extract bits function (core utility)
-    uint8_t extractBits(const uint8_t* data, uint8_t startBit, uint8_t length) {
-        if (length > 8 || startBit >= 64) return 0;
-        
-        uint8_t startByte = startBit / 8;
-        uint8_t startBitInByte = startBit % 8;
-        
-        if (startByte >= 8) return 0;
-        
-        uint8_t result = 0;
-        uint8_t bitsRemaining = length;
-        uint8_t resultBitPos = 0;
-        
-        while (bitsRemaining > 0 && startByte < 8) {
-            uint8_t bitsInThisByte = 8 - startBitInByte;
-            uint8_t bitsToExtract = (bitsRemaining < bitsInThisByte) ? bitsRemaining : bitsInThisByte;
-            
-            uint8_t mask = ((1 << bitsToExtract) - 1) << startBitInByte;
-            uint8_t extractedBits = (data[startByte] & mask) >> startBitInByte;
-            
-            result |= (extractedBits << resultBitPos);
-            
-            bitsRemaining -= bitsToExtract;
-            resultBitPos += bitsToExtract;
-            startByte++;
-            startBitInByte = 0;
-        }
-        
-        return result;
-    }
+    // Use production extractBits function from can_protocol.c
+    uint8_t extractBits(const uint8_t* data, uint8_t startBit, uint8_t length);
 }
 
 // Test helper base class
