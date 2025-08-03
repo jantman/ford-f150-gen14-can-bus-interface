@@ -17,16 +17,7 @@ unsigned long lastWatchdog = 0;
 unsigned long lastErrorRecovery = 0;
 
 // Error tracking and recovery
-struct SystemHealth {
-    unsigned long canErrors;
-    unsigned long parseErrors;
-    unsigned long criticalErrors;
-    unsigned long lastCanActivity;
-    unsigned long lastSystemOK;
-    bool recoveryMode;
-    bool watchdogTriggered;
-};
-static SystemHealth systemHealth = {0, 0, 0, 0, 0, false, false};
+SystemHealth systemHealth = {0, 0, 0, 0, 0, false, false};
 const unsigned long HEARTBEAT_INTERVAL = 10000; // 10 seconds
 const unsigned long CAN_STATS_INTERVAL = 30000; // 30 seconds
 const unsigned long OUTPUT_UPDATE_INTERVAL = 100; // 100ms for output updates

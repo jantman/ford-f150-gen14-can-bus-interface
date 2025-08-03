@@ -1,25 +1,17 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#pragma once
+
+// Import the mock Arduino layer for native tests
+#ifdef UNIT_TESTING
+#include "../mocks/mock_arduino.h"
+#endif
+
+// Test-specific config that mirrors src/config.h but works in native environment
+#ifdef NATIVE_ENV
 
 // Version information
 #define FIRMWARE_VERSION "1.0.0"
 #define BUILD_DATE __DATE__
 #define BUILD_TIME __TIME__
-
-// GPIO Pin Definitions
-#define BEDLIGHT_PIN 5          // Output: Controls bed light relay
-#define PARKED_LED_PIN 16       // Output: LED indicating vehicle is parked
-#define UNLOCKED_LED_PIN 15     // Output: LED indicating vehicle is unlocked
-#define TOOLBOX_OPENER_PIN 4    // Output: Controls toolbox opener relay
-#define TOOLBOX_BUTTON_PIN 17   // Input: Toolbox unlock button (with pullup)
-
-// CAN Bus Configuration (Listen-Only Mode)
-// Note: Both TX and RX pins needed for TWAI controller, even in listen-only mode
-// TX/RX refer to the ESP32↔transceiver connection, not the actual CAN_H/CAN_L bus
-// Pin assignments for AutoSport Labs ESP32-CAN-X2 board (X1/CAN1 interface)
-#define CAN_TX_PIN 7            // ESP32-S3 TWAI TX to onboard CAN transceiver (X1/CAN1)
-#define CAN_RX_PIN 6            // ESP32-S3 TWAI RX from onboard CAN transceiver (X1/CAN1)
-#define CAN_BAUDRATE 500000     // 500kbps - standard automotive rate
 
 // CAN Message IDs (from minimal.dbc)
 #define BCM_LAMP_STAT_FD1_ID 0x3C3      // 963 decimal
@@ -57,7 +49,6 @@
 #define TRNPRKSTS_AT_NO_SPRING 3
 #define TRNPRKSTS_TRANSITION_CLOSE_TO_OUT_OF_PARK 4
 #define TRNPRKSTS_OUT_OF_PARK 5
-// Additional values 6-15 exist but we only care about Park(1)
 
 // Debug Configuration
 #define DEBUG_LEVEL_NONE 0
@@ -70,7 +61,7 @@
 #define DEBUG_LEVEL DEBUG_LEVEL_INFO
 #endif
 
-// Logging macros
+// Logging macros for testing (captured by mock)
 #if DEBUG_LEVEL >= DEBUG_LEVEL_ERROR
 #define LOG_ERROR(format, ...) Serial.printf("[ERROR] " format "\n", ##__VA_ARGS__)
 #else
@@ -95,15 +86,7 @@
 #define LOG_DEBUG(format, ...)
 #endif
 
-// System Health Tracking Structure
-struct SystemHealth {
-    unsigned long canErrors;
-    unsigned long parseErrors;
-    unsigned long criticalErrors;
-    unsigned long lastCanActivity;
-    unsigned long lastSystemOK;
-    bool watchdogTriggered;
-    bool recoveryMode;
-};
-
-#endif // CONFIG_H
+#else
+// Include the original config for embedded builds
+#include "../../src/config.h"
+#endif

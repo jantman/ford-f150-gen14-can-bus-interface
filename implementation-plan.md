@@ -80,21 +80,18 @@ Based on the minimal.dbc file, we need to monitor:
 - Add error handling and recovery
 - Implement watchdog functionality
 
-### Step 9: Host-Based Unit Testing (NEW)
-- **Remove embedded test suite** - Delete test_suite.h/cpp and embedded test functions
-- **Set up PlatformIO Native Testing** - Configure native test environment 
+### Step 9: Testing and Validation
+- **Set up PlatformIO Native Testing** - Configure native test environment with GoogleTest
 - **Create comprehensive host-based tests** - Test all critical logic on development machine
 - **Extract testable logic** - Separate pure logic from hardware dependencies
-- **Focus on future-proof areas** - Prioritize testing logic likely to change (new messages, outputs, hardware)
-
-### Step 10: Testing Implementation
 - **Message Parsing Tests** - Comprehensive bit extraction and CAN parsing validation
-- **State Management Tests** - Vehicle state transitions and condition logic
+- **State Management Tests** - Vehicle state transitions and condition logic  
 - **Output Control Tests** - Output decision logic separated from hardware calls
 - **Error Recovery Tests** - Watchdog and recovery decision logic
-- **CI Integration** - Automated testing on commits
+- **Hardware-in-Loop Testing** - Test on actual ESP32-S3 hardware
+- **Integration Testing** - Test with real CAN bus interface
 
-### Step 11: Documentation and Deployment
+### Step 10: Documentation and Deployment
 - Update README.md with build and flash instructions
 - Add troubleshooting guide
 - Create configuration constants for easy customization
@@ -130,23 +127,14 @@ src/
 └── logger.h/cpp          # Logging utilities
 
 test/
-├── native/               # Host-based unit tests (PlatformIO Native)
-│   ├── test_message_parser/
-│   │   ├── test_bit_extraction.cpp      # Core bit manipulation tests
-│   │   ├── test_can_parsing.cpp         # CAN message parsing tests
-│   │   └── test_edge_cases.cpp          # Invalid/boundary data tests
-│   ├── test_state_manager/
-│   │   ├── test_state_transitions.cpp   # State change logic tests
-│   │   ├── test_vehicle_conditions.cpp  # Output decision logic tests
-│   │   └── test_timeout_handling.cpp    # Timing logic tests
-│   ├── test_output_control/
-│   │   ├── test_output_decisions.cpp    # Pure logic tests (hardware-independent)
-│   │   └── test_integration.cpp         # Cross-module integration tests
-│   └── test_error_recovery/
-│       └── test_recovery_logic.cpp      # Error handling and watchdog logic
+├── test_main.cpp         # Comprehensive native test suite with GoogleTest
+├── common/               # Shared test utilities
+│   ├── test_config.h     # Test configuration constants
+│   └── test_helpers.h    # Helper functions for tests
 └── mocks/
-    ├── mock_arduino.h                   # Arduino function mocks
-    └── mock_logging.h                   # Logging function mocks
+    ├── mock_arduino.h/cpp    # Arduino function mocks
+    └── mock_arduino.h        # Arduino hardware abstraction
+```
 ```
 
 ## Success Criteria
