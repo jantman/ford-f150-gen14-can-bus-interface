@@ -14,11 +14,13 @@
 #define TOOLBOX_BUTTON_PIN 17   // Input: Toolbox unlock button (with pullup)
 
 // CAN Bus Configuration (Listen-Only Mode)
-// Note: Both TX and RX pins needed for TWAI controller, even in listen-only mode
-// TX/RX refer to the ESP32↔transceiver connection, not the actual CAN_H/CAN_L bus
-// Pin assignments for AutoSport Labs ESP32-CAN-X2 board (X1/CAN1 interface)
-#define CAN_TX_PIN 7            // ESP32-S3 TWAI TX to onboard CAN transceiver (X1/CAN1)
-#define CAN_RX_PIN 6            // ESP32-S3 TWAI RX from onboard CAN transceiver (X1/CAN1)
+// Using MCP2515 controller on X2 header (CAN2) - ESP32-CAN-X2 board
+// Pin assignments for MCP2515 SPI interface
+#define CAN_CS_PIN 10           // SPI Chip Select for MCP2515
+#define CAN_CLK_PIN 12          // SPI Clock 
+#define CAN_MISO_PIN 13         // SPI MISO
+#define CAN_MOSI_PIN 11         // SPI MOSI
+#define CAN_IRQ_PIN 3           // MCP2515 Interrupt pin
 #define CAN_BAUDRATE 500000     // 500kbps - standard automotive rate
 
 // CAN Message IDs (from minimal.dbc)

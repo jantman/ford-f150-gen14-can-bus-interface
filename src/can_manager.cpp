@@ -1,6 +1,9 @@
 #include "can_manager.h"
-#include "driver/twai.h"
-#include "esp_err.h"
+#include <SPI.h>
+#include <mcp2515.h>
+
+// MCP2515 CAN controller instance
+MCP2515 mcp2515(CAN_CS_PIN);
 
 // Global CAN state
 static bool canInitialized = false;
@@ -9,129 +12,73 @@ static unsigned long lastCANActivity = 0;
 static uint32_t messagesReceived = 0;
 static uint32_t canErrors = 0;
 
-// TWAI configuration with more robust settings
-static const twai_general_config_t g_config = {
-    .mode = TWAI_MODE_LISTEN_ONLY,  // Listen-only mode - cannot transmit
-    .tx_io = (gpio_num_t)CAN_TX_PIN, // Still needed even in listen-only mode
-    .rx_io = (gpio_num_t)CAN_RX_PIN,
-    .clkout_io = TWAI_IO_UNUSED,
-    .bus_off_io = TWAI_IO_UNUSED,
-    .tx_queue_len = 0,              // No TX queue needed
-    .rx_queue_len = 50,             // Increased from 20 to handle burst traffic
-    .alerts_enabled = TWAI_ALERT_RX_DATA | TWAI_ALERT_ERR_PASS | TWAI_ALERT_BUS_ERROR | 
-                      TWAI_ALERT_RX_QUEUE_FULL | TWAI_ALERT_ERR_ACTIVE,
-    .clkout_divider = 0,
-    .intr_flags = ESP_INTR_FLAG_LEVEL1
-};
-
-// Standard ESP-IDF timing configuration for 500kbps
-static const twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
-
-static const twai_filter_config_t f_config = {
-    .acceptance_code = 0x00000000,
-    .acceptance_mask = 0x00000000,  // Accept all messages
-    .single_filter = true
-};
-
 bool initializeCAN() {
-    LOG_INFO("Initializing CAN bus (TWAI) in LISTEN-ONLY mode...");
-    LOG_INFO("Note: TX/RX pins connect ESP32 to CAN transceiver, not directly to CAN_H/CAN_L");
+    LOG_INFO("Initializing CAN bus (MCP2515) in LISTEN-ONLY mode...");
+    LOG_INFO("Using X2 header (CAN2H/CAN2L) with MCP2515 controller");
     
-    // Check if driver is already installed
+    // Check if already initialized
     if (canInitialized) {
-        LOG_WARN("CAN driver already initialized, skipping installation");
+        LOG_WARN("CAN driver already initialized");
         return isCANConnected();
     }
     
-    // Install TWAI driver
-    esp_err_t result = twai_driver_install(&g_config, &t_config, &f_config);
-    if (result == ESP_ERR_INVALID_STATE) {
-        LOG_WARN("TWAI driver already installed, attempting to start...");
-        // Driver already installed, try to start it
-        result = twai_start();
-        if (result == ESP_OK) {
-            canInitialized = true;
-            canConnected = true;
-            lastCANActivity = millis();
-            LOG_INFO("CAN bus started successfully (driver was already installed)");
-            return true;
-        } else {
-            LOG_ERROR("Failed to start existing TWAI driver: %s", esp_err_to_name(result));
-            return false;
-        }
-    } else if (result != ESP_OK) {
-        LOG_ERROR("Failed to install TWAI driver: %s", esp_err_to_name(result));
+    // Initialize SPI for MCP2515
+    SPI.begin(CAN_CLK_PIN, CAN_MISO_PIN, CAN_MOSI_PIN, CAN_CS_PIN);
+    
+    // Reset MCP2515
+    mcp2515.reset();
+    
+    // Set CAN bit rate to 500kbps with 16MHz crystal
+    MCP2515::ERROR result = mcp2515.setBitrate(CAN_500KBPS, MCP_16MHZ);
+    if (result != MCP2515::ERROR_OK) {
+        LOG_ERROR("Failed to set CAN bitrate: %d", (int)result);
+        canErrors++;
         return false;
     }
     
-    // Start TWAI driver
-    result = twai_start();
-    if (result != ESP_OK) {
-        LOG_ERROR("Failed to start TWAI driver: %s", esp_err_to_name(result));
-        twai_driver_uninstall();
+    // Set to listen-only mode (no ACK, no error frames)
+    result = mcp2515.setListenOnlyMode();
+    if (result != MCP2515::ERROR_OK) {
+        LOG_ERROR("Failed to set listen-only mode: %d", (int)result);
+        canErrors++;
         return false;
     }
     
     canInitialized = true;
     canConnected = true;
-    lastCANActivity = millis();
-    messagesReceived = 0;
-    canErrors = 0;
-    
-    LOG_INFO("CAN bus initialized successfully (LISTEN-ONLY MODE)");
-    LOG_INFO("  TX Pin: %d (connected but won't transmit)", CAN_TX_PIN);
-    LOG_INFO("  RX Pin: %d", CAN_RX_PIN);
-    LOG_INFO("  Baud Rate: %d bps", CAN_BAUDRATE);
-    LOG_INFO("  Mode: Listen-only (No transmission capability)");
-    LOG_INFO("  Filter: Accept all messages");
-    LOG_INFO("  RX Queue Size: %d messages", g_config.rx_queue_len);
-    
-    // Give some time for the CAN controller to settle and start receiving
-    delay(100);
-    
-    // Check if we can immediately see any bus activity
-    LOG_INFO("Checking for immediate bus activity...");
-    checkRawCANActivity();
+    LOG_INFO("CAN bus initialized successfully using MCP2515");
+    LOG_INFO("Ready to receive messages on X2 header (CAN2H/CAN2L)");
     
     return true;
 }
 
 bool receiveCANMessage(CANMessage& message) {
-    if (!canInitialized || !canConnected) {
+    if (!canInitialized) {
         return false;
     }
     
-    twai_message_t twai_msg;
-    esp_err_t result = twai_receive(&twai_msg, 0);  // Non-blocking receive
+    struct can_frame frame;
+    MCP2515::ERROR result = mcp2515.readMessage(&frame);
     
-    if (result == ESP_OK) {
-        // Convert TWAI message to our CANMessage
-        message.id = twai_msg.identifier;
-        message.length = twai_msg.data_length_code;
+    if (result == MCP2515::ERROR_OK) {
+        // Convert MCP2515 frame to our CANMessage structure
+        message.id = frame.can_id;
+        message.length = frame.can_dlc;
+        memcpy(message.data, frame.data, frame.can_dlc);
         message.timestamp = millis();
-        
-        // Copy data
-        for (int i = 0; i < twai_msg.data_length_code && i < 8; i++) {
-            message.data[i] = twai_msg.data[i];
-        }
         
         messagesReceived++;
         lastCANActivity = millis();
+        canConnected = true;
         
-        LOG_DEBUG("CAN message received: ID=0x%03X, Length=%d", message.id, message.length);
         return true;
-    } else if (result == ESP_ERR_TIMEOUT) {
-        // No message available, this is normal
-        return false;
-    } else if (result == ESP_ERR_INVALID_STATE) {
-        // Driver not in correct state - mark as disconnected
-        LOG_ERROR("CAN receive failed - driver invalid state");
-        canConnected = false;
-        canErrors++;
+    } else if (result == MCP2515::ERROR_NOMSG) {
+        // No message available - not an error
         return false;
     } else {
+        // Actual error occurred
         canErrors++;
-        LOG_WARN("CAN receive error: %s", esp_err_to_name(result));
+        LOG_DEBUG("CAN receive error: %d", (int)result);
         return false;
     }
 }
@@ -142,35 +89,35 @@ void debugReceiveAllMessages() {
         return;
     }
     
-    twai_message_t twai_msg;
+    struct can_frame frame;
     int messagesProcessed = 0;
     const int MAX_DEBUG_MESSAGES = 50; // Prevent spam
     
     while (messagesProcessed < MAX_DEBUG_MESSAGES) {
-        esp_err_t result = twai_receive(&twai_msg, 0);  // Non-blocking receive
+        MCP2515::ERROR result = mcp2515.readMessage(&frame);
         
-        if (result == ESP_OK) {
-            lastCANActivity = millis(); // Update activity timestamp
-            
-            // Log the message details
-            LOG_INFO("CAN MSG: ID=0x%03X (%d), DLC=%d, Data=[%02X %02X %02X %02X %02X %02X %02X %02X]%s",
-                     twai_msg.identifier, twai_msg.identifier, twai_msg.data_length_code,
-                     twai_msg.data[0], twai_msg.data[1], twai_msg.data[2], twai_msg.data[3],
-                     twai_msg.data[4], twai_msg.data[5], twai_msg.data[6], twai_msg.data[7],
-                     isTargetCANMessage(twai_msg.identifier) ? " [TARGET]" : "");
-            
+        if (result == MCP2515::ERROR_OK) {
             messagesProcessed++;
-        } else if (result == ESP_ERR_TIMEOUT) {
+            lastCANActivity = millis();
+            
+            // Log the message
+            LOG_INFO("DEBUG CAN RX: ID=0x%03X (%d), Len=%d, Data=[%02X %02X %02X %02X %02X %02X %02X %02X]",
+                frame.can_id, frame.can_id, frame.can_dlc,
+                frame.data[0], frame.data[1], frame.data[2], frame.data[3],
+                frame.data[4], frame.data[5], frame.data[6], frame.data[7]);
+        } else if (result == MCP2515::ERROR_NOMSG) {
             // No more messages available
             break;
         } else {
-            LOG_WARN("Debug receive error: %s", esp_err_to_name(result));
+            // Error occurred
+            canErrors++;
+            LOG_WARN("CAN debug receive error: %d", (int)result);
             break;
         }
     }
     
     if (messagesProcessed > 0) {
-        LOG_INFO("Debug: Processed %d CAN messages", messagesProcessed);
+        LOG_INFO("Processed %d debug messages", messagesProcessed);
     }
 }
 
@@ -179,41 +126,39 @@ void processPendingCANMessages() {
         return;
     }
     
-    // Check for alerts
-    uint32_t alerts;
-    esp_err_t result = twai_read_alerts(&alerts, 0);  // Non-blocking
+    // Process up to 10 messages per call to avoid blocking too long
+    int processedCount = 0;
+    const int MAX_MESSAGES_PER_CALL = 10;
     
-    if (result == ESP_OK && alerts != 0) {
-        if (alerts & TWAI_ALERT_ERR_PASS) {
-            LOG_WARN("CAN: Error passive state");
-        }
-        if (alerts & TWAI_ALERT_BUS_ERROR) {
-            LOG_ERROR("CAN: Bus error detected");
-            canErrors++;
-        }
-        if (alerts & TWAI_ALERT_RX_QUEUE_FULL) {
-            LOG_WARN("CAN: RX queue full, messages may be lost");
-        }
-        // Note: No bus-off alert in listen-only mode
-    }
-    
-    // Process all pending messages
-    CANMessage message;
-    int messagesProcessed = 0;
-    const int MAX_MESSAGES_PER_CYCLE = 10;  // Prevent infinite loop
-    
-    while (messagesProcessed < MAX_MESSAGES_PER_CYCLE && receiveCANMessage(message)) {
-        // Check if this is one of our target messages
-        if (message.id == BCM_LAMP_STAT_FD1_ID ||
-            message.id == LOCKING_SYSTEMS_2_FD1_ID ||
-            message.id == POWERTRAIN_DATA_10_ID ||
-            message.id == BATTERY_MGMT_3_FD1_ID) {
-            
-            LOG_DEBUG("Target CAN message received: ID=0x%03X", message.id);
-            // Message will be processed by message parser in the main loop
-        }
+    while (processedCount < MAX_MESSAGES_PER_CALL) {
+        struct can_frame frame;
+        MCP2515::ERROR result = mcp2515.readMessage(&frame);
         
-        messagesProcessed++;
+        if (result == MCP2515::ERROR_OK) {
+            processedCount++;
+            messagesReceived++;
+            lastCANActivity = millis();
+            
+            // Create CANMessage structure
+            CANMessage message;
+            message.id = frame.can_id;
+            message.length = frame.can_dlc;
+            memcpy(message.data, frame.data, frame.can_dlc);
+            message.timestamp = millis();
+            
+            // Log if it's a target message we care about
+            if (isTargetCANMessage(message.id)) {
+                LOG_DEBUG("Target CAN message: ID=0x%03X, Len=%d", message.id, message.length);
+            }
+        } else if (result == MCP2515::ERROR_NOMSG) {
+            // No more messages available
+            break;
+        } else {
+            // Error occurred
+            canErrors++;
+            LOG_DEBUG("CAN process error: %d", (int)result);
+            break;
+        }
     }
 }
 
@@ -222,47 +167,25 @@ bool isCANConnected() {
         return false;
     }
     
-    // Check TWAI driver state first
-    twai_status_info_t status;
-    esp_err_t result = twai_get_status_info(&status);
-    if (result != ESP_OK) {
-        LOG_WARN("Failed to get TWAI status: %s", esp_err_to_name(result));
-        canConnected = false;
-        return false;
-    }
+    // For MCP2515, we consider it connected if:
+    // 1. It's initialized
+    // 2. We've received messages recently OR we haven't had many errors
     
-    // Check if driver is in a healthy state
-    if (status.state != TWAI_STATE_RUNNING) {
-        LOG_WARN("TWAI driver not running (state: %d)", status.state);
-        canConnected = false;
-        return false;
-    }
-    
-    // Check for any sign of bus activity:
-    // 1. Recent successful message receipt
-    // 2. Messages pending in queue (even if we haven't processed them)
-    // 3. Low error counters indicate healthy communication
     unsigned long timeSinceActivity = millis() - lastCANActivity;
-    bool hasRecentActivity = (timeSinceActivity <= CAN_TIMEOUT_MS);
-    bool hasQueuedMessages = (status.msgs_to_rx > 0);
-    bool hasHealthyErrorCounters = (status.rx_error_counter < 128 && status.tx_error_counter < 128);
     
-    // Update last activity if there are queued messages
-    if (hasQueuedMessages) {
-        lastCANActivity = millis();
-        hasRecentActivity = true;
-        LOG_DEBUG("Updated CAN activity timestamp due to queued messages");
+    // If we've received messages recently, we're definitely connected
+    if (timeSinceActivity < 5000) { // 5 seconds
+        canConnected = true;
+        return true;
     }
     
-    // Consider connected if we have recent activity OR healthy error counters
-    // (healthy counters indicate the bus is working even if we're not receiving target messages)
-    canConnected = hasRecentActivity || hasHealthyErrorCounters;
-    
-    if (!canConnected) {
-        LOG_WARN("CAN bus timeout - no activity for %lu ms, queued: %lu, RX errors: %lu", 
-                 timeSinceActivity, status.msgs_to_rx, status.rx_error_counter);
+    // If we have too many errors, consider disconnected
+    if (canErrors > 10) {
+        canConnected = false;
+        return false;
     }
     
+    // Otherwise, maintain current connection state
     return canConnected;
 }
 
@@ -273,64 +196,55 @@ void handleCANError() {
         return;
     }
     
-    // Stop the driver
-    esp_err_t result = twai_stop();
-    if (result != ESP_OK) {
-        LOG_ERROR("Failed to stop TWAI driver: %s", esp_err_to_name(result));
-    }
-    
-    // Wait a bit
+    // For MCP2515, we can try to reset and reinitialize
+    mcp2515.reset();
     delay(100);
     
-    // Restart the driver
-    result = twai_start();
-    if (result == ESP_OK) {
-        LOG_INFO("CAN bus recovery successful");
-        canConnected = true;
-        lastCANActivity = millis();
+    // Reinitialize
+    MCP2515::ERROR result = mcp2515.setBitrate(CAN_500KBPS, MCP_16MHZ);
+    if (result == MCP2515::ERROR_OK) {
+        result = mcp2515.setListenOnlyMode();
+        if (result == MCP2515::ERROR_OK) {
+            LOG_INFO("CAN bus recovery successful");
+            canConnected = true;
+            canErrors = 0; // Reset error count on successful recovery
+        } else {
+            LOG_ERROR("CAN recovery failed - setListenOnlyMode error: %d", (int)result);
+            canConnected = false;
+        }
     } else {
-        LOG_ERROR("CAN bus recovery failed: %s", esp_err_to_name(result));
+        LOG_ERROR("CAN recovery failed - setBitrate error: %d", (int)result);
         canConnected = false;
     }
 }
 
-// Full CAN system recovery - uninstalls and reinstalls the driver
 bool recoverCANSystem() {
-    LOG_INFO("Attempting full CAN system recovery...");
+    LOG_WARN("Performing full CAN system recovery...");
     
-    // First try to stop if running
-    if (canInitialized) {
-        esp_err_t result = twai_stop();
-        if (result != ESP_OK && result != ESP_ERR_INVALID_STATE) {
-            LOG_WARN("Failed to stop TWAI driver during recovery: %s", esp_err_to_name(result));
-        }
-        
-        // Uninstall the driver
-        result = twai_driver_uninstall();
-        if (result != ESP_OK && result != ESP_ERR_INVALID_STATE) {
-            LOG_ERROR("Failed to uninstall TWAI driver during recovery: %s", esp_err_to_name(result));
-            return false;
-        }
-        
-        canInitialized = false;
-        canConnected = false;
-        LOG_INFO("TWAI driver uninstalled for recovery");
-    }
-    
-    // Wait a bit for hardware to settle
+    // Reset MCP2515 completely
+    mcp2515.reset();
     delay(200);
     
-    // Reinstall and start the driver
-    esp_err_t result = twai_driver_install(&g_config, &t_config, &f_config);
-    if (result != ESP_OK) {
-        LOG_ERROR("Failed to reinstall TWAI driver during recovery: %s", esp_err_to_name(result));
+    // Reinitialize SPI
+    SPI.end();
+    delay(100);
+    SPI.begin(CAN_CLK_PIN, CAN_MISO_PIN, CAN_MOSI_PIN, CAN_CS_PIN);
+    delay(100);
+    
+    // Reinitialize MCP2515
+    MCP2515::ERROR result = mcp2515.setBitrate(CAN_500KBPS, MCP_16MHZ);
+    if (result != MCP2515::ERROR_OK) {
+        LOG_ERROR("Failed to set bitrate during recovery: %d", (int)result);
+        canInitialized = false;
+        canConnected = false;
         return false;
     }
     
-    result = twai_start();
-    if (result != ESP_OK) {
-        LOG_ERROR("Failed to start TWAI driver during recovery: %s", esp_err_to_name(result));
-        twai_driver_uninstall();
+    result = mcp2515.setListenOnlyMode();
+    if (result != MCP2515::ERROR_OK) {
+        LOG_ERROR("Failed to set listen-only mode during recovery: %d", (int)result);
+        canInitialized = false;
+        canConnected = false;
         return false;
     }
     
@@ -351,41 +265,47 @@ void checkRawCANActivity() {
         return;
     }
     
-    twai_status_info_t status;
-    esp_err_t result = twai_get_status_info(&status);
-    if (result == ESP_OK) {
-        LOG_INFO("=== RAW CAN DIAGNOSTICS ===");
-        LOG_INFO("  TWAI State: %d (0=STOPPED, 1=RUNNING, 2=BUS_OFF, 3=RECOVERING)", status.state);
-        LOG_INFO("  Messages in RX Queue: %lu", status.msgs_to_rx);
-        LOG_INFO("  Messages in TX Queue: %lu", status.msgs_to_tx);
-        LOG_INFO("  TX Error Counter: %lu", status.tx_error_counter);
-        LOG_INFO("  RX Error Counter: %lu", status.rx_error_counter);
-        LOG_INFO("  TX Failed Count: %lu", status.tx_failed_count);
-        LOG_INFO("  RX Missed Count: %lu", status.rx_missed_count);
-        LOG_INFO("  RX Overrun Count: %lu", status.rx_overrun_count);
-        LOG_INFO("  Arbitration Lost Count: %lu", status.arb_lost_count);
-        LOG_INFO("  Bus Error Count: %lu", status.bus_error_count);
-        
-        // Check for any messages in the queue without removing them
-        if (status.msgs_to_rx > 0) {
-            LOG_INFO("  *** MESSAGES ARE AVAILABLE IN QUEUE ***");
-            lastCANActivity = millis(); // Update activity if messages are queued
+    LOG_INFO("=== RAW CAN DIAGNOSTICS ===");
+    LOG_INFO("  Controller: MCP2515 (SPI-based)");
+    LOG_INFO("  Interface: X2 header (CAN2H/CAN2L)");
+    LOG_INFO("  SPI Pins: CS=%d, CLK=%d, MISO=%d, MOSI=%d", CAN_CS_PIN, CAN_CLK_PIN, CAN_MISO_PIN, CAN_MOSI_PIN);
+    LOG_INFO("  Bitrate: 500kbps with 16MHz crystal");
+    LOG_INFO("  Mode: Listen-only");
+    LOG_INFO("  Messages Received: %lu", messagesReceived);
+    LOG_INFO("  Errors: %lu", canErrors);
+    LOG_INFO("  Last Activity: %lu ms ago", millis() - lastCANActivity);
+    
+    // Try to read a few messages immediately
+    struct can_frame frame;
+    int immediateMessages = 0;
+    for (int i = 0; i < 5; i++) {
+        if (mcp2515.readMessage(&frame) == MCP2515::ERROR_OK) {
+            immediateMessages++;
+            LOG_INFO("  Immediate message %d: ID=0x%03X, Len=%d", i+1, frame.can_id, frame.can_dlc);
+        } else {
+            break;
         }
-    } else {
-        LOG_ERROR("Failed to get TWAI status for diagnostics: %s", esp_err_to_name(result));
     }
+    
+    if (immediateMessages == 0) {
+        LOG_INFO("  No immediate messages available");
+    } else {
+        LOG_INFO("  Found %d immediate messages", immediateMessages);
+        lastCANActivity = millis();
+    }
+    
+    LOG_INFO("=== END CAN DIAGNOSTICS ===");
 }
 
 // Enhanced statistics with more detailed information
 void printCANStatistics() {
-    LOG_INFO("CAN Bus Statistics (Listen-Only Mode):");
+    LOG_INFO("CAN Bus Statistics (MCP2515 Listen-Only Mode):");
+    LOG_INFO("  Controller: MCP2515 on X2 header");
     LOG_INFO("  Messages Received: %lu", messagesReceived);
     LOG_INFO("  Errors: %lu", canErrors);
     LOG_INFO("  Last Activity: %lu ms ago", millis() - lastCANActivity);
-    LOG_INFO("  Connected: %s", canConnected ? "Yes" : "No");
+    LOG_INFO("  Connection Status: %s", canConnected ? "Connected" : "Disconnected");
     LOG_INFO("  Initialized: %s", canInitialized ? "Yes" : "No");
-    
-    checkRawCANActivity();
 }
 
 void resetCANStatistics() {
