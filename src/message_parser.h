@@ -42,4 +42,9 @@ bool parseBatteryManagement(const CANMessage& message, BatteryManagement& data);
 uint8_t extractBits(const uint8_t* data, uint8_t startBit, uint8_t length);
 uint16_t extractBits16(const uint8_t* data, uint8_t startBit, uint8_t length);
 
+// Debugging and testing functions
+void printCANMessageHex(const CANMessage& message);
+void printCANMessageBinary(const CANMessage& message);
+bool testBitExtraction();
+
 #endif // MESSAGE_PARSER_H

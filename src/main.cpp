@@ -4,7 +4,7 @@
 // Module includes (will be created in subsequent steps)
 #include "can_manager.h"
 #include "gpio_controller.h"
-// #include "message_parser.h"
+#include "message_parser.h"
 // #include "state_manager.h"
 // #include "logger.h"
 
@@ -42,6 +42,11 @@ void setup() {
     // Initialize state management (Step 5)
     // TODO: Initialize state management
     LOG_INFO("TODO: Initialize state management");
+    
+    // Test message parsing functions
+    if (!testBitExtraction()) {
+        LOG_ERROR("Bit extraction test failed - message parsing may not work correctly");
+    }
     
     systemInitialized = true;
     LOG_INFO("System initialization complete");
@@ -83,7 +88,48 @@ void loop() {
     
     // Process CAN messages (Step 3-4)
     processPendingCANMessages();
-    // TODO: Parse received messages and update state
+    
+    // Parse received target messages (Step 4)
+    CANMessage message;
+    while (receiveCANMessage(message)) {
+        if (isTargetCANMessage(message.id)) {
+            // Parse the message based on its ID
+            switch (message.id) {
+                case BCM_LAMP_STAT_FD1_ID: {
+                    BCMLampStatus lampStatus;
+                    if (parseBCMLampStatus(message, lampStatus)) {
+                        // TODO: Update state management with new lamp status
+                        LOG_DEBUG("BCM Lamp Status updated: PudLamp=%d", lampStatus.pudLampRequest);
+                    }
+                    break;
+                }
+                case LOCKING_SYSTEMS_2_FD1_ID: {
+                    LockingSystemsStatus lockStatus;
+                    if (parseLockingSystemsStatus(message, lockStatus)) {
+                        // TODO: Update state management with new lock status
+                        LOG_DEBUG("Lock Status updated: VehLock=%d", lockStatus.vehicleLockStatus);
+                    }
+                    break;
+                }
+                case POWERTRAIN_DATA_10_ID: {
+                    PowertrainData powertrainData;
+                    if (parsePowertrainData(message, powertrainData)) {
+                        // TODO: Update state management with new powertrain data
+                        LOG_DEBUG("Powertrain Data updated: ParkStatus=%d", powertrainData.transmissionParkStatus);
+                    }
+                    break;
+                }
+                case BATTERY_MGMT_3_FD1_ID: {
+                    BatteryManagement batteryData;
+                    if (parseBatteryManagement(message, batteryData)) {
+                        // TODO: Update state management with new battery data
+                        LOG_DEBUG("Battery Data updated: SOC=%d%%", batteryData.batterySOC);
+                    }
+                    break;
+                }
+            }
+        }
+    }
     
     // Update state management (Step 5)
     // TODO: Check for state changes and update accordingly
