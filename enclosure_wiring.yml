@@ -1,12 +1,12 @@
 # wiring diagram for use with https://github.com/wireviz/WireViz
 connectors:
-  X1:
+  X2:
     type: JST PH 2.0mm
     subtype: male
     pinlabels: ["+12VDC", "CAN-H", "CAN-L", "GND"]
     image:
       src: images/jst-ph-4pin.png
-    notes: X1 connector on ESP32-CAN-X2
+    notes: X2 connector on ESP32-CAN-X2
 
   Splice1:
     type: butt splices
@@ -50,15 +50,15 @@ connectors:
     type: butt splice
     notes: "GND348 Ground; C3154B pin 1 and 5, BK"
 
-  GX16-8-female:
-    type: GX16-8
+  GX26-8-female:
+    type: GX26-8
     subtype: female
     pinlabels: ["SBA40 +12VDC", "GPIO18", "GPIO17", "GPIO16", "GPIO15", "GPIO5", "GPIO4", ""]
     image:
       src: images/gx16-8-female.png
 
-  GX16-8-male:
-    type: GX16-8
+  GX26-8-male:
+    type: GX26-8
     subtype: male
     pinlabels: ["SBA40 +12VDC", "GPIO18", "GPIO17", "GPIO16", "GPIO15", "GPIO5", "GPIO4", ""]
     image:
@@ -74,12 +74,12 @@ connectors:
   12vTap:
     style: simple
     type: Tap
-    notes: "Tap used by GX16-8-female pin 1"
+    notes: "Tap used by GX26-8-female pin 1"
 
   12vQD:
     style: simple
     type: Quick Disconnect
-    notes: "Quick Disconnect to tap off of X1"
+    notes: "Quick Disconnect to tap off of X2"
 
   blunt:
     style: simple
@@ -109,7 +109,7 @@ connectors:
       src: images/5pinwaterproof-housing.png
 
 cables:
-  X1-Splice1:
+  X2-Splice1:
     category: bundle
     colors: [YE, WH, RD, BK]
   Splice-JST-SM-4-male:
@@ -118,7 +118,7 @@ cables:
   JST-SM-4-female-blunt:
     category: bundle
     colors: [RD, BK, BU, WH]
-  GX16-8-jst:
+  GX26-8-jst:
     category: bundle
     colors: [RD, YE, BU, VT, OG, GN, WH]
   12vTap-QD:
@@ -133,17 +133,17 @@ cables:
   5pinHousing:
     category: bundle
     colors: [GN, BU, YE, RD, BK]
-  GX16-8-truck:
+  GX26-8-truck:
     category: bundle
     colors: [RD, BU, YE, BK, BUYE, GN, WH]
 
 connections:
   - 
-    - X1: [1-4]
-    - X1-Splice1: [1-4]
+    - X2: [1-4]
+    - X2-Splice1: [1-4]
     - Splice1: [1-4]
   - 
-    - X1: [1]
+    - X2: [1]
     - 12vTap-QD: [1]
     - 12vTap.
   -
@@ -156,16 +156,16 @@ connections:
     - [SBA40., GND348., VDB30., VDB29.]
   -
     - JST-XH-6pin: [1, 2, 3, 4, 5, 6]
-    - GX16-8-jst: [2, 3, 4, 5, 6, 7]
-    - GX16-8-female: [2, 3, 4, 5, 6, 7]
+    - GX26-8-jst: [2, 3, 4, 5, 6, 7]
+    - GX26-8-female: [2, 3, 4, 5, 6, 7]
   - 
     - 12vQD.
-    - GX16-8-jst: [1]
-    - GX16-8-female: [1]
+    - GX26-8-jst: [1]
+    - GX26-8-female: [1]
   -
-    - GX16-8-female: [1-7]
+    - GX26-8-female: [1-7]
     - ==>
-    - GX16-8-male: [1-7]
+    - GX26-8-male: [1-7]
   - 
     - JST-XH-4pin: [1-4]
     - JST-XH-4pin-wire: [1-4]
@@ -187,6 +187,6 @@ connections:
     - 5pinHousing: [1-5]
     - blunt.
   -
-    - GX16-8-male: [1-7]
-    - GX16-8-truck: [1-7]
+    - GX26-8-male: [1-7]
+    - GX26-8-truck: [1-7]
     - blunt.

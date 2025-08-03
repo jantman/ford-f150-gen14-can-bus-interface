@@ -12,8 +12,8 @@ This is an application that will run on the AutoSport Labs ESP32-CAN-X2 developm
 
 - **MCU**: ESP32-S3-WROOM-1-N8R8
 - **CAN Controllers**: 
-  - Built-in TWAI (Two-Wire Automotive Interface) controller (this is the one we wish to target, called "X1" on the board)
-  - External MCP2515 CAN controller via SPI
+  - Built-in TWAI (Two-Wire Automotive Interface) controller
+  - External MCP2515 CAN controller via SPI (this is the one we wish to target, called "X2" on the board)
 - **Target Application**: Ford F150 Gen14 CAN bus interface for bed lights and toolbox control
 
 High-level functionality:
