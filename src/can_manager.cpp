@@ -24,14 +24,8 @@ static const twai_general_config_t g_config = {
     .intr_flags = ESP_INTR_FLAG_LEVEL1
 };
 
-// More specific timing configuration for 500kbps
-static const twai_timing_config_t t_config = {
-    .brp = 8,           // Baud rate prescaler
-    .tseg_1 = 15,       // Time segment 1
-    .tseg_2 = 4,        // Time segment 2  
-    .sjw = 3,           // Synchronization jump width
-    .triple_sampling = false
-};
+// Standard ESP-IDF timing configuration for 500kbps
+static const twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
 
 static const twai_filter_config_t f_config = {
     .acceptance_code = 0x00000000,
