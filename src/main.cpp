@@ -13,9 +13,26 @@ bool systemInitialized = false;
 unsigned long lastHeartbeat = 0;
 unsigned long lastCANStats = 0;
 unsigned long lastOutputUpdate = 0;
+unsigned long lastWatchdog = 0;
+unsigned long lastErrorRecovery = 0;
+
+// Error tracking and recovery
+struct SystemHealth {
+    unsigned long canErrors;
+    unsigned long parseErrors;
+    unsigned long criticalErrors;
+    unsigned long lastCanActivity;
+    unsigned long lastSystemOK;
+    bool recoveryMode;
+    bool watchdogTriggered;
+};
+static SystemHealth systemHealth = {0, 0, 0, 0, 0, false, false};
 const unsigned long HEARTBEAT_INTERVAL = 10000; // 10 seconds
 const unsigned long CAN_STATS_INTERVAL = 30000; // 30 seconds
 const unsigned long OUTPUT_UPDATE_INTERVAL = 100; // 100ms for output updates
+const unsigned long WATCHDOG_INTERVAL = 60000; // 60 seconds - system health check
+const unsigned long ERROR_RECOVERY_INTERVAL = 5000; // 5 seconds between recovery attempts
+const unsigned long CRITICAL_ERROR_THRESHOLD = 10; // Max critical errors before system reset
 
 // Output control state tracking
 struct OutputState {
@@ -30,6 +47,9 @@ static OutputState outputState = {false, false, false, false, false, false};
 
 // Function declarations
 void updateOutputControlLogic();
+void performSystemWatchdog();
+void handleErrorRecovery();
+void performSafeSystemShutdown();
 void printSystemInfo();
 
 void setup() {
@@ -66,6 +86,12 @@ void setup() {
     }
     
     systemInitialized = true;
+    
+    // Initialize system health tracking
+    unsigned long currentTime = millis();
+    systemHealth.lastCanActivity = currentTime;
+    systemHealth.lastSystemOK = currentTime;
+    
     LOG_INFO("System initialization complete");
     
     // Uncomment the line below to test all GPIO outputs on startup
@@ -103,49 +129,78 @@ void loop() {
         lastCANStats = currentTime;
     }
     
-    // Process CAN messages (Step 3-4)
-    processPendingCANMessages();
-    
-    // Parse received target messages (Step 4)
-    CANMessage message;
-    while (receiveCANMessage(message)) {
-        if (isTargetCANMessage(message.id)) {
-            // Parse the message based on its ID
-            switch (message.id) {
-                case BCM_LAMP_STAT_FD1_ID: {
-                    BCMLampStatus lampStatus;
-                    if (parseBCMLampStatus(message, lampStatus)) {
-                        updateBCMLampState(lampStatus);
-                        LOG_DEBUG("BCM Lamp Status updated: PudLamp=%d", lampStatus.pudLampRequest);
+    // Process CAN messages with error handling (Step 3-4, enhanced in Step 8)
+    try {
+        processPendingCANMessages();
+        
+        // Parse received target messages (Step 4)
+        CANMessage message;
+        unsigned int messagesProcessed = 0;
+        const unsigned int MAX_MESSAGES_PER_LOOP = 10; // Prevent loop blocking
+        
+        while (receiveCANMessage(message) && messagesProcessed < MAX_MESSAGES_PER_LOOP) {
+            messagesProcessed++;
+            systemHealth.lastCanActivity = currentTime;
+            
+            if (isTargetCANMessage(message.id)) {
+                bool parseSuccess = false;
+                // Parse the message based on its ID
+                switch (message.id) {
+                    case BCM_LAMP_STAT_FD1_ID: {
+                        BCMLampStatus lampStatus;
+                        if (parseBCMLampStatus(message, lampStatus)) {
+                            updateBCMLampState(lampStatus);
+                            LOG_DEBUG("BCM Lamp Status updated: PudLamp=%d", lampStatus.pudLampRequest);
+                            parseSuccess = true;
+                        }
+                        break;
                     }
-                    break;
+                    case LOCKING_SYSTEMS_2_FD1_ID: {
+                        LockingSystemsStatus lockStatus;
+                        if (parseLockingSystemsStatus(message, lockStatus)) {
+                            updateLockingSystemsState(lockStatus);
+                            LOG_DEBUG("Lock Status updated: VehLock=%d", lockStatus.vehicleLockStatus);
+                            parseSuccess = true;
+                        }
+                        break;
+                    }
+                    case POWERTRAIN_DATA_10_ID: {
+                        PowertrainData powertrainData;
+                        if (parsePowertrainData(message, powertrainData)) {
+                            updatePowertrainState(powertrainData);
+                            LOG_DEBUG("Powertrain Data updated: ParkStatus=%d", powertrainData.transmissionParkStatus);
+                            parseSuccess = true;
+                        }
+                        break;
+                    }
+                    case BATTERY_MGMT_3_FD1_ID: {
+                        BatteryManagement batteryData;
+                        if (parseBatteryManagement(message, batteryData)) {
+                            updateBatteryState(batteryData);
+                            LOG_DEBUG("Battery Data updated: SOC=%d%%", batteryData.batterySOC);
+                            parseSuccess = true;
+                        }
+                        break;
+                    }
                 }
-                case LOCKING_SYSTEMS_2_FD1_ID: {
-                    LockingSystemsStatus lockStatus;
-                    if (parseLockingSystemsStatus(message, lockStatus)) {
-                        updateLockingSystemsState(lockStatus);
-                        LOG_DEBUG("Lock Status updated: VehLock=%d", lockStatus.vehicleLockStatus);
-                    }
-                    break;
-                }
-                case POWERTRAIN_DATA_10_ID: {
-                    PowertrainData powertrainData;
-                    if (parsePowertrainData(message, powertrainData)) {
-                        updatePowertrainState(powertrainData);
-                        LOG_DEBUG("Powertrain Data updated: ParkStatus=%d", powertrainData.transmissionParkStatus);
-                    }
-                    break;
-                }
-                case BATTERY_MGMT_3_FD1_ID: {
-                    BatteryManagement batteryData;
-                    if (parseBatteryManagement(message, batteryData)) {
-                        updateBatteryState(batteryData);
-                        LOG_DEBUG("Battery Data updated: SOC=%d%%", batteryData.batterySOC);
-                    }
-                    break;
+                
+                // Track parsing errors
+                if (!parseSuccess) {
+                    systemHealth.parseErrors++;
+                    LOG_WARN("Failed to parse CAN message ID 0x%03X", message.id);
                 }
             }
         }
+        
+        // If we hit the message limit, log it
+        if (messagesProcessed >= MAX_MESSAGES_PER_LOOP) {
+            LOG_DEBUG("Message processing limit reached (%d messages), continuing next loop", messagesProcessed);
+        }
+        
+    } catch (...) {
+        systemHealth.canErrors++;
+        systemHealth.criticalErrors++;
+        LOG_ERROR("Critical error in CAN message processing (count: %lu)", systemHealth.criticalErrors);
     }
     
     // Update state management (Step 5)
@@ -174,6 +229,15 @@ void loop() {
     
     // Update outputs based on vehicle state (Step 7)
     updateOutputControlLogic();
+    
+    // System watchdog and error recovery (Step 8)
+    performSystemWatchdog();
+    handleErrorRecovery();
+    
+    // Update system health
+    if (isCANConnected() && getCurrentState().systemReady) {
+        systemHealth.lastSystemOK = currentTime;
+    }
     
     // Small delay to prevent overwhelming the CPU
     delay(10);
@@ -270,6 +334,160 @@ void updateOutputControlLogic() {
                       vehicleState.systemReady ? "READY" : "NOT_READY");
         }
         lastStatusLog = currentTime;
+    }
+}
+
+// System Watchdog (Step 8) - Monitor system health and detect failures
+void performSystemWatchdog() {
+    unsigned long currentTime = millis();
+    
+    // Only run watchdog check at specified intervals
+    if (currentTime - lastWatchdog < WATCHDOG_INTERVAL) {
+        return;
+    }
+    lastWatchdog = currentTime;
+    
+    bool systemHealthy = true;
+    
+    // Check 1: CAN activity timeout
+    if (currentTime - systemHealth.lastCanActivity > 30000) { // 30 seconds
+        LOG_ERROR("Watchdog: No CAN activity for %lu ms", currentTime - systemHealth.lastCanActivity);
+        systemHealthy = false;
+    }
+    
+    // Check 2: System ready timeout
+    if (currentTime - systemHealth.lastSystemOK > 60000) { // 60 seconds
+        LOG_ERROR("Watchdog: System not ready for %lu ms", currentTime - systemHealth.lastSystemOK);
+        systemHealthy = false;
+    }
+    
+    // Check 3: Critical error count
+    if (systemHealth.criticalErrors >= CRITICAL_ERROR_THRESHOLD) {
+        LOG_ERROR("Watchdog: Critical error threshold exceeded (%lu errors)", systemHealth.criticalErrors);
+        systemHealthy = false;
+    }
+    
+    // Check 4: Memory health
+    uint32_t freeHeap = ESP.getFreeHeap();
+    if (freeHeap < 10000) { // Less than 10KB free
+        LOG_ERROR("Watchdog: Low memory warning (%lu bytes free)", freeHeap);
+        systemHealthy = false;
+    }
+    
+    // Update watchdog status
+    if (!systemHealthy && !systemHealth.watchdogTriggered) {
+        systemHealth.watchdogTriggered = true;
+        systemHealth.recoveryMode = true;
+        LOG_ERROR("=== WATCHDOG TRIGGERED - System entering recovery mode ===");
+        
+        // Log detailed system state for debugging
+        LOG_ERROR("System Health Report:");
+        LOG_ERROR("  CAN Errors: %lu", systemHealth.canErrors);
+        LOG_ERROR("  Parse Errors: %lu", systemHealth.parseErrors);
+        LOG_ERROR("  Critical Errors: %lu", systemHealth.criticalErrors);
+        LOG_ERROR("  Last CAN Activity: %lu ms ago", currentTime - systemHealth.lastCanActivity);
+        LOG_ERROR("  Last System OK: %lu ms ago", currentTime - systemHealth.lastSystemOK);
+        LOG_ERROR("  Free Heap: %lu bytes", freeHeap);
+        
+    } else if (systemHealthy && systemHealth.watchdogTriggered) {
+        // System recovered
+        systemHealth.watchdogTriggered = false;
+        systemHealth.recoveryMode = false;
+        LOG_INFO("=== WATCHDOG CLEARED - System recovery successful ===");
+    }
+    
+    // Regular health status (when system is healthy)
+    if (systemHealthy) {
+        LOG_DEBUG("Watchdog: System healthy - CAN:%lu Parse:%lu Critical:%lu Heap:%lu", 
+                  systemHealth.canErrors, systemHealth.parseErrors, 
+                  systemHealth.criticalErrors, freeHeap);
+    }
+}
+
+// Error Recovery (Step 8) - Attempt to recover from system errors
+void handleErrorRecovery() {
+    if (!systemHealth.recoveryMode) {
+        return; // Only run recovery when needed
+    }
+    
+    unsigned long currentTime = millis();
+    
+    // Throttle recovery attempts
+    if (currentTime - lastErrorRecovery < ERROR_RECOVERY_INTERVAL) {
+        return;
+    }
+    lastErrorRecovery = currentTime;
+    
+    LOG_INFO("Attempting system recovery...");
+    
+    // Recovery Step 1: Restart CAN bus if needed
+    if (!isCANConnected()) {
+        LOG_INFO("Recovery: Reinitializing CAN bus...");
+        if (initializeCAN()) {
+            LOG_INFO("Recovery: CAN bus reinitialized successfully");
+            systemHealth.canErrors = 0; // Reset CAN error count
+        } else {
+            LOG_ERROR("Recovery: CAN bus reinitialization failed");
+        }
+    }
+    
+    // Recovery Step 2: Reset state timeouts
+    LOG_INFO("Recovery: Resetting state timeouts...");
+    resetStateTimeouts();
+    
+    // Recovery Step 3: Reset GPIO if needed
+    GPIOState gpioState = getGPIOState();
+    if (!gpioState.bedlight && !gpioState.parkedLED && !gpioState.unlockedLED) {
+        LOG_INFO("Recovery: Reinitializing GPIO...");
+        if (initializeGPIO()) {
+            LOG_INFO("Recovery: GPIO reinitialized successfully");
+        } else {
+            LOG_ERROR("Recovery: GPIO reinitialization failed");
+        }
+    }
+    
+    // Recovery Step 4: Clear error counters if recovery successful
+    if (isCANConnected()) {
+        if (systemHealth.parseErrors > 0 || systemHealth.canErrors > 0) {
+            LOG_INFO("Recovery: Clearing error counters (CAN:%lu Parse:%lu)", 
+                     systemHealth.canErrors, systemHealth.parseErrors);
+            systemHealth.parseErrors = 0;
+            systemHealth.canErrors = 0;
+        }
+    }
+    
+    // Recovery Step 5: Last resort - safe shutdown if too many critical errors
+    if (systemHealth.criticalErrors >= CRITICAL_ERROR_THRESHOLD * 2) {
+        LOG_ERROR("Recovery: Critical error threshold exceeded, initiating safe shutdown");
+        performSafeSystemShutdown();
+    }
+}
+
+// Safe System Shutdown (Step 8) - Safely disable all outputs and enter minimal mode
+void performSafeSystemShutdown() {
+    LOG_ERROR("=== PERFORMING SAFE SYSTEM SHUTDOWN ===");
+    
+    // Turn off all outputs for safety
+    setBedlight(false);
+    setParkedLED(false);
+    setUnlockedLED(false);
+    setToolboxOpener(false);
+    
+    // Log final system state
+    LOG_ERROR("All outputs disabled for safety");
+    LOG_ERROR("System entering minimal operation mode");
+    LOG_ERROR("Manual reset required to restore full functionality");
+    
+    // Set system to minimal operation mode
+    systemInitialized = false;
+    systemHealth.recoveryMode = false;
+    
+    // Flash parked LED as error indicator
+    for (int i = 0; i < 10; i++) {
+        setParkedLED(true);
+        delay(200);
+        setParkedLED(false);
+        delay(200);
     }
 }
 
