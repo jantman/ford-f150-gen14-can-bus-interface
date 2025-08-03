@@ -5,7 +5,7 @@
 #include "can_manager.h"
 #include "gpio_controller.h"
 #include "message_parser.h"
-// #include "state_manager.h"
+#include "state_manager.h"
 // #include "logger.h"
 
 // Global variables for application state
@@ -40,8 +40,8 @@ void setup() {
     LOG_INFO("CAN bus initialization successful");
     
     // Initialize state management (Step 5)
-    // TODO: Initialize state management
-    LOG_INFO("TODO: Initialize state management");
+    initializeStateManager();
+    LOG_INFO("State management initialization successful");
     
     // Test message parsing functions
     if (!testBitExtraction()) {
@@ -98,7 +98,7 @@ void loop() {
                 case BCM_LAMP_STAT_FD1_ID: {
                     BCMLampStatus lampStatus;
                     if (parseBCMLampStatus(message, lampStatus)) {
-                        // TODO: Update state management with new lamp status
+                        updateBCMLampState(lampStatus);
                         LOG_DEBUG("BCM Lamp Status updated: PudLamp=%d", lampStatus.pudLampRequest);
                     }
                     break;
@@ -106,7 +106,7 @@ void loop() {
                 case LOCKING_SYSTEMS_2_FD1_ID: {
                     LockingSystemsStatus lockStatus;
                     if (parseLockingSystemsStatus(message, lockStatus)) {
-                        // TODO: Update state management with new lock status
+                        updateLockingSystemsState(lockStatus);
                         LOG_DEBUG("Lock Status updated: VehLock=%d", lockStatus.vehicleLockStatus);
                     }
                     break;
@@ -114,7 +114,7 @@ void loop() {
                 case POWERTRAIN_DATA_10_ID: {
                     PowertrainData powertrainData;
                     if (parsePowertrainData(message, powertrainData)) {
-                        // TODO: Update state management with new powertrain data
+                        updatePowertrainState(powertrainData);
                         LOG_DEBUG("Powertrain Data updated: ParkStatus=%d", powertrainData.transmissionParkStatus);
                     }
                     break;
@@ -122,7 +122,7 @@ void loop() {
                 case BATTERY_MGMT_3_FD1_ID: {
                     BatteryManagement batteryData;
                     if (parseBatteryManagement(message, batteryData)) {
-                        // TODO: Update state management with new battery data
+                        updateBatteryState(batteryData);
                         LOG_DEBUG("Battery Data updated: SOC=%d%%", batteryData.batterySOC);
                     }
                     break;
@@ -132,10 +132,10 @@ void loop() {
     }
     
     // Update state management (Step 5)
-    // TODO: Check for state changes and update accordingly
+    checkForStateChanges();
     
-    // Handle button input (Step 6)
-    // TODO: Process toolbox button with debouncing
+    // Handle button input (Step 6) 
+    updateButtonState();
     
     // Update GPIO timing (toolbox opener auto-shutoff)
     updateToolboxOpenerTiming();

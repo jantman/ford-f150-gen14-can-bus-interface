@@ -31,6 +31,7 @@
 #define TOOLBOX_OPENER_DURATION_MS 500  // Duration to keep toolbox opener active
 #define BUTTON_DEBOUNCE_MS 50          // Button debounce time
 #define CAN_TIMEOUT_MS 5000            // CAN message timeout (consider signal stale)
+#define STATE_TIMEOUT_MS 10000         // State data timeout (consider system not ready)
 #define SERIAL_BAUD_RATE 115200        // Serial monitor baud rate
 
 // Signal Value Definitions (from minimal.dbc)
@@ -41,18 +42,19 @@
 #define PUDLAMP_RAMP_DOWN 3
 
 // Veh_Lock_Status values
-#define LOCK_DBL 0
-#define LOCK_ALL 1
-#define UNLOCK_ALL 2
-#define UNLOCK_DRV 3
+#define VEH_LOCK_DBL 0
+#define VEH_LOCK_ALL 1
+#define VEH_UNLOCK_ALL 2
+#define VEH_UNLOCK_DRV 3
+#define VEH_LOCK_UNKNOWN 255
 
 // TrnPrkSys_D_Actl values
-#define PARK_NOT_KNOWN 0
-#define PARK_PARK 1
-#define PARK_TRANSITION_CLOSE_TO_PARK 2
-#define PARK_AT_NO_SPRING 3
-#define PARK_TRANSITION_CLOSE_TO_OUT_OF_PARK 4
-#define PARK_OUT_OF_PARK 5
+#define TRNPRKSTS_UNKNOWN 0
+#define TRNPRKSTS_PARK 1
+#define TRNPRKSTS_TRANSITION_CLOSE_TO_PARK 2
+#define TRNPRKSTS_AT_NO_SPRING 3
+#define TRNPRKSTS_TRANSITION_CLOSE_TO_OUT_OF_PARK 4
+#define TRNPRKSTS_OUT_OF_PARK 5
 // Additional values 6-15 exist but we only care about Park(1)
 
 // Debug Configuration
