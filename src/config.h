@@ -30,6 +30,8 @@
 // Timing Configuration
 #define TOOLBOX_OPENER_DURATION_MS 500  // Duration to keep toolbox opener active
 #define BUTTON_DEBOUNCE_MS 50          // Button debounce time
+#define BUTTON_HOLD_THRESHOLD_MS 1000  // Time to consider button "held"
+#define BUTTON_DOUBLE_CLICK_MS 300     // Max time between clicks for double-click
 #define CAN_TIMEOUT_MS 5000            // CAN message timeout (consider signal stale)
 #define STATE_TIMEOUT_MS 10000         // State data timeout (consider system not ready)
 #define SERIAL_BAUD_RATE 115200        // Serial monitor baud rate

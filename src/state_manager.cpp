@@ -37,9 +37,15 @@ void initializeStateManager() {
     // Initialize button state
     buttonState.currentState = false;
     buttonState.previousState = false;
+    buttonState.rawState = false;
     buttonState.pressed = false;
+    buttonState.released = false;
+    buttonState.isHeld = false;
     buttonState.lastChangeTime = currentTime;
     buttonState.lastPressTime = 0;
+    buttonState.lastReleaseTime = 0;
+    buttonState.pressCount = 0;
+    buttonState.holdDuration = 0;
     
     stateManagerInitialized = true;
     LOG_INFO("State Manager initialized successfully");
@@ -257,32 +263,67 @@ void resetStateTimeouts() {
     LOG_INFO("State timeouts reset");
 }
 
-// Update button state (Step 6 functionality - basic implementation for now)
+// Update button state (Step 6 functionality - enhanced debouncing)
 void updateButtonState() {
     if (!stateManagerInitialized) {
         return;
     }
     
-    // Read current button state (active low with pullup)
-    bool currentReading = !digitalRead(TOOLBOX_BUTTON_PIN);
+    // Read raw button state (active low with pullup)
+    bool currentRawReading = !digitalRead(TOOLBOX_BUTTON_PIN);
     unsigned long currentTime = millis();
     
-    // Store previous state
+    // Store raw state
+    buttonState.rawState = currentRawReading;
+    
+    // Store previous debounced state
     buttonState.previousState = buttonState.currentState;
     
-    // Simple debouncing - require stable state for BUTTON_DEBOUNCE_MS
-    if (currentReading != buttonState.currentState) {
-        if ((currentTime - buttonState.lastChangeTime) > BUTTON_DEBOUNCE_MS) {
-            buttonState.currentState = currentReading;
+    // Debouncing logic: require stable state for BUTTON_DEBOUNCE_MS
+    if (currentRawReading != buttonState.currentState) {
+        // State change detected, check if it's been stable long enough
+        if ((currentTime - buttonState.lastChangeTime) >= BUTTON_DEBOUNCE_MS) {
+            // State change confirmed, update debounced state
+            buttonState.currentState = currentRawReading;
             buttonState.lastChangeTime = currentTime;
             
             // Detect press event (transition from false to true)
             if (buttonState.currentState && !buttonState.previousState) {
                 buttonState.pressed = true;
                 buttonState.lastPressTime = currentTime;
-                LOG_INFO("Toolbox button pressed");
+                buttonState.pressCount++;
+                buttonState.holdDuration = 0;
+                LOG_INFO("Toolbox button pressed (count: %lu)", buttonState.pressCount);
+            }
+            
+            // Detect release event (transition from true to false)
+            if (!buttonState.currentState && buttonState.previousState) {
+                buttonState.released = true;
+                buttonState.lastReleaseTime = currentTime;
+                buttonState.isHeld = false;
+                buttonState.holdDuration = 0;
+                
+                unsigned long pressDuration = currentTime - buttonState.lastPressTime;
+                LOG_INFO("Toolbox button released (held for %lu ms)", pressDuration);
             }
         }
+    } else {
+        // No state change, reset the debounce timer
+        buttonState.lastChangeTime = currentTime;
+    }
+    
+    // Update hold status and duration
+    if (buttonState.currentState) {
+        buttonState.holdDuration = currentTime - buttonState.lastPressTime;
+        
+        // Check if button is being held
+        if (buttonState.holdDuration >= BUTTON_HOLD_THRESHOLD_MS && !buttonState.isHeld) {
+            buttonState.isHeld = true;
+            LOG_INFO("Toolbox button is being held (%lu ms)", buttonState.holdDuration);
+        }
+    } else {
+        buttonState.holdDuration = 0;
+        buttonState.isHeld = false;
     }
 }
 
@@ -295,6 +336,54 @@ bool isButtonPressed() {
     bool wasPressed = buttonState.pressed;
     buttonState.pressed = false; // Clear flag after reading
     return wasPressed;
+}
+
+// Check if button was released (and clear the flag)
+bool isButtonReleased() {
+    if (!stateManagerInitialized) {
+        return false;
+    }
+    
+    bool wasReleased = buttonState.released;
+    buttonState.released = false; // Clear flag after reading
+    return wasReleased;
+}
+
+// Check if button is currently being held
+bool isButtonHeld() {
+    if (!stateManagerInitialized) {
+        return false;
+    }
+    
+    return buttonState.isHeld;
+}
+
+// Get current button hold duration in milliseconds
+unsigned long getButtonHoldDuration() {
+    if (!stateManagerInitialized) {
+        return 0;
+    }
+    
+    return buttonState.holdDuration;
+}
+
+// Get total button press count
+unsigned long getButtonPressCount() {
+    if (!stateManagerInitialized) {
+        return 0;
+    }
+    
+    return buttonState.pressCount;
+}
+
+// Reset button press count (useful for diagnostics)
+void resetButtonPressCount() {
+    if (!stateManagerInitialized) {
+        return;
+    }
+    
+    LOG_INFO("Button press count reset (was %lu)", buttonState.pressCount);
+    buttonState.pressCount = 0;
 }
 
 // Get button state (read-only copy)

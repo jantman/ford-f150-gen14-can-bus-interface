@@ -137,6 +137,21 @@ void loop() {
     // Handle button input (Step 6) 
     updateButtonState();
     
+    // Process button events with enhanced debouncing
+    if (isButtonPressed()) {
+        if (shouldActivateToolbox()) {
+            LOG_INFO("Toolbox activation requested - conditions met, activating toolbox opener");
+            setToolboxOpener(true);
+        } else {
+            LOG_WARN("Toolbox activation requested but conditions not met (not ready/parked/unlocked)");
+        }
+    }
+    
+    // Log long button holds (for diagnostics)
+    if (isButtonHeld() && (getButtonHoldDuration() % 5000) == 0) {
+        LOG_DEBUG("Button held for %lu ms", getButtonHoldDuration());
+    }
+    
     // Update GPIO timing (toolbox opener auto-shutoff)
     updateToolboxOpenerTiming();
     
