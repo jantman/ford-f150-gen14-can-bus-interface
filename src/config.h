@@ -69,7 +69,7 @@
 #define DEBUG_LEVEL_DEBUG 4
 
 #ifndef DEBUG_LEVEL
-#define DEBUG_LEVEL DEBUG_LEVEL_INFO
+#define DEBUG_LEVEL DEBUG_LEVEL_DEBUG
 #endif
 
 // Logging macros
