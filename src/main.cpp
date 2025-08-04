@@ -125,8 +125,6 @@ void loop() {
     
     // Process CAN messages with error handling (Step 3-4, enhanced in Step 8)
     try {
-        processPendingCANMessages();
-        
         // Parse received target messages (Step 4)
         CANMessage message;
         unsigned int messagesProcessed = 0;

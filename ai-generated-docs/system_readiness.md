@@ -141,17 +141,23 @@ Use the `can_debug` or `cd` command to monitor CAN message reception for 10 seco
 
 ### Common Causes of "Not Ready" Status
 
-1. **CAN Bus Connection Issues**
+1. **Message Processing Pipeline Issue (Fixed in Latest Version)**
+   - **Symptom**: Messages visible in `can_debug` but no processing logs
+   - **Cause**: Redundant message consumption in main loop
+   - **Fix**: Updated main.cpp to remove `processPendingCANMessages()` call
+   - **Detection**: Run `can_debug` - if you see target messages but no parsing logs, this was the issue
+
+2. **CAN Bus Connection Issues**
    - Check physical CAN bus connections
    - Verify MCP2515 controller is functioning
    - Check for CAN bus errors in statistics
 
-2. **Missing Target Messages**
+3. **Missing Target Messages**
    - Vehicle may not be transmitting expected messages
    - CAN message IDs may be different for your vehicle variant
    - Use `can_debug` command to see what messages are being received
 
-3. **Intermittent Reception**
+4. **Intermittent Reception**
    - Poor CAN bus signal quality
    - Electrical interference
    - Check error counters and CAN statistics
@@ -160,36 +166,22 @@ Use the `can_debug` or `cd` command to monitor CAN message reception for 10 seco
 
 1. **Check CAN Statistics**: Use `can_status` command
 2. **Monitor Message Reception**: Use `can_debug` command
-3. **Review Error Logs**: Look for parsing errors or CAN errors
-4. **Verify Message IDs**: Confirm your vehicle sends the expected message IDs
+3. **Compare Debug vs Normal Logs**: 
+   - If `can_debug` shows target messages but normal operation doesn't process them, there's a pipeline issue
+   - If `can_debug` shows no target messages, it's a CAN bus/vehicle issue
+4. **Review Error Logs**: Look for parsing errors or CAN errors
+5. **Verify Message IDs**: Confirm your vehicle sends the expected message IDs
 
-## Configuration
+### Expected Log Sequence for Working System
 
-### Timeout Adjustment
+When a target message is received and processed, you should see:
 
-The system readiness timeout can be adjusted by modifying `STATE_TIMEOUT_MS` in `config.h`:
-
-```cpp
-#define STATE_TIMEOUT_MS 10000  // 10 seconds (default)
+```
+[DEBUG] Target CAN message: ID=0x331, Len=8
+[DEBUG] Parsed Locking_Systems_2_FD1: VehLockStatus=2
+[DEBUG] Lock Status updated: VehLock=2
+[INFO] Vehicle lock state changed: LOCK_ALL -> UNLOCK_ALL (unlocked: YES)
+[INFO] Unlocked LED ON (vehicle lock status: 2)
 ```
 
-**Note**: Shorter timeouts make the system more responsive but less tolerant of intermittent CAN bus issues. Longer timeouts are more forgiving but slower to detect actual problems.
-
-### Debug Level
-
-To see detailed system readiness logging, ensure debug level is set appropriately:
-
-```cpp
-#define DEBUG_LEVEL DEBUG_LEVEL_DEBUG  // Shows all log messages
-```
-
-## Safety Considerations
-
-The system readiness mechanism is a critical safety feature:
-
-1. **Fail-Safe Operation**: When system is not ready, all outputs are disabled
-2. **No False Activations**: Toolbox and other outputs won't activate without confirmed vehicle state
-3. **Timeout Protection**: Stale data is automatically detected and handled
-4. **Graceful Degradation**: System continues monitoring and attempts recovery
-
-This ensures the system only operates when it has current, reliable information about the vehicle's actual state.
+If you only see the first line or none at all, there's a processing issue.
