@@ -3,3 +3,4 @@ venv/
 
 # CAN log files
 *.log
+*.out
