@@ -45,37 +45,29 @@ protected:
     }
 };
 
-// Helper to set specific bits in CAN data
+// Helper to set specific bits in CAN data using DBC-style positioning
+// startBit: MSB bit position (DBC format), length: number of bits
+// Uses Intel (little-endian) byte order as specified in DBC (@0+)
 void setBits(uint8_t* data, int startBit, int length, uint32_t value) {
-    int byteIndex = startBit / 8;
-    int bitOffset = startBit % 8;
-    
-    // Clear existing bits first
-    for (int i = 0; i < (length + bitOffset + 7) / 8 && (byteIndex + i) < 8; i++) {
-        uint8_t mask = 0xFF;
-        if (i == 0) {
-            mask = ~(((1 << length) - 1) << bitOffset);
-            if (length + bitOffset > 8) {
-                mask = ~(0xFF << bitOffset);
-            }
-        } else if (i == (length + bitOffset + 7) / 8 - 1) {
-            int remainingBits = (length + bitOffset) % 8;
-            if (remainingBits != 0) {
-                mask = ~((1 << remainingBits) - 1);
-            }
-        } else {
-            mask = 0x00;
-        }
-        data[byteIndex + i] &= mask;
+    // Convert existing data to 64-bit integer (little-endian)
+    uint64_t dataValue = 0;
+    for (int i = 0; i < 8; i++) {
+        dataValue |= ((uint64_t)data[i]) << (i * 8);
     }
     
-    // Set new value
-    for (int i = 0; i < (length + bitOffset + 7) / 8 && (byteIndex + i) < 8; i++) {
-        uint8_t valueByte = (value >> (i * 8 - bitOffset)) & 0xFF;
-        if (i == 0) {
-            valueByte = (value << bitOffset) & 0xFF;
-        }
-        data[byteIndex + i] |= valueByte;
+    // Calculate bit position (DBC uses MSB bit numbering)
+    int bitPos = startBit - length + 1;
+    
+    // Clear the target bits
+    uint64_t mask = ((1ULL << length) - 1) << bitPos;
+    dataValue &= ~mask;
+    
+    // Set the new value at the correct bit position
+    dataValue |= ((uint64_t)value) << bitPos;
+    
+    // Convert back to byte array (little-endian)
+    for (int i = 0; i < 8; i++) {
+        data[i] = (dataValue >> (i * 8)) & 0xFF;
     }
 }
 
@@ -83,10 +75,10 @@ void setBits(uint8_t* data, int startBit, int length, uint32_t value) {
 TEST_F(ArduinoTest, BitExtractionBasic) {
     uint8_t testData[8] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
     
-    // Test basic extraction within single byte
-    EXPECT_EQ(extractBits(testData, 0, 4), 0x2);   // Lower 4 bits of 0x12
-    EXPECT_EQ(extractBits(testData, 4, 4), 0x1);   // Upper 4 bits of 0x12
-    EXPECT_EQ(extractBits(testData, 8, 8), 0x34);  // Full second byte
+    // Test basic extraction within single byte using DBC-style positions
+    EXPECT_EQ(extractBits(testData, 3, 4), 0x2);   // Lower 4 bits of 0x12 (DBC bits 0-3, MSB at 3)
+    EXPECT_EQ(extractBits(testData, 7, 4), 0x1);   // Upper 4 bits of 0x12 (DBC bits 4-7, MSB at 7)
+    EXPECT_EQ(extractBits(testData, 15, 8), 0x34); // Full second byte (DBC bits 8-15, MSB at 15)
 }
 
 TEST_F(ArduinoTest, BitExtractionEdgeCases) {
@@ -102,16 +94,16 @@ TEST_F(ArduinoTest, BitExtractionEdgeCases) {
 TEST_F(ArduinoTest, CANMessageBitSetting) {
     uint8_t data[8] = {0};
     
-    // Set bits 11-12 to value 2 (PudLamp)
-    setBits(data, 11, 2, 2);
-    EXPECT_EQ(extractBits(data, 11, 2), 2);
+    // Set PudLamp_D_Rq (DBC bits 11-12, MSB at 12) to value 2
+    setBits(data, 12, 2, 2);
+    EXPECT_EQ(extractBits(data, 12, 2), 2);
     
-    // Set bits 34-35 to value 3 (Lock status)
-    setBits(data, 34, 2, 3);
-    EXPECT_EQ(extractBits(data, 34, 2), 3);
+    // Set Veh_Lock_Status (DBC bits 34-35, MSB at 35) to value 3
+    setBits(data, 35, 2, 3);
+    EXPECT_EQ(extractBits(data, 35, 2), 3);
     
     // Verify first value is preserved
-    EXPECT_EQ(extractBits(data, 11, 2), 2);
+    EXPECT_EQ(extractBits(data, 12, 2), 2);
 }
 
 // Test Suite: Arduino Mock Functionality

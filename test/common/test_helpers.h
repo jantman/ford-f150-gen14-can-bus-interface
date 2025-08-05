@@ -48,24 +48,29 @@ protected:
 #define CREATE_CAN_MESSAGE(id, data_bytes) \
     { .identifier = id, .data_length_code = 8, .data = data_bytes }
 
-// Bit manipulation helpers for creating test CAN data
+// Bit manipulation helpers for creating test CAN data using DBC-style positioning
+// startBit: MSB bit position (DBC format), length: number of bits
+// Uses Intel (little-endian) byte order as specified in DBC (@0+)
 inline void setBits(uint8_t* data, int startBit, int length, uint32_t value) {
-    int byteIndex = startBit / 8;
-    int bitOffset = startBit % 8;
-    
-    // Clear existing bits
-    uint32_t mask = ((1U << length) - 1) << bitOffset;
-    for (int i = 0; i < (length + bitOffset + 7) / 8; i++) {
-        if (byteIndex + i < 8) {
-            data[byteIndex + i] &= ~(mask >> (i * 8));
-        }
+    // Convert existing data to 64-bit integer (little-endian)
+    uint64_t dataValue = 0;
+    for (int i = 0; i < 8; i++) {
+        dataValue |= ((uint64_t)data[i]) << (i * 8);
     }
     
-    // Set new value  
-    for (int i = 0; i < (length + bitOffset + 7) / 8; i++) {
-        if (byteIndex + i < 8) {
-            data[byteIndex + i] |= (value << bitOffset) >> (i * 8);
-        }
+    // Calculate bit position (DBC uses MSB bit numbering)
+    int bitPos = startBit - length + 1;
+    
+    // Clear the target bits
+    uint64_t mask = ((1ULL << length) - 1) << bitPos;
+    dataValue &= ~mask;
+    
+    // Set the new value at the correct bit position
+    dataValue |= ((uint64_t)value) << bitPos;
+    
+    // Convert back to byte array (little-endian)
+    for (int i = 0; i < 8; i++) {
+        data[i] = (dataValue >> (i * 8)) & 0xFF;
     }
 }
 

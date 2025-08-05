@@ -1,65 +1,46 @@
 #include "can_protocol.h"
 #include "config.h"
 
-// Pure bit manipulation (no Arduino dependencies)
+// Pure bit manipulation using DBC-style bit positioning
+// startBit: MSB bit position (DBC format), length: number of bits (1-8)
+// Uses Intel (little-endian) byte order as specified in DBC (@0+)
 uint8_t extractBits(const uint8_t* data, uint8_t startBit, uint8_t length) {
-    if (length > 8 || startBit >= 64) return 0;
+    if (length > 8 || startBit > 63) return 0; // Bounds check
     
-    uint8_t startByte = startBit / 8;
-    uint8_t startBitInByte = startBit % 8;
-    
-    if (startByte >= 8) return 0;
-    
-    uint8_t result = 0;
-    uint8_t bitsRemaining = length;
-    uint8_t resultBitPos = 0;
-    
-    while (bitsRemaining > 0 && startByte < 8) {
-        uint8_t bitsInThisByte = 8 - startBitInByte;
-        uint8_t bitsToExtract = (bitsRemaining < bitsInThisByte) ? bitsRemaining : bitsInThisByte;
-        
-        uint8_t mask = ((1 << bitsToExtract) - 1) << startBitInByte;
-        uint8_t extractedBits = (data[startByte] & mask) >> startBitInByte;
-        
-        result |= (extractedBits << resultBitPos);
-        
-        bitsRemaining -= bitsToExtract;
-        resultBitPos += bitsToExtract;
-        startByte++;
-        startBitInByte = 0;
+    // Convert 8 bytes to 64-bit integer (little-endian) - matches Python implementation
+    uint64_t data_int = 0;
+    for (int i = 0; i < 8; i++) {
+        data_int |= ((uint64_t)data[i]) << (i * 8);
     }
     
-    return result;
+    // Calculate bit position from MSB (DBC uses MSB bit numbering) - matches Python
+    uint8_t bit_pos = startBit - length + 1;
+    
+    // Create mask and extract value - matches Python
+    uint64_t mask = (1ULL << length) - 1;
+    uint8_t value = (data_int >> bit_pos) & mask;
+    
+    return value;
 }
 
+// 16-bit version for larger values using DBC-style bit positioning
 uint16_t extractBits16(const uint8_t* data, uint8_t startBit, uint8_t length) {
-    if (length > 16) return 0;
+    if (length > 16 || startBit > 63) return 0; // Bounds check
     
-    uint8_t startByte = startBit / 8;
-    uint8_t startBitInByte = startBit % 8;
-    
-    if (startByte >= 8) return 0;
-    
-    uint16_t result = 0;
-    uint8_t bitsRemaining = length;
-    uint8_t resultBitPos = 0;
-    
-    while (bitsRemaining > 0 && startByte < 8) {
-        uint8_t bitsInThisByte = 8 - startBitInByte;
-        uint8_t bitsToExtract = (bitsRemaining < bitsInThisByte) ? bitsRemaining : bitsInThisByte;
-        
-        uint8_t mask = ((1 << bitsToExtract) - 1) << startBitInByte;
-        uint8_t extractedBits = (data[startByte] & mask) >> startBitInByte;
-        
-        result |= (extractedBits << resultBitPos);
-        
-        bitsRemaining -= bitsToExtract;
-        resultBitPos += bitsToExtract;
-        startByte++;
-        startBitInByte = 0;
+    // Convert 8 bytes to 64-bit integer (little-endian) - matches Python implementation
+    uint64_t data_int = 0;
+    for (int i = 0; i < 8; i++) {
+        data_int |= ((uint64_t)data[i]) << (i * 8);
     }
     
-    return result;
+    // Calculate bit position from MSB (DBC uses MSB bit numbering) - matches Python
+    uint8_t bit_pos = startBit - length + 1;
+    
+    // Create mask and extract value - matches Python
+    uint64_t mask = (1ULL << length) - 1;
+    uint16_t value = (data_int >> bit_pos) & mask;
+    
+    return value;
 }
 
 // Pure message parsing (no Arduino dependencies)
@@ -71,10 +52,10 @@ BCMLampData parseBCMLampFrame(const CANFrame* frame) {
         return result;
     }
     
-    // Extract signals according to DBC specification
-    result.pudLampRequest = extractBits(frame->data, 11, 2);  // Bits 11-12
-    result.illuminatedEntryStatus = extractBits(frame->data, 13, 2);  
-    result.drCourtesyLightStatus = extractBits(frame->data, 15, 2);   
+    // Extract signals according to DBC specification (using DBC MSB bit positions)
+    result.pudLampRequest = extractBits(frame->data, 12, 2);  // Bits 11-12 (DBC MSB position 12)
+    result.illuminatedEntryStatus = extractBits(frame->data, 64, 2);  // Bits 63-64 (DBC MSB position 64) 
+    result.drCourtesyLightStatus = extractBits(frame->data, 50, 2);   // Bits 49-50 (DBC MSB position 50)   
     
     // Basic validation
     result.valid = (result.pudLampRequest <= 3);  // Valid range 0-3
@@ -90,8 +71,8 @@ LockingSystemsData parseLockingSystemsFrame(const CANFrame* frame) {
         return result;
     }
     
-    // Extract signals according to DBC specification  
-    result.vehicleLockStatus = extractBits(frame->data, 34, 2);  // Bits 34-35
+    // Extract signals according to DBC specification (using DBC MSB bit positions)
+    result.vehicleLockStatus = extractBits(frame->data, 35, 2);  // Bits 34-35 (DBC MSB position 35)
     
     // Basic validation
     result.valid = (result.vehicleLockStatus <= 3);  // Valid range 0-3
@@ -107,8 +88,8 @@ PowertrainData parsePowertrainFrame(const CANFrame* frame) {
         return result;
     }
     
-    // Extract signals according to DBC specification
-    result.transmissionParkStatus = extractBits(frame->data, 31, 4);  // Bits 31-34
+    // Extract signals according to DBC specification (using DBC MSB bit positions)
+    result.transmissionParkStatus = extractBits(frame->data, 34, 4);  // Bits 31-34 (DBC MSB position 34)
     
     // Basic validation
     result.valid = (result.transmissionParkStatus <= 15);  // Valid range 0-15
@@ -124,8 +105,8 @@ BatteryData parseBatteryFrame(const CANFrame* frame) {
         return result;
     }
     
-    // Extract signals according to DBC specification
-    result.batterySOC = extractBits(frame->data, 22, 7);  // Bits 22-28, 7 bits for 0-127%
+    // Extract signals according to DBC specification (using DBC MSB bit positions)
+    result.batterySOC = extractBits(frame->data, 28, 7);  // Bits 22-28 (DBC MSB position 28), 7 bits for 0-127%
     
     // Basic validation
     result.valid = (result.batterySOC <= 127);  // Valid range 0-127%

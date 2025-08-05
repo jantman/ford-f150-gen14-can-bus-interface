@@ -1,71 +1,45 @@
 #include "message_parser.h"
 
-// Utility function to extract bits from CAN data
-// startBit: bit position (0-63), length: number of bits (1-32)
-// CAN data is typically stored in big-endian format
+// Utility function to extract bits from CAN data using DBC-style bit positioning
+// startBit: MSB bit position (DBC format), length: number of bits (1-8)
+// Uses Intel (little-endian) byte order as specified in DBC (@0+)
 uint8_t extractBits(const uint8_t* data, uint8_t startBit, uint8_t length) {
-    if (length > 8) return 0; // This function is for up to 8 bits
+    if (length > 8 || startBit > 63) return 0; // Bounds check
     
-    uint8_t startByte = startBit / 8;
-    uint8_t startBitInByte = startBit % 8;
-    
-    if (startByte >= 8) return 0; // Out of bounds
-    
-    uint8_t result = 0;
-    uint8_t bitsRemaining = length;
-    uint8_t resultBitPos = 0;
-    
-    while (bitsRemaining > 0 && startByte < 8) {
-        uint8_t bitsInThisByte = 8 - startBitInByte;
-        uint8_t bitsToExtract = (bitsRemaining < bitsInThisByte) ? bitsRemaining : bitsInThisByte;
-        
-        // Create mask for the bits we want
-        uint8_t mask = ((1 << bitsToExtract) - 1) << startBitInByte;
-        uint8_t extractedBits = (data[startByte] & mask) >> startBitInByte;
-        
-        // Place extracted bits in result
-        result |= (extractedBits << resultBitPos);
-        
-        bitsRemaining -= bitsToExtract;
-        resultBitPos += bitsToExtract;
-        startByte++;
-        startBitInByte = 0; // For subsequent bytes, start from bit 0
+    // Convert 8 bytes to 64-bit integer (little-endian) - matches Python implementation
+    uint64_t data_int = 0;
+    for (int i = 0; i < 8; i++) {
+        data_int |= ((uint64_t)data[i]) << (i * 8);
     }
     
-    return result;
+    // Calculate bit position from MSB (DBC uses MSB bit numbering) - matches Python
+    uint8_t bit_pos = startBit - length + 1;
+    
+    // Create mask and extract value - matches Python
+    uint64_t mask = (1ULL << length) - 1;
+    uint8_t value = (data_int >> bit_pos) & mask;
+    
+    return value;
 }
 
-// 16-bit version for larger values
+// 16-bit version for larger values using DBC-style bit positioning
 uint16_t extractBits16(const uint8_t* data, uint8_t startBit, uint8_t length) {
-    if (length > 16) return 0; // This function is for up to 16 bits
+    if (length > 16 || startBit > 63) return 0; // Bounds check
     
-    uint8_t startByte = startBit / 8;
-    uint8_t startBitInByte = startBit % 8;
-    
-    if (startByte >= 8) return 0; // Out of bounds
-    
-    uint16_t result = 0;
-    uint8_t bitsRemaining = length;
-    uint8_t resultBitPos = 0;
-    
-    while (bitsRemaining > 0 && startByte < 8) {
-        uint8_t bitsInThisByte = 8 - startBitInByte;
-        uint8_t bitsToExtract = (bitsRemaining < bitsInThisByte) ? bitsRemaining : bitsInThisByte;
-        
-        // Create mask for the bits we want
-        uint8_t mask = ((1 << bitsToExtract) - 1) << startBitInByte;
-        uint8_t extractedBits = (data[startByte] & mask) >> startBitInByte;
-        
-        // Place extracted bits in result
-        result |= ((uint16_t)extractedBits << resultBitPos);
-        
-        bitsRemaining -= bitsToExtract;
-        resultBitPos += bitsToExtract;
-        startByte++;
-        startBitInByte = 0; // For subsequent bytes, start from bit 0
+    // Convert 8 bytes to 64-bit integer (little-endian) - matches Python implementation
+    uint64_t data_int = 0;
+    for (int i = 0; i < 8; i++) {
+        data_int |= ((uint64_t)data[i]) << (i * 8);
     }
     
-    return result;
+    // Calculate bit position from MSB (DBC uses MSB bit numbering) - matches Python
+    uint8_t bit_pos = startBit - length + 1;
+    
+    // Create mask and extract value - matches Python
+    uint64_t mask = (1ULL << length) - 1;
+    uint16_t value = (data_int >> bit_pos) & mask;
+    
+    return value;
 }
 
 // Parse BCM_Lamp_Stat_FD1 message (ID: 963, 8 bytes)
@@ -76,10 +50,10 @@ bool parseBCMLampStatus(const CANMessage& message, BCMLampStatus& status) {
         return false;
     }
     
-    // Extract signals according to DBC file
-    status.pudLampRequest = extractBits(message.data, 11, 2);           // Bits 11-12, 2 bits
-    status.illuminatedEntryStatus = extractBits(message.data, 63, 2);   // Bits 63-64, 2 bits  
-    status.drCourtesyLightStatus = extractBits(message.data, 49, 2);    // Bits 49-50, 2 bits
+    // Extract signals according to DBC file (using DBC bit positions directly)
+    status.pudLampRequest = extractBits(message.data, 12, 2);           // Bits 11-12, 2 bits (DBC MSB position 12)
+    status.illuminatedEntryStatus = extractBits(message.data, 64, 2);   // Bits 63-64, 2 bits (DBC MSB position 64)
+    status.drCourtesyLightStatus = extractBits(message.data, 50, 2);    // Bits 49-50, 2 bits (DBC MSB position 50)
     
     status.valid = true;
     status.timestamp = message.timestamp;
@@ -98,8 +72,8 @@ bool parseLockingSystemsStatus(const CANMessage& message, LockingSystemsStatus& 
         return false;
     }
     
-    // Extract vehicle lock status signal
-    status.vehicleLockStatus = extractBits(message.data, 34, 2);  // Bits 34-35, 2 bits
+    // Extract vehicle lock status signal (using DBC bit position directly)
+    status.vehicleLockStatus = extractBits(message.data, 35, 2);  // Bits 34-35, 2 bits (DBC MSB position 35)
     
     status.valid = true;
     status.timestamp = message.timestamp;
@@ -117,8 +91,8 @@ bool parsePowertrainData(const CANMessage& message, PowertrainData& data) {
         return false;
     }
     
-    // Extract transmission park system status
-    data.transmissionParkStatus = extractBits(message.data, 31, 4);  // Bits 31-34, 4 bits
+    // Extract transmission park system status (using DBC bit position directly)
+    data.transmissionParkStatus = extractBits(message.data, 34, 4);  // Bits 31-34, 4 bits (DBC MSB position 34)
     
     data.valid = true;
     data.timestamp = message.timestamp;
@@ -136,8 +110,8 @@ bool parseBatteryManagement(const CANMessage& message, BatteryManagement& data) 
         return false;
     }
     
-    // Extract battery state of charge
-    data.batterySOC = extractBits(message.data, 22, 7);  // Bits 22-28, 7 bits (0-127%)
+    // Extract battery state of charge (using DBC bit position directly)
+    data.batterySOC = extractBits(message.data, 28, 7);  // Bits 22-28, 7 bits (DBC MSB position 28, 0-127%)
     
     data.valid = true;
     data.timestamp = message.timestamp;

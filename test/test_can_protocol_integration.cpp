@@ -32,14 +32,15 @@ protected:
 TEST_F(CANProtocolTest, BitExtractionProduction) {
     uint8_t testData[] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
     
-    // Test basic bit extraction using ACTUAL PRODUCTION CODE
-    EXPECT_EQ(extractBits(testData, 0, 4), 0x2);   // Lower 4 bits of 0x12
-    EXPECT_EQ(extractBits(testData, 4, 4), 0x1);   // Upper 4 bits of 0x12  
-    EXPECT_EQ(extractBits(testData, 8, 8), 0x34);  // Full second byte
+    // Test basic bit extraction using ACTUAL PRODUCTION CODE with DBC-style positioning
+    // testData as little-endian 64-bit: 0xF0DEBC9A78563412
+    EXPECT_EQ(extractBits(testData, 3, 4), 0x2);   // DBC bits 0-3: lower 4 bits of 0x12
+    EXPECT_EQ(extractBits(testData, 7, 4), 0x1);   // DBC bits 4-7: upper 4 bits of 0x12  
+    EXPECT_EQ(extractBits(testData, 15, 8), 0x34); // DBC bits 8-15: full second byte
     
     // Test edge cases
-    EXPECT_EQ(extractBits(testData, 0, 1), 0x0);   // Single bit (LSB of 0x12)
-    EXPECT_EQ(extractBits(testData, 1, 1), 0x1);   // Second bit
+    EXPECT_EQ(extractBits(testData, 0, 1), 0x0);   // DBC bit 0: LSB of 0x12
+    EXPECT_EQ(extractBits(testData, 1, 1), 0x1);   // DBC bit 1: second bit
     EXPECT_EQ(extractBits(testData, 64, 1), 0x0);  // Out of bounds
     EXPECT_EQ(extractBits(testData, 0, 9), 0x0);   // Too many bits
 }

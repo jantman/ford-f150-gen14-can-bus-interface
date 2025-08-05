@@ -107,7 +107,7 @@ TEST_F(CANBitExtractionTest, PythonBitExtractionReplication) {
     // Test all bit positions used in our CAN messages
     BitExtractionTest tests[] = {
         {12, 2, "PudLamp_D_Rq"},
-        {64, 2, "Illuminated_Entry_Stat"}, 
+        {63, 2, "Illuminated_Entry_Stat"}, // Note: Using 63 instead of 64 to stay within 64-bit range
         {50, 2, "Dr_Courtesy_Light_Stat"},
         {35, 2, "Veh_Lock_Status"},
         {34, 4, "TrnPrkSys_D_Actl"},
@@ -122,10 +122,8 @@ TEST_F(CANBitExtractionTest, PythonBitExtractionReplication) {
         uint32_t pythonValue = pythonExtractSignalValue(testData, test.startBit, test.length);
         
         // Test our C++ implementation matches Python
-        // Note: Our C++ function uses a different bit numbering convention, 
-        // so we need to adjust the parameters
-        uint8_t cppStartBit = test.startBit - test.length + 1;
-        uint32_t cppValue = extractBits(testData, cppStartBit, test.length);
+        // Our updated C++ function now uses DBC bit positions directly
+        uint32_t cppValue = extractBits(testData, test.startBit, test.length);
         
         EXPECT_EQ(cppValue, pythonValue) 
             << "Mismatch for " << test.signalName 
@@ -147,7 +145,7 @@ TEST_F(CANBitExtractionTest, BCMLampStatusSignalExtraction) {
         setBitPattern(testData, 12, 2, testValue);
         
         uint32_t pythonValue = pythonExtractSignalValue(testData, 12, 2);
-        uint32_t cppValue = extractBits(testData, 11, 2); // start_bit - length + 1 = 12 - 2 + 1 = 11
+        uint32_t cppValue = extractBits(testData, 12, 2); // DBC position 12, length 2
         
         EXPECT_EQ(cppValue, testValue) << "C++ extraction failed for PudLamp_D_Rq value " << testValue;
         EXPECT_EQ(pythonValue, testValue) << "Python extraction failed for PudLamp_D_Rq value " << testValue;
@@ -161,7 +159,7 @@ TEST_F(CANBitExtractionTest, BCMLampStatusSignalExtraction) {
         setBitPattern(testData, 63, 2, testValue); // Use bit 63 instead of 64 to stay in range
         
         uint32_t pythonValue = pythonExtractSignalValue(testData, 63, 2);
-        uint32_t cppValue = extractBits(testData, 62, 2); // start_bit - length + 1 = 63 - 2 + 1 = 62
+        uint32_t cppValue = extractBits(testData, 63, 2); // DBC position 63, length 2
         
         EXPECT_EQ(cppValue, testValue) << "C++ extraction failed for Illuminated_Entry_Stat value " << testValue;
         EXPECT_EQ(pythonValue, testValue) << "Python extraction failed for Illuminated_Entry_Stat value " << testValue;
@@ -174,7 +172,7 @@ TEST_F(CANBitExtractionTest, BCMLampStatusSignalExtraction) {
         setBitPattern(testData, 50, 2, testValue);
         
         uint32_t pythonValue = pythonExtractSignalValue(testData, 50, 2);
-        uint32_t cppValue = extractBits(testData, 49, 2); // start_bit - length + 1 = 50 - 2 + 1 = 49
+        uint32_t cppValue = extractBits(testData, 50, 2); // DBC position 50, length 2
         
         EXPECT_EQ(cppValue, testValue) << "C++ extraction failed for Dr_Courtesy_Light_Stat value " << testValue;
         EXPECT_EQ(pythonValue, testValue) << "Python extraction failed for Dr_Courtesy_Light_Stat value " << testValue;
@@ -208,7 +206,7 @@ TEST_F(CANBitExtractionTest, LockingSystemsSignalExtraction) {
         setBitPattern(testData, 35, 2, test.value);
         
         uint32_t pythonValue = pythonExtractSignalValue(testData, 35, 2);
-        uint32_t cppValue = extractBits(testData, 34, 2); // start_bit - length + 1 = 35 - 2 + 1 = 34
+        uint32_t cppValue = extractBits(testData, 35, 2); // DBC position 35, length 2
         
         EXPECT_EQ(cppValue, test.value) << "C++ extraction failed for " << test.pythonMapping;
         EXPECT_EQ(pythonValue, test.value) << "Python extraction failed for " << test.pythonMapping;
@@ -250,7 +248,7 @@ TEST_F(CANBitExtractionTest, PowertrainDataSignalExtraction) {
         setBitPattern(testData, 34, 4, test.value);
         
         uint32_t pythonValue = pythonExtractSignalValue(testData, 34, 4);
-        uint32_t cppValue = extractBits(testData, 31, 4); // start_bit - length + 1 = 34 - 4 + 1 = 31
+        uint32_t cppValue = extractBits(testData, 34, 4); // DBC position 34, length 4
         
         EXPECT_EQ(cppValue, test.value) << "C++ extraction failed for " << test.pythonMapping;
         EXPECT_EQ(pythonValue, test.value) << "Python extraction failed for " << test.pythonMapping;
@@ -277,7 +275,7 @@ TEST_F(CANBitExtractionTest, BatteryManagementSignalExtraction) {
         setBitPattern(testData, 28, 7, testValue);
         
         uint32_t pythonValue = pythonExtractSignalValue(testData, 28, 7);
-        uint32_t cppValue = extractBits(testData, 22, 7); // start_bit - length + 1 = 28 - 7 + 1 = 22
+        uint32_t cppValue = extractBits(testData, 28, 7); // DBC position 28, length 7
         
         EXPECT_EQ(cppValue, testValue) << "C++ extraction failed for BSBattSOC value " << testValue;
         EXPECT_EQ(pythonValue, testValue) << "Python extraction failed for BSBattSOC value " << testValue;
@@ -314,7 +312,7 @@ TEST_F(CANBitExtractionTest, RealisticCANDataPatterns) {
     
     for (const auto& signal : signals) {
         uint32_t pythonValue = pythonExtractSignalValue(realisticData, signal.startBit, signal.length);
-        uint32_t cppValue = extractBits(realisticData, signal.startBit - signal.length + 1, signal.length);
+        uint32_t cppValue = extractBits(realisticData, signal.startBit, signal.length);
         
         // Values should be within expected ranges
         uint32_t maxValue = (1U << signal.length) - 1;
@@ -340,22 +338,22 @@ TEST_F(CANBitExtractionTest, EdgeCasesAndBoundaryConditions) {
     // Test with all zeros
     uint8_t zeroData[8] = {0};
     EXPECT_EQ(pythonExtractSignalValue(zeroData, 12, 2), 0);
-    EXPECT_EQ(extractBits(zeroData, 11, 2), 0);
+    EXPECT_EQ(extractBits(zeroData, 12, 2), 0);
     
     // Test with all ones
     uint8_t onesData[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     
     // 2-bit field should extract maximum value (3)
     EXPECT_EQ(pythonExtractSignalValue(onesData, 12, 2), 3);
-    EXPECT_EQ(extractBits(onesData, 11, 2), 3);
+    EXPECT_EQ(extractBits(onesData, 12, 2), 3);
     
     // 4-bit field should extract maximum value (15)
     EXPECT_EQ(pythonExtractSignalValue(onesData, 34, 4), 15);
-    EXPECT_EQ(extractBits(onesData, 31, 4), 15);
+    EXPECT_EQ(extractBits(onesData, 34, 4), 15);
     
     // 7-bit field should extract maximum value (127)
     EXPECT_EQ(pythonExtractSignalValue(onesData, 28, 7), 127);
-    EXPECT_EQ(extractBits(onesData, 22, 7), 127);
+    EXPECT_EQ(extractBits(onesData, 28, 7), 127);
     
     // Test single bit extraction
     // For DBC bit numbering, bit 0 is the LSB of byte 0
@@ -366,7 +364,7 @@ TEST_F(CANBitExtractionTest, EdgeCasesAndBoundaryConditions) {
     // Test extraction at byte boundaries
     uint8_t boundaryData[8] = {0, 0xFF, 0, 0, 0, 0, 0, 0}; // Second byte all set
     EXPECT_EQ(pythonExtractSignalValue(boundaryData, 15, 8), 0xFF);  // DBC bits 8-15 (second byte)
-    EXPECT_EQ(extractBits(boundaryData, 8, 8), 0xFF);
+    EXPECT_EQ(extractBits(boundaryData, 15, 8), 0xFF);
 }
 
 // ===============================================
@@ -430,8 +428,8 @@ TEST_F(CANBitExtractionTest, CrossValidationWithPythonLogic) {
         // Extract using Python logic
         uint32_t pythonValue = pythonExtractSignalValue(complexData, signal.startBit, signal.length);
         
-        // Extract using our C++ logic (adjusted for bit numbering difference)
-        uint32_t cppValue = extractBits(complexData, signal.startBit - signal.length + 1, signal.length);
+        // Extract using our C++ logic (now uses DBC bit positions directly)
+        uint32_t cppValue = extractBits(complexData, signal.startBit, signal.length);
         
         // Verify they match
         EXPECT_EQ(cppValue, pythonValue) 
