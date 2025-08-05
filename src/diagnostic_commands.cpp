@@ -31,6 +31,11 @@ void processSerialCommands() {
 }
 
 void cmd_help() {
+    LOG_INFO("=== Ford F150 Gen14 CAN Bus Interface ===");
+    LOG_INFO("Project: https://github.com/jantman/ford-f150-gen14-can-bus-interface");
+    LOG_INFO("Firmware Version: %s", FIRMWARE_VERSION);
+    LOG_INFO("Build Date: %s %s", BUILD_DATE, BUILD_TIME);
+    LOG_INFO("");
     LOG_INFO("=== DIAGNOSTIC COMMANDS ===");
     LOG_INFO("help (h)        - Show this help");
     LOG_INFO("can_status (cs) - Show CAN bus status");
