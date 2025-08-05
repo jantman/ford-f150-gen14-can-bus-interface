@@ -35,6 +35,11 @@ jobs:
         
     - name: Run Native Tests
       run: pio test -e native
-        
+
+    - name: Run checks
+      run: |
+        echo "Running native tests..."
+        pio check -e esp32-s3-devkitc-1 -v
+
     - name: Build ESP32-S3 Firmware  
       run: pio run -e esp32-s3-devkitc-1

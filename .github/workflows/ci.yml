@@ -55,7 +55,12 @@ jobs:
     - name: Install project dependencies
       run: |
         pio pkg install
-        
+
+    - name: Run checks
+      run: |
+        echo "Running native tests..."
+        pio check -e esp32-s3-devkitc-1 -v
+
     - name: Run native tests
       run: |
         echo "Running native tests..."
