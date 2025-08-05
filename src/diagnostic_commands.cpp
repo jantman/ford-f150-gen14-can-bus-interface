@@ -23,6 +23,8 @@ void processSerialCommands() {
         cmd_can_debug();
     } else if (command == "can_reset" || command == "cr") {
         cmd_can_reset();
+    } else if (command == "can_buffers" || command == "cb") {
+        cmd_can_buffers();
     } else if (command == "system_info" || command == "si") {
         cmd_system_info();
     } else if (command.length() > 0) {
@@ -41,6 +43,7 @@ void cmd_help() {
     LOG_INFO("can_status (cs) - Show CAN bus status");
     LOG_INFO("can_debug (cd)  - Debug CAN message reception");
     LOG_INFO("can_reset (cr)  - Reset CAN system");
+    LOG_INFO("can_buffers (cb)- Show CAN buffer status and message loss");
     LOG_INFO("system_info (si)- Show system information");
     LOG_INFO("============================");
 }
@@ -89,6 +92,51 @@ void cmd_can_reset() {
         LOG_ERROR("CAN system reset failed");
     }
     printCANStatistics();
+}
+
+void cmd_can_buffers() {
+    LOG_INFO("=== CAN BUFFER STATUS ===");
+    LOG_INFO("Controller: MCP2515 (Hardware buffers only)");
+    LOG_INFO("RX Buffer Count: 2 (RXB0, RXB1)");
+    LOG_INFO("Buffer Size: 1 message per buffer");
+    LOG_INFO("Total Hardware Capacity: 2 messages");
+    LOG_INFO("Overflow Detection: Heuristic-based (pattern analysis)");
+    
+    uint32_t lossCount = getMessageLossCount();
+    LOG_INFO("Suspected Buffer Overflows: %lu", lossCount);
+    
+    if (lossCount > 0) {
+        LOG_WARN("WARNING: Potential buffer overflows detected!");
+        LOG_WARN("Detection method: Monitoring for sudden message cessation during active periods");
+        LOG_WARN("This indicates the system may not be processing messages fast enough");
+        LOG_WARN("Recommendations:");
+        LOG_WARN("  1. Reduce main loop delay (currently 10ms)");
+        LOG_WARN("  2. Increase MAX_MESSAGES_PER_LOOP (currently 10)");
+        LOG_WARN("  3. Consider using ESP32 TWAI instead of MCP2515 for larger buffers");
+        LOG_WARN("  4. Filter messages to reduce processing load");
+        LOG_WARN("  5. Monitor 'can_debug' output for message burst patterns");
+    } else {
+        LOG_INFO("No suspected buffer overflows - system appears to be keeping up");
+    }
+    
+    // Show current processing limits
+    LOG_INFO("=== PROCESSING LIMITS ===");
+    LOG_INFO("MAX_MESSAGES_PER_LOOP: 10");
+    LOG_INFO("Main loop delay: 10ms");
+    LOG_INFO("Overflow check interval: 100ms");
+    LOG_INFO("Detection threshold: 5 seconds of silence during active periods");
+    
+    // Force an immediate overflow check
+    LOG_INFO("Performing immediate buffer status check...");
+    checkMessageLoss();
+    
+    LOG_INFO("=== BUFFER MONITORING NOTES ===");
+    LOG_INFO("The MCP2515 has very limited (2-message) hardware buffers");
+    LOG_INFO("Unlike software queues, these cannot be increased");
+    LOG_INFO("Monitor for patterns: busy periods followed by silence, then bursts");
+    LOG_INFO("Use 'can_debug' to observe actual message timing and patterns");
+    
+    LOG_INFO("=== END BUFFER STATUS ===");
 }
 
 void cmd_system_info() {

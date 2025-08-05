@@ -125,6 +125,9 @@ void loop() {
     
     // Process CAN messages with error handling (Step 3-4, enhanced in Step 8)
     try {
+        // Check for message loss (MCP2515 buffer overflow monitoring)
+        checkMessageLoss();
+        
         // Parse received target messages (Step 4)
         CANMessage message;
         unsigned int messagesProcessed = 0;

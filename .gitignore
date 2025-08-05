@@ -1,2 +1,5 @@
 venv/
 .pio/
+
+# CAN log files
+*.log

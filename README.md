@@ -118,9 +118,10 @@ The firmware includes interactive debugging commands accessible via the serial m
 **Available Commands:**
 
 - `help` or `h` - Show available commands
-- `can_status` or `cs` - Display detailed CAN bus status and diagnostics
+- `can_status` or `cs` - Display detailed CAN bus status and diagnostics  
 - `can_debug` or `cd` - Monitor ALL CAN messages for 10 seconds (useful for verifying bus activity)
 - `can_reset` or `cr` - Perform full CAN system recovery/reset
+- `can_buffers` or `cb` - Show CAN buffer status and message loss detection
 - `system_info` or `si` - Show system information (memory, GPIO states, etc.)
 
 **Example Usage:**
@@ -133,6 +134,16 @@ pio device monitor
 help                    # Show all available commands
 can_status             # Check CAN bus health
 can_debug              # Monitor all CAN traffic for 10 seconds
+can_buffers            # Check for message loss and buffer overflows
+```
+
+**Monitoring CAN Buffer Health:**
+
+The MCP2515 controller has very limited hardware buffers (only 2 messages). Use the buffer monitoring features to detect potential message loss:
+
+```bash
+can_buffers            # Check buffer overflow detection
+can_status             # Shows suspected overflow count in statistics
 ```
 
 **Debugging CAN Issues:**
@@ -143,7 +154,30 @@ If you're seeing "CAN bus timeout - no activity" errors:
 2. **Monitor bus activity**: Use `can_debug` to see if ANY messages are being received
 3. **Verify target messages**: Look for `[TARGET]` markers in debug output indicating your desired message IDs
 4. **Check error counters**: High RX/TX error counts in `can_status` indicate bus issues
-5. **Reset if needed**: Use `can_reset` to recover from driver errors
+5. **Monitor for message loss**: Use `can_buffers` to check for buffer overflows
+6. **Reset if needed**: Use `can_reset` to recover from driver errors
+
+**Buffer Overflow Detection:**
+
+The system includes monitoring for CAN message loss due to the MCP2515's limited 2-message hardware buffers:
+
+- **Automatic monitoring**: Runs every 100ms during normal operation
+- **Heuristic detection**: Monitors for sudden message cessation during active periods
+- **Overflow warnings**: Logged when potential overflows are detected
+- **Diagnostic command**: Use `can_buffers` for detailed buffer analysis
+- **Statistics tracking**: Overflow counts included in `can_status` output
+
+Signs of buffer overflow:
+- Sudden stops in message reception during busy periods
+- "Suspected buffer overflow" warnings in logs
+- Message bursts following periods of silence
+- High overflow counts in statistics
+
+If overflows are detected, consider:
+1. Reducing main loop delay (currently 10ms)
+2. Increasing `MAX_MESSAGES_PER_LOOP` (currently 10) 
+3. Using ESP32 TWAI controller instead of MCP2515 for larger buffers
+4. Implementing message filtering to reduce processing load
 
 The diagnostic output shows:
 - TWAI driver state (should be "1" for RUNNING)

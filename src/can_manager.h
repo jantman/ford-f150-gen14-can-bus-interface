@@ -27,4 +27,9 @@ bool isTargetCANMessage(uint32_t messageId);
 void checkRawCANActivity();
 void debugReceiveAllMessages();
 
+// Message loss detection and monitoring
+void checkMessageLoss();
+uint32_t getMessageLossCount();
+void resetMessageLossCounters();
+
 #endif // CAN_MANAGER_H

@@ -10,6 +10,7 @@ void processSerialCommands();
 void cmd_can_status();
 void cmd_can_debug();
 void cmd_can_reset();
+void cmd_can_buffers();
 void cmd_system_info();
 void cmd_help();
 

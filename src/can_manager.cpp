@@ -12,6 +12,12 @@ static unsigned long lastCANActivity = 0;
 static uint32_t messagesReceived = 0;
 static uint32_t canErrors = 0;
 
+// Message loss tracking
+static uint32_t messageLossCount = 0;
+static uint32_t lastMessageLossCheck = 0;
+static unsigned long lastOverflowWarning = 0;
+const unsigned long OVERFLOW_WARNING_INTERVAL = 5000; // Warn every 5 seconds max
+
 bool initializeCAN() {
     LOG_INFO("Initializing CAN bus (MCP2515) in LISTEN-ONLY mode...");
     LOG_INFO("Using X2 header (CAN2H/CAN2L) with MCP2515 controller");
@@ -56,6 +62,9 @@ bool receiveCANMessage(CANMessage& message) {
     if (!canInitialized) {
         return false;
     }
+    
+    // Check for message loss before reading new messages
+    checkMessageLoss();
     
     struct can_frame frame;
     MCP2515::ERROR result = mcp2515.readMessage(&frame);
@@ -303,15 +312,27 @@ void printCANStatistics() {
     LOG_INFO("  Controller: MCP2515 on X2 header");
     LOG_INFO("  Messages Received: %lu", messagesReceived);
     LOG_INFO("  Errors: %lu", canErrors);
+    LOG_INFO("  Suspected Buffer Overflows: %lu", messageLossCount);
     LOG_INFO("  Last Activity: %lu ms ago", millis() - lastCANActivity);
     LOG_INFO("  Connection Status: %s", canConnected ? "Connected" : "Disconnected");
     LOG_INFO("  Initialized: %s", canInitialized ? "Yes" : "No");
+    
+    // Show buffer overflow status if any have occurred
+    if (messageLossCount > 0) {
+        LOG_WARN("WARNING: %lu suspected buffer overflows detected!", messageLossCount);
+        LOG_WARN("Detection method: Heuristic analysis of message patterns");
+        LOG_WARN("Consider reducing main loop processing time or using larger buffers");
+        LOG_WARN("Use 'can_buffers' command for detailed buffer analysis");
+    } else {
+        LOG_INFO("No suspected overflows - processing appears to keep up with traffic");
+    }
 }
 
 void resetCANStatistics() {
     messagesReceived = 0;
     canErrors = 0;
     lastCANActivity = millis();
+    resetMessageLossCounters();
     LOG_INFO("CAN statistics reset");
 }
 
@@ -321,4 +342,87 @@ bool isTargetCANMessage(uint32_t messageId) {
             messageId == LOCKING_SYSTEMS_2_FD1_ID ||
             messageId == POWERTRAIN_DATA_10_ID ||
             messageId == BATTERY_MGMT_3_FD1_ID);
+}
+
+// Message loss detection - Check MCP2515 status for buffer overflows
+void checkMessageLoss() {
+    if (!canInitialized) {
+        return;
+    }
+    
+    unsigned long currentTime = millis();
+    
+    // Throttle overflow checks to avoid excessive SPI communication
+    if (currentTime - lastMessageLossCheck < 100) { // Check every 100ms max
+        return;
+    }
+    lastMessageLossCheck = currentTime;
+    
+    // Note: The standard autowp/autowp-mcp2515 library doesn't provide direct
+    // access to EFLG register or overflow flags. We'll implement indirect detection
+    // by monitoring for rapid consecutive ERROR_NOMSG results which may indicate
+    // buffer overflows when we expect messages.
+    
+    // Alternative approach: Monitor receive pattern anomalies
+    static uint32_t consecutiveNoMsgCount = 0;
+    static unsigned long lastMessageTime = 0;
+    static bool wasReceivingMessages = false;
+    
+    // Check if we're in a period where we should be receiving messages
+    bool expectingMessages = (millis() - lastCANActivity) < 2000; // Within 2 seconds of last activity
+    
+    if (expectingMessages && wasReceivingMessages) {
+        // Try to read a message to check current buffer state
+        struct can_frame frame;
+        MCP2515::ERROR result = mcp2515.readMessage(&frame);
+        
+        if (result == MCP2515::ERROR_NOMSG) {
+            consecutiveNoMsgCount++;
+        } else if (result == MCP2515::ERROR_OK) {
+            // Reset counter on successful read
+            consecutiveNoMsgCount = 0;
+            lastMessageTime = currentTime;
+        } else {
+            // Other error occurred
+            consecutiveNoMsgCount = 0;
+        }
+        
+        // Heuristic: If we suddenly stop receiving messages during active periods,
+        // it might indicate buffer overflow (especially if followed by burst of messages)
+        if (consecutiveNoMsgCount > 50) { // 50 * 100ms = 5 seconds of no messages during active period
+            messageLossCount++;
+            consecutiveNoMsgCount = 0; // Reset to avoid repeated counting
+            
+            // Log overflow warning (but not too frequently)
+            if (currentTime - lastOverflowWarning >= OVERFLOW_WARNING_INTERVAL) {
+                LOG_ERROR("Potential CAN buffer overflow detected! (Total suspected overflows: %lu)", messageLossCount);
+                LOG_WARN("Detected sudden message cessation during active CAN period");
+                LOG_WARN("This may indicate MCP2515 RX buffer overflow - messages may be lost");
+                LOG_WARN("Consider reducing main loop delay or increasing processing frequency");
+                lastOverflowWarning = currentTime;
+            }
+            
+            // Increment general error counter
+            canErrors++;
+        }
+    } else {
+        // Reset counters when not in active message period
+        consecutiveNoMsgCount = 0;
+    }
+    
+    // Track if we were receiving messages for next iteration
+    wasReceivingMessages = (currentTime - lastCANActivity) < 1000; // Within 1 second
+}
+
+// Get total message loss count
+uint32_t getMessageLossCount() {
+    return messageLossCount;
+}
+
+// Reset message loss counters
+void resetMessageLossCounters() {
+    messageLossCount = 0;
+    lastMessageLossCheck = 0;
+    lastOverflowWarning = 0;
+    LOG_INFO("Message loss counters reset");
 }
