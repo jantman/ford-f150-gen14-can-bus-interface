@@ -4,6 +4,9 @@
 #include "state_manager.h"
 #include "gpio_controller.h"
 
+// External global variables
+extern SystemHealth systemHealth;
+
 void processSerialCommands() {
     if (!Serial.available()) {
         return;
@@ -17,6 +20,8 @@ void processSerialCommands() {
     
     if (command == "help" || command == "h") {
         cmd_help();
+    } else if (command == "status" || command == "t") {
+        cmd_status();
     } else if (command == "can_status" || command == "cs") {
         cmd_can_status();
     } else if (command == "can_debug" || command == "cd") {
@@ -40,6 +45,7 @@ void cmd_help() {
     LOG_INFO("");
     LOG_INFO("=== DIAGNOSTIC COMMANDS ===");
     LOG_INFO("help (h)        - Show this help");
+    LOG_INFO("status (t)      - Show complete system status");
     LOG_INFO("can_status (cs) - Show CAN bus status");
     LOG_INFO("can_debug (cd)  - Debug CAN message reception");
     LOG_INFO("can_reset (cr)  - Reset CAN system");
@@ -157,4 +163,46 @@ void cmd_system_info() {
     LOG_INFO("Unlocked LED: %s", gpioState.unlockedLED ? "ON" : "OFF");
     LOG_INFO("Toolbox Opener: %s", gpioState.toolboxOpener ? "ACTIVE" : "INACTIVE");
     LOG_INFO("Button State: %s", gpioState.toolboxButton ? "PRESSED" : "RELEASED");
+}
+
+void cmd_status() {
+    LOG_INFO("=== SYSTEM STATUS ===");
+    
+    // Get current states
+    VehicleState vehicleState = getCurrentState();
+    ButtonState buttonState = getButtonState();
+    GPIOState gpioState = getGPIOState();
+    unsigned long currentTime = millis();
+    
+    // Vehicle State Flags
+    LOG_INFO("Vehicle State: Ready=%s Parked=%s Unlocked=%s BedLight=%s", 
+             vehicleState.systemReady ? "Y" : "N",
+             vehicleState.isParked ? "Y" : "N", 
+             vehicleState.isUnlocked ? "Y" : "N",
+             vehicleState.bedlightShouldBeOn ? "Y" : "N");
+    
+    // Vehicle State Raw Values
+    LOG_INFO("Raw Values: PUD=%d Lock=%d Park=%d SOC=%d%%", 
+             vehicleState.pudLampRequest, vehicleState.vehicleLockStatus,
+             vehicleState.transmissionParkStatus, vehicleState.batterySOC);
+    
+    // GPIO States
+    LOG_INFO("GPIO Outputs: Bed=%s Park=%s Unlock=%s Toolbox=%s Button=%s",
+             gpioState.bedlight ? "ON" : "OFF",
+             gpioState.parkedLED ? "ON" : "OFF", 
+             gpioState.unlockedLED ? "ON" : "OFF",
+             gpioState.toolboxOpener ? "ACTIVE" : "OFF",
+             gpioState.toolboxButton ? "PRESSED" : "RELEASED");
+    
+    // Button State (essential info only)
+    LOG_INFO("Button: State=%s Held=%s Count=%lu",
+             buttonState.currentState ? "PRESSED" : "RELEASED",
+             buttonState.isHeld ? "Y" : "N",
+             buttonState.pressCount);
+    
+    // System Health (key metrics only)
+    LOG_INFO("Health: CAN=%s Errors(C/P/Cr)=%lu/%lu/%lu Recovery=%s",
+             isCANConnected() ? "OK" : "FAIL",
+             systemHealth.canErrors, systemHealth.parseErrors, systemHealth.criticalErrors,
+             systemHealth.recoveryMode ? "Y" : "N");
 }

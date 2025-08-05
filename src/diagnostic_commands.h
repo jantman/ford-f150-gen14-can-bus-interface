@@ -12,6 +12,7 @@ void cmd_can_debug();
 void cmd_can_reset();
 void cmd_can_buffers();
 void cmd_system_info();
+void cmd_status();
 void cmd_help();
 
 #endif // DIAGNOSTIC_COMMANDS_H
