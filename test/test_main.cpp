@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "mocks/mock_arduino.h"
 #include "../src/can_protocol.h"
+#include "../src/bit_utils.h"
 
 // Since we're in NATIVE_ENV, use our test config
 #ifdef NATIVE_ENV
@@ -19,6 +20,9 @@ extern "C" {
     
     // Use production extractBits function from can_protocol.c
     uint8_t extractBits(const uint8_t* data, uint8_t startBit, uint8_t length);
+    
+    // Use production setBits function from bit_utils.c
+    void setBits(uint8_t* data, uint8_t startBit, uint8_t length, uint32_t value);
 }
 
 // Test helper base class
@@ -44,32 +48,6 @@ protected:
         return ArduinoMock::instance().getDigitalState(pin) == HIGH;
     }
 };
-
-// Helper to set specific bits in CAN data using DBC-style positioning
-// startBit: MSB bit position (DBC format), length: number of bits
-// Uses Intel (little-endian) byte order as specified in DBC (@0+)
-void setBits(uint8_t* data, int startBit, int length, uint32_t value) {
-    // Convert existing data to 64-bit integer (little-endian)
-    uint64_t dataValue = 0;
-    for (int i = 0; i < 8; i++) {
-        dataValue |= ((uint64_t)data[i]) << (i * 8);
-    }
-    
-    // Calculate bit position (DBC uses MSB bit numbering)
-    int bitPos = startBit - length + 1;
-    
-    // Clear the target bits
-    uint64_t mask = ((1ULL << length) - 1) << bitPos;
-    dataValue &= ~mask;
-    
-    // Set the new value at the correct bit position
-    dataValue |= ((uint64_t)value) << bitPos;
-    
-    // Convert back to byte array (little-endian)
-    for (int i = 0; i < 8; i++) {
-        data[i] = (dataValue >> (i * 8)) & 0xFF;
-    }
-}
 
 // Test Suite: Bit Extraction Core Functionality
 TEST_F(ArduinoTest, BitExtractionBasic) {

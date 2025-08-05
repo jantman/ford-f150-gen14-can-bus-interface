@@ -38,9 +38,7 @@ bool parseLockingSystemsStatus(const CANMessage& message, LockingSystemsStatus& 
 bool parsePowertrainData(const CANMessage& message, PowertrainData& data);
 bool parseBatteryManagement(const CANMessage& message, BatteryManagement& data);
 
-// Utility functions for bit manipulation
-uint8_t extractBits(const uint8_t* data, uint8_t startBit, uint8_t length);
-uint16_t extractBits16(const uint8_t* data, uint8_t startBit, uint8_t length);
+#include "bit_utils.h"
 
 // Debugging functions
 void printCANMessageHex(const CANMessage& message);

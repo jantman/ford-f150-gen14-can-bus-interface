@@ -1,48 +1,6 @@
 #include "can_protocol.h"
 #include "config.h"
 
-// Pure bit manipulation using DBC-style bit positioning
-// startBit: MSB bit position (DBC format), length: number of bits (1-8)
-// Uses Intel (little-endian) byte order as specified in DBC (@0+)
-uint8_t extractBits(const uint8_t* data, uint8_t startBit, uint8_t length) {
-    if (length > 8 || startBit > 63) return 0; // Bounds check
-    
-    // Convert 8 bytes to 64-bit integer (little-endian) - matches Python implementation
-    uint64_t data_int = 0;
-    for (int i = 0; i < 8; i++) {
-        data_int |= ((uint64_t)data[i]) << (i * 8);
-    }
-    
-    // Calculate bit position from MSB (DBC uses MSB bit numbering) - matches Python
-    uint8_t bit_pos = startBit - length + 1;
-    
-    // Create mask and extract value - matches Python
-    uint64_t mask = (1ULL << length) - 1;
-    uint8_t value = (data_int >> bit_pos) & mask;
-    
-    return value;
-}
-
-// 16-bit version for larger values using DBC-style bit positioning
-uint16_t extractBits16(const uint8_t* data, uint8_t startBit, uint8_t length) {
-    if (length > 16 || startBit > 63) return 0; // Bounds check
-    
-    // Convert 8 bytes to 64-bit integer (little-endian) - matches Python implementation
-    uint64_t data_int = 0;
-    for (int i = 0; i < 8; i++) {
-        data_int |= ((uint64_t)data[i]) << (i * 8);
-    }
-    
-    // Calculate bit position from MSB (DBC uses MSB bit numbering) - matches Python
-    uint8_t bit_pos = startBit - length + 1;
-    
-    // Create mask and extract value - matches Python
-    uint64_t mask = (1ULL << length) - 1;
-    uint16_t value = (data_int >> bit_pos) & mask;
-    
-    return value;
-}
-
 // Pure message parsing (no Arduino dependencies)
 BCMLampData parseBCMLampFrame(const CANFrame* frame) {
     BCMLampData result = {0};

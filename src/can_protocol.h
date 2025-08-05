@@ -38,9 +38,7 @@ typedef struct {
     bool valid;
 } BatteryData;
 
-// Pure bit manipulation functions (no Arduino dependencies)
-uint8_t extractBits(const uint8_t* data, uint8_t startBit, uint8_t length);
-uint16_t extractBits16(const uint8_t* data, uint8_t startBit, uint8_t length);
+#include "bit_utils.h"
 
 // Pure message parsing functions (no Arduino dependencies)
 BCMLampData parseBCMLampFrame(const CANFrame* frame);
