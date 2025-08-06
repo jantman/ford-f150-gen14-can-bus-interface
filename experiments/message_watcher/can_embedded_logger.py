@@ -6,7 +6,8 @@ This is an optimized version of can_logger.py designed for resource-constrained
 embedded Linux systems. It implements native CAN decoding without external libraries
 like cantools, focusing on minimal memory usage and CPU overhead.
 
-The logger monitors the same 4 specific CAN messages and signals as the original:
+The logger monitors 4 specific CAN messages and logs each matching message immediately
+with both raw message data and decoded signal values:
 - BCM_Lamp_Stat_FD1 (0x3C3): PudLamp_D_Rq, Illuminated_Entry_Stat, Dr_Courtesy_Light_Stat
 - Locking_Systems_2_FD1 (0x331): Veh_Lock_Status  
 - PowertrainData_10 (0x176): TrnPrkSys_D_Actl
@@ -66,9 +67,8 @@ CAN_FILTER_IDS = list(CAN_MESSAGES.keys())
 class EmbeddedCANLogger:
     """Minimal resource CAN logger for embedded systems."""
     
-    def __init__(self, can_interface, log_interval=1.0):
+    def __init__(self, can_interface):
         self.can_interface = can_interface
-        self.log_interval = log_interval
         self.running = False
         self.start_time = time.time()
         
@@ -92,7 +92,7 @@ class EmbeddedCANLogger:
         
         print(f"Embedded CAN Logger initialized", file=sys.stderr)
         print(f"Interface: {can_interface}", file=sys.stderr)
-        print(f"Log interval: {log_interval}s", file=sys.stderr)
+        print(f"Mode: Per-message logging", file=sys.stderr)
         print(f"Monitoring {len(CAN_MESSAGES)} message types", file=sys.stderr)
 
     def extract_signal_value(self, data, start_bit, length):
@@ -200,9 +200,9 @@ class EmbeddedCANLogger:
             return str(value)
 
     def log_header(self):
-        """Print CSV header."""
-        print("# Embedded CAN Signal Logger Output")
-        print("# Format: timestamp | message.signal=value | ...")
+        """Print log header."""
+        print("# Embedded CAN Signal Logger Output - Per-Message Mode")
+        print("# Format: timestamp | CAN_ID:0xXXX | data:XX XX XX XX XX XX XX XX | message_name | signal1=value1 signal2=value2 ...")
         print("# Timestamp: YYYY-MM-DD HH:MM:SS.mmm")
         print("#" + "="*80)
 
@@ -228,6 +228,40 @@ class EmbeddedCANLogger:
         print(log_line)
         self.stats['log_entries'] += 1
 
+    def log_can_message(self, can_id, data, decoded_data):
+        """Log a single CAN message with both raw and decoded data."""
+        current_time = time.time()
+        timestamp = datetime.fromtimestamp(current_time).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+        
+        # Format raw data as hex bytes
+        data_hex = " ".join(f"{byte:02X}" for byte in data)
+        
+        # Build log line with raw message info
+        log_parts = [
+            timestamp,
+            f"CAN_ID:0x{can_id:03X}",
+            f"data:{data_hex}"
+        ]
+        
+        if decoded_data:
+            # Add decoded message name
+            log_parts.append(decoded_data['message_name'])
+            
+            # Add decoded signals
+            signal_parts = []
+            for signal_name, value in decoded_data['signals'].items():
+                formatted_value = self.format_signal_value(value)
+                signal_parts.append(f"{signal_name}={formatted_value}")
+            
+            if signal_parts:
+                log_parts.append(" ".join(signal_parts))
+        else:
+            log_parts.append("UNKNOWN_MESSAGE")
+        
+        log_line = " | ".join(log_parts)
+        print(log_line)
+        self.stats['log_entries'] += 1
+
     def message_listener(self):
         """Background thread for CAN message reception."""
         while self.running:
@@ -247,6 +281,7 @@ class EmbeddedCANLogger:
                     if decoded_data:
                         self.stats['decoded_messages'] += 1
                         self.update_signal_data(decoded_data)
+                        self.log_can_message(can_id, data, decoded_data)
                         
             except socket.timeout:
                 continue  # Normal timeout, keep listening
@@ -265,16 +300,13 @@ class EmbeddedCANLogger:
         listener_thread = threading.Thread(target=self.message_listener, daemon=True)
         listener_thread.start()
         
-        print(f"Starting logger with {self.log_interval}s interval...", file=sys.stderr)
+        print(f"Starting logger in per-message mode...", file=sys.stderr)
         self.log_header()
-        
-        # Allow time for initial messages
-        time.sleep(2)
         
         try:
             while True:
-                self.log_current_state()
-                time.sleep(self.log_interval)
+                # Just wait for messages to be logged by the listener thread
+                time.sleep(1.0)
                 
         except KeyboardInterrupt:
             print(f"\nStopping logger...", file=sys.stderr)
@@ -307,12 +339,12 @@ def main():
 Examples:
     python can_embedded_logger.py can0
     python can_embedded_logger.py vcan0 > can_log.csv
-    python can_embedded_logger.py can0 --interval 0.5
 
 This embedded version:
 - Uses no external dependencies beyond standard library
 - Implements native CAN decoding without cantools
 - Minimizes memory allocation and CPU overhead
+- Logs each matching CAN message immediately with both raw and decoded data
 - Monitors these specific signals:
   * BCM_Lamp_Stat_FD1: PudLamp_D_Rq, Illuminated_Entry_Stat, Dr_Courtesy_Light_Stat
   * Locking_Systems_2_FD1: Veh_Lock_Status
@@ -322,13 +354,11 @@ This embedded version:
     )
     
     parser.add_argument('can_interface', help='CAN interface name (e.g., can0, vcan0)')
-    parser.add_argument('--interval', type=float, default=1.0, 
-                       help='Log interval in seconds (default: 1.0)')
     
     args = parser.parse_args()
     
-    # Create and run the embedded logger
-    logger = EmbeddedCANLogger(args.can_interface, args.interval)
+    # Create and run the embedded logger (interval no longer used for periodic logging)
+    logger = EmbeddedCANLogger(args.can_interface)
     
     try:
         success = logger.run()
