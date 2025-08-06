@@ -7,7 +7,7 @@
 #include "message_parser.h"
 #include "state_manager.h"
 #include "diagnostic_commands.h"
-// #include "logger.h"
+#include "logger.h"
 
 // Global variables for application state
 bool systemInitialized = false;
@@ -138,6 +138,9 @@ void loop() {
             systemHealth.lastCanActivity = currentTime;
             
             if (isTargetCANMessage(message.id)) {
+                // Log raw CAN message frame data at debug level for target messages
+                logCANMessage("RX", message.id, message.data, message.length);
+                
                 bool parseSuccess = false;
                 // Parse the message based on its ID
                 switch (message.id) {
