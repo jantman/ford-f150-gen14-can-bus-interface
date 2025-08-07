@@ -125,10 +125,10 @@ protected:
         const unsigned long TIMEOUT_MS = SYSTEM_READINESS_TIMEOUT_MS; // 10 minute timeout for ANY message
         
         // System is ready if ANY message type has been received within the timeout window
-        bool hasBCMData = (currentTime - vehicleState.lastBCMLampUpdate < TIMEOUT_MS);
-        bool hasLockingData = (currentTime - vehicleState.lastLockingSystemsUpdate < TIMEOUT_MS);
-        bool hasPowertrainData = (currentTime - vehicleState.lastPowertrainUpdate < TIMEOUT_MS);
-        bool hasBatteryData = (currentTime - vehicleState.lastBatteryUpdate < TIMEOUT_MS);
+        bool hasBCMData = (currentTime - vehicleState.lastBCMLampUpdate) < TIMEOUT_MS;
+        bool hasLockingData = (currentTime - vehicleState.lastLockingSystemsUpdate) < TIMEOUT_MS;
+        bool hasPowertrainData = (currentTime - vehicleState.lastPowertrainUpdate) < TIMEOUT_MS;
+        bool hasBatteryData = (currentTime - vehicleState.lastBatteryUpdate) < TIMEOUT_MS;
         
         vehicleState.systemReady = hasBCMData || hasLockingData || hasPowertrainData || hasBatteryData;
     }
@@ -316,31 +316,39 @@ TEST_F(VehicleStateTest, SystemReadyLogic) {
     EXPECT_TRUE(vehicleState.systemReady); // Should be ready with just BCM data
     
     // Test 3: System should be ready with just Locking data
-    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 100000); // Well past timeout for BCM
+    // Advance far enough that the previous BCM update (at baseTime + TIMEOUT + 1500) is stale
+    unsigned long test3Time = baseTime + SYSTEM_READINESS_TIMEOUT_MS + 1500 + SYSTEM_READINESS_TIMEOUT_MS + 1000;
+    advanceTimeAndUpdate(test3Time); // Well past timeout for previous BCM update
     EXPECT_FALSE(vehicleState.systemReady); // Should be false now
     
-    updateLockingSystemsStatus(VEH_UNLOCK_ALL, baseTime + SYSTEM_READINESS_TIMEOUT_MS + 101000); // Fresh Locking only
-    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 101100);
+    updateLockingSystemsStatus(VEH_UNLOCK_ALL, test3Time + 100); // Fresh Locking only
+    advanceTimeAndUpdate(test3Time + 200);
     EXPECT_TRUE(vehicleState.systemReady); // Should be ready with just Locking data
     
     // Test 4: System should be ready with just Powertrain data
-    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 200000); // Well past timeout for Locking
+    // Advance far enough that the previous Locking update is stale
+    unsigned long test4Time = test3Time + 100 + SYSTEM_READINESS_TIMEOUT_MS + 1000;
+    advanceTimeAndUpdate(test4Time); // Well past timeout for previous Locking update
     EXPECT_FALSE(vehicleState.systemReady); // Should be false now
     
-    updatePowertrainStatus(TRNPRKSTS_PARK, baseTime + SYSTEM_READINESS_TIMEOUT_MS + 201000); // Fresh Powertrain only
-    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 201100);
+    updatePowertrainStatus(TRNPRKSTS_PARK, test4Time + 100); // Fresh Powertrain only
+    advanceTimeAndUpdate(test4Time + 200);
     EXPECT_TRUE(vehicleState.systemReady); // Should be ready with just Powertrain data
     
     // Test 5: System should be ready with just Battery data
-    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 300000); // Well past timeout for Powertrain
+    // Advance far enough that the previous Powertrain update is stale
+    unsigned long test5Time = test4Time + 100 + SYSTEM_READINESS_TIMEOUT_MS + 1000;
+    advanceTimeAndUpdate(test5Time); // Well past timeout for previous Powertrain update
     EXPECT_FALSE(vehicleState.systemReady); // Should be false now
     
-    updateBatteryStatus(85, baseTime + SYSTEM_READINESS_TIMEOUT_MS + 301000); // Fresh Battery only
-    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 301100);
+    updateBatteryStatus(85, test5Time + 100); // Fresh Battery only
+    advanceTimeAndUpdate(test5Time + 200);
     EXPECT_TRUE(vehicleState.systemReady); // Should be ready with just Battery data
     
     // Test 6: System should NOT be ready when NO messages are recent
-    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 400000); // Well past timeout for Battery
+    // Advance far enough that the previous Battery update is stale
+    unsigned long test6Time = test5Time + 100 + SYSTEM_READINESS_TIMEOUT_MS + 1000;
+    advanceTimeAndUpdate(test6Time); // Well past timeout for previous Battery update
     EXPECT_FALSE(vehicleState.systemReady); // Should be false when all data is stale
 }
 
