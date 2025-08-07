@@ -30,8 +30,8 @@ bool parseLockingSystemsStatus(const CANMessage& message, LockingSystemsStatus& 
         return false;
     }
     
-    // Extract vehicle lock status signal (FINAL CORRECTED bit position - VALIDATED)
-    status.vehicleLockStatus = extractBits(message.data, 32, 3);  // Bits 32-34, 3 bits (VALIDATED: 2,5 perfect match)
+    // Extract vehicle lock status signal (using DBC MSB bit positions to match can_protocol.c)
+    status.vehicleLockStatus = extractBits(message.data, 35, 2);  // Bits 34-35 (DBC MSB position 35)
     
     status.valid = true;
     status.timestamp = message.timestamp;
