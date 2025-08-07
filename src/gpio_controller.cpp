@@ -7,6 +7,7 @@ static GPIOState gpioState = {
     .unlockedLED = false,
     .toolboxOpener = false,
     .toolboxButton = false,
+    .systemReady = false,
     .toolboxOpenerStartTime = 0
 };
 
@@ -18,6 +19,7 @@ bool initializeGPIO() {
     pinMode(PARKED_LED_PIN, OUTPUT);
     pinMode(UNLOCKED_LED_PIN, OUTPUT);
     pinMode(TOOLBOX_OPENER_PIN, OUTPUT);
+    pinMode(SYSTEM_READY_PIN, OUTPUT);
     
     // Initialize input pin with internal pullup
     pinMode(TOOLBOX_BUTTON_PIN, INPUT_PULLUP);
@@ -27,12 +29,14 @@ bool initializeGPIO() {
     digitalWrite(PARKED_LED_PIN, LOW);
     digitalWrite(UNLOCKED_LED_PIN, LOW);
     digitalWrite(TOOLBOX_OPENER_PIN, LOW);
+    digitalWrite(SYSTEM_READY_PIN, LOW);
     
     // Initialize state structure
     gpioState.bedlight = false;
     gpioState.parkedLED = false;
     gpioState.unlockedLED = false;
     gpioState.toolboxOpener = false;
+    gpioState.systemReady = false;
     gpioState.toolboxButton = digitalRead(TOOLBOX_BUTTON_PIN) == LOW; // Active low with pullup
     gpioState.toolboxOpenerStartTime = 0;
     
@@ -41,6 +45,7 @@ bool initializeGPIO() {
     LOG_INFO("  PARKED_LED_PIN (%d): OUTPUT, initial state: LOW", PARKED_LED_PIN);
     LOG_INFO("  UNLOCKED_LED_PIN (%d): OUTPUT, initial state: LOW", UNLOCKED_LED_PIN);
     LOG_INFO("  TOOLBOX_OPENER_PIN (%d): OUTPUT, initial state: LOW", TOOLBOX_OPENER_PIN);
+    LOG_INFO("  SYSTEM_READY_PIN (%d): OUTPUT, initial state: LOW", SYSTEM_READY_PIN);
     LOG_INFO("  TOOLBOX_BUTTON_PIN (%d): INPUT_PULLUP, current state: %s", 
              TOOLBOX_BUTTON_PIN, gpioState.toolboxButton ? "PRESSED" : "RELEASED");
     
@@ -68,6 +73,14 @@ void setUnlockedLED(bool state) {
         gpioState.unlockedLED = state;
         digitalWrite(UNLOCKED_LED_PIN, state ? HIGH : LOW);
         LOG_INFO("Unlocked LED changed to: %s", state ? "ON" : "OFF");
+    }
+}
+
+void setSystemReady(bool state) {
+    if (gpioState.systemReady != state) {
+        gpioState.systemReady = state;
+        digitalWrite(SYSTEM_READY_PIN, state ? HIGH : LOW);
+        LOG_INFO("System ready indicator changed to: %s", state ? "ON" : "OFF");
     }
 }
 
@@ -135,6 +148,7 @@ void printGPIOStatus() {
     LOG_DEBUG("  Bedlight: %s", state.bedlight ? "ON" : "OFF");
     LOG_DEBUG("  Parked LED: %s", state.parkedLED ? "ON" : "OFF");
     LOG_DEBUG("  Unlocked LED: %s", state.unlockedLED ? "ON" : "OFF");
+    LOG_DEBUG("  System Ready: %s", state.systemReady ? "ON" : "OFF");
     LOG_DEBUG("  Toolbox Opener: %s", state.toolboxOpener ? "ACTIVE" : "INACTIVE");
     LOG_DEBUG("  Toolbox Button: %s", state.toolboxButton ? "PRESSED" : "RELEASED");
     

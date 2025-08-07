@@ -10,6 +10,7 @@ extern "C" {
         bool unlockedLED;
         bool toolboxOpener;
         bool toolboxButton;
+        bool systemReady;
         unsigned long toolboxOpenerStartTime;
     };
     
@@ -18,6 +19,7 @@ extern "C" {
     void setParkedLED(bool state);
     void setUnlockedLED(bool state);
     void setToolboxOpener(bool state);
+    void setSystemReady(bool state);
     bool readToolboxButton();
     void updateToolboxOpenerTiming();
     GPIOState getGPIOState();
@@ -35,6 +37,7 @@ bool initializeGPIO() {
     gpioState.unlockedLED = false;
     gpioState.toolboxOpener = false;
     gpioState.toolboxButton = false;
+    gpioState.systemReady = false;
     gpioState.toolboxOpenerStartTime = 0;
     
     // Set pin modes in mock
@@ -42,6 +45,7 @@ bool initializeGPIO() {
     ArduinoMock::instance().setPinMode(PARKED_LED_PIN, OUTPUT);
     ArduinoMock::instance().setPinMode(UNLOCKED_LED_PIN, OUTPUT);
     ArduinoMock::instance().setPinMode(TOOLBOX_OPENER_PIN, OUTPUT);
+    ArduinoMock::instance().setPinMode(SYSTEM_READY_PIN, OUTPUT);
     ArduinoMock::instance().setPinMode(TOOLBOX_BUTTON_PIN, INPUT_PULLUP);
     
     // Initialize outputs to LOW
@@ -49,6 +53,7 @@ bool initializeGPIO() {
     ArduinoMock::instance().setDigitalWrite(PARKED_LED_PIN, LOW);
     ArduinoMock::instance().setDigitalWrite(UNLOCKED_LED_PIN, LOW);
     ArduinoMock::instance().setDigitalWrite(TOOLBOX_OPENER_PIN, LOW);
+    ArduinoMock::instance().setDigitalWrite(SYSTEM_READY_PIN, LOW);
     
     // Initialize button reading (pullup means HIGH when not pressed)
     ArduinoMock::instance().setDigitalRead(TOOLBOX_BUTTON_PIN, HIGH);
@@ -82,6 +87,15 @@ void setUnlockedLED(bool state) {
     if (gpioState.unlockedLED != state) {
         gpioState.unlockedLED = state;
         ArduinoMock::instance().setDigitalWrite(UNLOCKED_LED_PIN, state ? HIGH : LOW);
+    }
+}
+
+void setSystemReady(bool state) {
+    if (!gpioInitialized) return;
+    
+    if (gpioState.systemReady != state) {
+        gpioState.systemReady = state;
+        ArduinoMock::instance().setDigitalWrite(SYSTEM_READY_PIN, state ? HIGH : LOW);
     }
 }
 
@@ -148,6 +162,7 @@ TEST_F(GPIOInitTest, InitializationSuccess) {
     EXPECT_FALSE(state.unlockedLED);
     EXPECT_FALSE(state.toolboxOpener);
     EXPECT_FALSE(state.toolboxButton);
+    EXPECT_FALSE(state.systemReady);
     EXPECT_EQ(state.toolboxOpenerStartTime, 0);
 }
 
@@ -158,6 +173,7 @@ TEST_F(GPIOInitTest, InitializationSetsPinModes) {
     EXPECT_EQ(ArduinoMock::instance().getPinMode(PARKED_LED_PIN), OUTPUT);
     EXPECT_EQ(ArduinoMock::instance().getPinMode(UNLOCKED_LED_PIN), OUTPUT);
     EXPECT_EQ(ArduinoMock::instance().getPinMode(TOOLBOX_OPENER_PIN), OUTPUT);
+    EXPECT_EQ(ArduinoMock::instance().getPinMode(SYSTEM_READY_PIN), OUTPUT);
     EXPECT_EQ(ArduinoMock::instance().getPinMode(TOOLBOX_BUTTON_PIN), INPUT_PULLUP);
 }
 
@@ -168,6 +184,7 @@ TEST_F(GPIOInitTest, InitializationSetsOutputsLow) {
     EXPECT_EQ(ArduinoMock::instance().getDigitalState(PARKED_LED_PIN), LOW);
     EXPECT_EQ(ArduinoMock::instance().getDigitalState(UNLOCKED_LED_PIN), LOW);
     EXPECT_EQ(ArduinoMock::instance().getDigitalState(TOOLBOX_OPENER_PIN), LOW);
+    EXPECT_EQ(ArduinoMock::instance().getDigitalState(SYSTEM_READY_PIN), LOW);
 }
 
 // Test Suite for Basic Output Control
@@ -220,6 +237,20 @@ TEST_F(BasicOutputTest, UnlockedLEDControl) {
     state = getGPIOState();
     EXPECT_FALSE(state.unlockedLED);
     EXPECT_FALSE(isGPIOHigh(UNLOCKED_LED_PIN));
+}
+
+TEST_F(BasicOutputTest, SystemReadyControl) {
+    setSystemReady(true);
+    
+    GPIOState state = getGPIOState();
+    EXPECT_TRUE(state.systemReady);
+    EXPECT_TRUE(isGPIOHigh(SYSTEM_READY_PIN));
+    
+    setSystemReady(false);
+    
+    state = getGPIOState();
+    EXPECT_FALSE(state.systemReady);
+    EXPECT_FALSE(isGPIOHigh(SYSTEM_READY_PIN));
 }
 
 TEST_F(BasicOutputTest, RedundantStateChanges) {
@@ -394,12 +425,14 @@ TEST_F(OutputControlIntegrationTest, AllOutputsIndependent) {
     setBedlight(true);
     setParkedLED(true);
     setUnlockedLED(true);
+    setSystemReady(true);
     setToolboxOpener(true);
     
     GPIOState state = getGPIOState();
     EXPECT_TRUE(state.bedlight);
     EXPECT_TRUE(state.parkedLED);
     EXPECT_TRUE(state.unlockedLED);
+    EXPECT_TRUE(state.systemReady);
     EXPECT_TRUE(state.toolboxOpener);
     
     // Turn off one output - others should remain on
@@ -409,6 +442,7 @@ TEST_F(OutputControlIntegrationTest, AllOutputsIndependent) {
     EXPECT_FALSE(state.bedlight);
     EXPECT_TRUE(state.parkedLED);
     EXPECT_TRUE(state.unlockedLED);
+    EXPECT_TRUE(state.systemReady);
     EXPECT_TRUE(state.toolboxOpener);
 }
 
@@ -543,4 +577,83 @@ TEST_F(RealWorldOutputTest, MultipleToolboxActivations) {
     // Should have new start time
     unsigned long newStartTime = state.toolboxOpenerStartTime;
     EXPECT_GT(newStartTime, 4000);  // Should be after initial test time
+}
+
+// Test Suite for System Ready Indicator
+class SystemReadyIndicatorTest : public ArduinoTest {
+protected:
+    void SetUp() override {
+        ArduinoTest::SetUp();
+        initializeGPIO();
+    }
+};
+
+TEST_F(SystemReadyIndicatorTest, SystemReadyIndicatorBasicOperation) {
+    // System ready indicator should start as OFF
+    GPIOState state = getGPIOState();
+    EXPECT_FALSE(state.systemReady);
+    EXPECT_FALSE(isGPIOHigh(SYSTEM_READY_PIN));
+    
+    // Turn on system ready
+    setSystemReady(true);
+    state = getGPIOState();
+    EXPECT_TRUE(state.systemReady);
+    EXPECT_TRUE(isGPIOHigh(SYSTEM_READY_PIN));
+    
+    // Turn off system ready
+    setSystemReady(false);
+    state = getGPIOState();
+    EXPECT_FALSE(state.systemReady);
+    EXPECT_FALSE(isGPIOHigh(SYSTEM_READY_PIN));
+}
+
+TEST_F(SystemReadyIndicatorTest, SystemReadyRedundantCalls) {
+    // Multiple calls with same state should not cause issues
+    setSystemReady(true);
+    setSystemReady(true);
+    setSystemReady(true);
+    
+    GPIOState state = getGPIOState();
+    EXPECT_TRUE(state.systemReady);
+    EXPECT_TRUE(isGPIOHigh(SYSTEM_READY_PIN));
+    
+    setSystemReady(false);
+    setSystemReady(false);
+    setSystemReady(false);
+    
+    state = getGPIOState();
+    EXPECT_FALSE(state.systemReady);
+    EXPECT_FALSE(isGPIOHigh(SYSTEM_READY_PIN));
+}
+
+TEST_F(SystemReadyIndicatorTest, SystemReadyIndependentOfOtherOutputs) {
+    // Turn on other outputs
+    setBedlight(true);
+    setParkedLED(true);
+    setUnlockedLED(true);
+    
+    // System ready should remain off
+    GPIOState state = getGPIOState();
+    EXPECT_FALSE(state.systemReady);
+    EXPECT_FALSE(isGPIOHigh(SYSTEM_READY_PIN));
+    
+    // Turn on system ready
+    setSystemReady(true);
+    state = getGPIOState();
+    EXPECT_TRUE(state.systemReady);
+    EXPECT_TRUE(isGPIOHigh(SYSTEM_READY_PIN));
+    
+    // Other outputs should remain on
+    EXPECT_TRUE(state.bedlight);
+    EXPECT_TRUE(state.parkedLED);
+    EXPECT_TRUE(state.unlockedLED);
+    
+    // Turn off system ready - other outputs should remain
+    setSystemReady(false);
+    state = getGPIOState();
+    EXPECT_FALSE(state.systemReady);
+    EXPECT_FALSE(isGPIOHigh(SYSTEM_READY_PIN));
+    EXPECT_TRUE(state.bedlight);
+    EXPECT_TRUE(state.parkedLED);
+    EXPECT_TRUE(state.unlockedLED);
 }

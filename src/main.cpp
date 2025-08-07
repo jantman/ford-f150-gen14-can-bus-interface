@@ -89,6 +89,7 @@ void setup() {
     LOG_INFO("  UNLOCKED_LED_PIN: %d", UNLOCKED_LED_PIN);
     LOG_INFO("  TOOLBOX_OPENER_PIN: %d", TOOLBOX_OPENER_PIN);
     LOG_INFO("  TOOLBOX_BUTTON_PIN: %d", TOOLBOX_BUTTON_PIN);
+    LOG_INFO("  SYSTEM_READY_PIN: %d", SYSTEM_READY_PIN);
 }
 
 void loop() {
@@ -316,6 +317,10 @@ void updateOutputControlLogic() {
                  vehicleState.vehicleLockStatus);
     }
     
+    // === System Ready Indicator Control Logic ===
+    // Control system ready indicator (GPIO18) based on overall system readiness
+    setSystemReady(vehicleState.systemReady);
+    
     // === Toolbox Opener Logic ===
     // Toolbox opener is handled by button press events in the main loop
     // The timing shutoff is handled by updateToolboxOpenerTiming()
@@ -470,6 +475,7 @@ void performSafeSystemShutdown() {
     setParkedLED(false);
     setUnlockedLED(false);
     setToolboxOpener(false);
+    setSystemReady(false);
     
     // Log final system state
     LOG_ERROR("All outputs disabled for safety");

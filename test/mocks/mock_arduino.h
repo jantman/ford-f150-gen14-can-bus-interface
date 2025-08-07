@@ -18,6 +18,7 @@
 #define UNLOCKED_LED_PIN 15
 #define TOOLBOX_OPENER_PIN 4
 #define TOOLBOX_BUTTON_PIN 17
+#define SYSTEM_READY_PIN 18
 
 // Mock Arduino types
 typedef uint8_t byte;

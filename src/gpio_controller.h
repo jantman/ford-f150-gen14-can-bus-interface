@@ -11,6 +11,7 @@ struct GPIOState {
     bool unlockedLED;
     bool toolboxOpener;
     bool toolboxButton;
+    bool systemReady;
     unsigned long toolboxOpenerStartTime;
 };
 
@@ -20,6 +21,7 @@ void setBedlight(bool state);
 void setParkedLED(bool state);
 void setUnlockedLED(bool state);
 void setToolboxOpener(bool state);
+void setSystemReady(bool state);
 bool readToolboxButton();
 void updateToolboxOpenerTiming();
 GPIOState getGPIOState();
