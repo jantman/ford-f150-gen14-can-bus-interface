@@ -2,7 +2,19 @@
 
 ## CAN Message Specifications
 
-This document details the specific CAN messages and signals used by the Ford F150 Gen14 CAN Bus Interface.
+This document details the specific CAN messages and## System Health Monitoring
+
+### Timeout Detection
+- **Timeout Period**: 600000ms (10 minutes)
+- **Monitored Messages**: All four CAN messages
+- **Action**: System marked as "not ready" only when ALL messages have timed out
+- **Recovery**: Automatic when ANY fresh message is received
+
+### Error Handling
+- **CAN Bus Errors**: Automatic reinitialization
+- **GPIO Errors**: Automatic reinitialization  
+- **Critical Errors**: Safe shutdown mode (all outputs disabled)
+- **Watchdog**: System health monitoring every loop cycle by the Ford F150 Gen14 CAN Bus Interface.
 
 ## CAN Bus Configuration
 
@@ -134,10 +146,10 @@ bool shouldActivateToolbox(bool systemReady, bool isParked, bool isUnlocked) {
 ## System Health Monitoring
 
 ### Timeout Detection
-- **Timeout Period**: 5000ms (5 seconds)
+- **Timeout Period**: 600000ms (10 minutes)
 - **Monitored Messages**: All four CAN messages
-- **Action**: System marked as "not ready" if any message times out
-- **Recovery**: Automatic when fresh messages received
+- **Action**: System marked as "not ready" only if ALL messages time out
+- **Recovery**: Automatic when ANY fresh message is received
 
 ### Error Handling
 - **CAN Bus Errors**: Automatic reinitialization

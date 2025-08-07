@@ -25,7 +25,8 @@
 #define BUTTON_HOLD_THRESHOLD_MS 1000  // Time to consider button "held"
 #define BUTTON_DOUBLE_CLICK_MS 300     // Max time between clicks for double-click
 #define CAN_TIMEOUT_MS 5000            // CAN message timeout (consider signal stale)
-#define STATE_TIMEOUT_MS 10000         // State data timeout (consider system not ready)
+#define STATE_TIMEOUT_MS 10000         // State data timeout (consider system not ready) - DEPRECATED
+#define SYSTEM_READINESS_TIMEOUT_MS 600000  // System ready if ANY monitored message received within 10 minutes
 #define SERIAL_BAUD_RATE 115200        // Serial monitor baud rate
 
 // Signal Value Definitions (from minimal.dbc)

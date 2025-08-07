@@ -559,7 +559,7 @@ TEST_F(ArduinoTest, StateChangeDetection) {
 }
 
 TEST_F(ArduinoTest, SystemReadyLogic) {
-    // Test system ready determination
+    // Test system ready determination with new ANY-message logic
     setTime(6000);
     
     struct VehicleState {
@@ -587,26 +587,49 @@ TEST_F(ArduinoTest, SystemReadyLogic) {
     testState.lastPowertrainUpdate = 5500;
     testState.lastBatteryUpdate = 5500;
     
-    // Simulate system ready logic - all updates recent
-    const unsigned long TIMEOUT_MS = 5000; // 5 second timeout 
+    // Simulate NEW system ready logic - ANY message within timeout
+    const unsigned long TIMEOUT_MS = SYSTEM_READINESS_TIMEOUT_MS; // 10 minute timeout
     unsigned long currentTime = 6000;
     
-    bool systemReady = (currentTime - testState.lastBCMLampUpdate < TIMEOUT_MS) &&
-                      (currentTime - testState.lastLockingSystemsUpdate < TIMEOUT_MS) &&
-                      (currentTime - testState.lastPowertrainUpdate < TIMEOUT_MS) &&
-                      (currentTime - testState.lastBatteryUpdate < TIMEOUT_MS);
+    bool hasBCMData = (currentTime - testState.lastBCMLampUpdate < TIMEOUT_MS);
+    bool hasLockingData = (currentTime - testState.lastLockingSystemsUpdate < TIMEOUT_MS);
+    bool hasPowertrainData = (currentTime - testState.lastPowertrainUpdate < TIMEOUT_MS);
+    bool hasBatteryData = (currentTime - testState.lastBatteryUpdate < TIMEOUT_MS);
+    
+    bool systemReady = hasBCMData || hasLockingData || hasPowertrainData || hasBatteryData;
     
     EXPECT_TRUE(systemReady);
     
-    // Test with stale BCM data
-    testState.lastBCMLampUpdate = 0; // 6000ms old, exceeds 5000ms timeout
+    // Test with only BCM data recent
+    currentTime = TIMEOUT_MS + 10000; // Set current time well past timeout
+    testState.lastBCMLampUpdate = currentTime - 5000; // Recent (5 seconds ago)
+    testState.lastLockingSystemsUpdate = 0; // Very stale
+    testState.lastPowertrainUpdate = 0; // Very stale  
+    testState.lastBatteryUpdate = 0; // Very stale
     
-    systemReady = (currentTime - testState.lastBCMLampUpdate < TIMEOUT_MS) &&
-                 (currentTime - testState.lastLockingSystemsUpdate < TIMEOUT_MS) &&
-                 (currentTime - testState.lastPowertrainUpdate < TIMEOUT_MS) &&
-                 (currentTime - testState.lastBatteryUpdate < TIMEOUT_MS);
+    hasBCMData = (currentTime - testState.lastBCMLampUpdate < TIMEOUT_MS);
+    hasLockingData = (currentTime - testState.lastLockingSystemsUpdate < TIMEOUT_MS);
+    hasPowertrainData = (currentTime - testState.lastPowertrainUpdate < TIMEOUT_MS);
+    hasBatteryData = (currentTime - testState.lastBatteryUpdate < TIMEOUT_MS);
     
-    EXPECT_FALSE(systemReady);
+    systemReady = hasBCMData || hasLockingData || hasPowertrainData || hasBatteryData;
+    
+    EXPECT_TRUE(systemReady); // Should still be ready with just BCM data
+    
+    // Test with all data stale
+    testState.lastBCMLampUpdate = 0; // Very stale
+    testState.lastLockingSystemsUpdate = 0; // Very stale
+    testState.lastPowertrainUpdate = 0; // Very stale
+    testState.lastBatteryUpdate = 0; // Very stale
+    
+    hasBCMData = (currentTime - testState.lastBCMLampUpdate < TIMEOUT_MS);
+    hasLockingData = (currentTime - testState.lastLockingSystemsUpdate < TIMEOUT_MS);
+    hasPowertrainData = (currentTime - testState.lastPowertrainUpdate < TIMEOUT_MS);
+    hasBatteryData = (currentTime - testState.lastBatteryUpdate < TIMEOUT_MS);
+    
+    systemReady = hasBCMData || hasLockingData || hasPowertrainData || hasBatteryData;
+    
+    EXPECT_FALSE(systemReady); // Should be false when all data is stale
 }
 
 int main(int argc, char **argv) {

@@ -187,14 +187,14 @@ void checkForStateChanges() {
     unsigned long currentTime = millis();
     bool systemWasReady = vehicleState.systemReady;
     
-    // Check if we have recent data from all critical systems
-    bool hasBCMData = (currentTime - vehicleState.lastBCMLampUpdate) < STATE_TIMEOUT_MS;
-    bool hasLockingData = (currentTime - vehicleState.lastLockingSystemsUpdate) < STATE_TIMEOUT_MS;
-    bool hasPowertrainData = (currentTime - vehicleState.lastPowertrainUpdate) < STATE_TIMEOUT_MS;
-    bool hasBatteryData = (currentTime - vehicleState.lastBatteryUpdate) < STATE_TIMEOUT_MS;
+    // Check if we have recent data from ANY of the monitored systems
+    bool hasBCMData = (currentTime - vehicleState.lastBCMLampUpdate) < SYSTEM_READINESS_TIMEOUT_MS;
+    bool hasLockingData = (currentTime - vehicleState.lastLockingSystemsUpdate) < SYSTEM_READINESS_TIMEOUT_MS;
+    bool hasPowertrainData = (currentTime - vehicleState.lastPowertrainUpdate) < SYSTEM_READINESS_TIMEOUT_MS;
+    bool hasBatteryData = (currentTime - vehicleState.lastBatteryUpdate) < SYSTEM_READINESS_TIMEOUT_MS;
     
-    // System is ready if we have recent data from at least the critical systems
-    vehicleState.systemReady = hasBCMData && hasLockingData && hasPowertrainData;
+    // System is ready if we have recent data from ANY of the monitored systems
+    vehicleState.systemReady = hasBCMData || hasLockingData || hasPowertrainData || hasBatteryData;
     
     // Log system readiness changes
     if (systemWasReady != vehicleState.systemReady) {
@@ -206,15 +206,20 @@ void checkForStateChanges() {
                  hasBatteryData ? "OK" : "TIMEOUT");
     }
     
-    // Log warnings for data timeouts
-    if (!hasBCMData && (currentTime % 30000) < 100) { // Log every 30s
-        LOG_WARN("BCM lamp data timeout (last update %lu ms ago)", currentTime - vehicleState.lastBCMLampUpdate);
-    }
-    if (!hasLockingData && (currentTime % 30000) < 100) {
-        LOG_WARN("Locking systems data timeout (last update %lu ms ago)", currentTime - vehicleState.lastLockingSystemsUpdate);
-    }
-    if (!hasPowertrainData && (currentTime % 30000) < 100) {
-        LOG_WARN("Powertrain data timeout (last update %lu ms ago)", currentTime - vehicleState.lastPowertrainUpdate);
+    // Log warnings for data timeouts (only if ALL systems are timed out and system is not ready)
+    if (!vehicleState.systemReady) {
+        if (!hasBCMData && (currentTime % 30000) < 100) { // Log every 30s
+            LOG_WARN("BCM lamp data timeout (last update %lu ms ago)", currentTime - vehicleState.lastBCMLampUpdate);
+        }
+        if (!hasLockingData && (currentTime % 30000) < 100) {
+            LOG_WARN("Locking systems data timeout (last update %lu ms ago)", currentTime - vehicleState.lastLockingSystemsUpdate);
+        }
+        if (!hasPowertrainData && (currentTime % 30000) < 100) {
+            LOG_WARN("Powertrain data timeout (last update %lu ms ago)", currentTime - vehicleState.lastPowertrainUpdate);
+        }
+        if (!hasBatteryData && (currentTime % 30000) < 100) {
+            LOG_WARN("Battery data timeout (last update %lu ms ago)", currentTime - vehicleState.lastBatteryUpdate);
+        }
     }
 }
 

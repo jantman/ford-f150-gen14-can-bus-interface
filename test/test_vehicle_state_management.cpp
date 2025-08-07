@@ -122,13 +122,15 @@ protected:
     
     // Update system ready status based on message freshness
     void updateSystemReady(unsigned long currentTime) {
-        const unsigned long TIMEOUT_MS = 5000; // 5 second timeout as used in Python
+        const unsigned long TIMEOUT_MS = SYSTEM_READINESS_TIMEOUT_MS; // 10 minute timeout for ANY message
         
-        vehicleState.systemReady = 
-            (currentTime - vehicleState.lastBCMLampUpdate < TIMEOUT_MS) &&
-            (currentTime - vehicleState.lastLockingSystemsUpdate < TIMEOUT_MS) &&
-            (currentTime - vehicleState.lastPowertrainUpdate < TIMEOUT_MS) &&
-            (currentTime - vehicleState.lastBatteryUpdate < TIMEOUT_MS);
+        // System is ready if ANY message type has been received within the timeout window
+        bool hasBCMData = (currentTime - vehicleState.lastBCMLampUpdate < TIMEOUT_MS);
+        bool hasLockingData = (currentTime - vehicleState.lastLockingSystemsUpdate < TIMEOUT_MS);
+        bool hasPowertrainData = (currentTime - vehicleState.lastPowertrainUpdate < TIMEOUT_MS);
+        bool hasBatteryData = (currentTime - vehicleState.lastBatteryUpdate < TIMEOUT_MS);
+        
+        vehicleState.systemReady = hasBCMData || hasLockingData || hasPowertrainData || hasBatteryData;
     }
     
     // Check if toolbox should be activated based on current state
@@ -296,37 +298,50 @@ TEST_F(VehicleStateTest, StateChangeDetection) {
 TEST_F(VehicleStateTest, SystemReadyLogic) {
     unsigned long baseTime = 6000;
     
-    // Update all systems with recent timestamps
+    // Test 1: System should be ready when ALL messages are recent
     updateBCMLampStatus(PUDLAMP_OFF, 0, 0, baseTime);
     updateLockingSystemsStatus(VEH_LOCK_ALL, baseTime);
     updatePowertrainStatus(TRNPRKSTS_UNKNOWN, baseTime);
     updateBatteryStatus(75, baseTime);
     
-    // System should be ready when all messages are recent
     advanceTimeAndUpdate(baseTime + 1000); // 1 second later
     EXPECT_TRUE(vehicleState.systemReady);
     
-    // System should still be ready within timeout window
-    advanceTimeAndUpdate(baseTime + 4000); // 4 seconds later
-    EXPECT_TRUE(vehicleState.systemReady);
+    // Test 2: System should be ready with just ONE recent message (BCM only)
+    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 1000); // Well past timeout for all messages
+    EXPECT_FALSE(vehicleState.systemReady); // Should be false now
     
-    // System should not be ready after timeout
-    advanceTimeAndUpdate(baseTime + 6000); // 6 seconds later (exceeds 5s timeout)
-    EXPECT_FALSE(vehicleState.systemReady);
+    updateBCMLampStatus(PUDLAMP_ON, 0, 0, baseTime + SYSTEM_READINESS_TIMEOUT_MS + 1500); // Fresh BCM only
+    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 1600);
+    EXPECT_TRUE(vehicleState.systemReady); // Should be ready with just BCM data
     
-    // Test with one stale message
-    updateBCMLampStatus(PUDLAMP_ON, 0, 0, baseTime + 7000); // Fresh BCM
-    updateLockingSystemsStatus(VEH_UNLOCK_ALL, baseTime + 7000); // Fresh Locking
-    updatePowertrainStatus(TRNPRKSTS_PARK, baseTime + 7000); // Fresh Powertrain
-    // Battery is still stale (baseTime)
+    // Test 3: System should be ready with just Locking data
+    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 100000); // Well past timeout for BCM
+    EXPECT_FALSE(vehicleState.systemReady); // Should be false now
     
-    advanceTimeAndUpdate(baseTime + 7500);
-    EXPECT_FALSE(vehicleState.systemReady); // Should be false due to stale battery data
+    updateLockingSystemsStatus(VEH_UNLOCK_ALL, baseTime + SYSTEM_READINESS_TIMEOUT_MS + 101000); // Fresh Locking only
+    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 101100);
+    EXPECT_TRUE(vehicleState.systemReady); // Should be ready with just Locking data
     
-    // Update battery to make all fresh
-    updateBatteryStatus(85, baseTime + 7500);
-    advanceTimeAndUpdate(baseTime + 7600);
-    EXPECT_TRUE(vehicleState.systemReady); // Now should be ready
+    // Test 4: System should be ready with just Powertrain data
+    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 200000); // Well past timeout for Locking
+    EXPECT_FALSE(vehicleState.systemReady); // Should be false now
+    
+    updatePowertrainStatus(TRNPRKSTS_PARK, baseTime + SYSTEM_READINESS_TIMEOUT_MS + 201000); // Fresh Powertrain only
+    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 201100);
+    EXPECT_TRUE(vehicleState.systemReady); // Should be ready with just Powertrain data
+    
+    // Test 5: System should be ready with just Battery data
+    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 300000); // Well past timeout for Powertrain
+    EXPECT_FALSE(vehicleState.systemReady); // Should be false now
+    
+    updateBatteryStatus(85, baseTime + SYSTEM_READINESS_TIMEOUT_MS + 301000); // Fresh Battery only
+    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 301100);
+    EXPECT_TRUE(vehicleState.systemReady); // Should be ready with just Battery data
+    
+    // Test 6: System should NOT be ready when NO messages are recent
+    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 400000); // Well past timeout for Battery
+    EXPECT_FALSE(vehicleState.systemReady); // Should be false when all data is stale
 }
 
 // ===============================================
@@ -375,7 +390,7 @@ TEST_F(VehicleStateTest, ToolboxActivationLogic) {
     EXPECT_TRUE(vehicleState.toolboxShouldOpen);
     
     // Test case 5: Conditions met but system not ready - should NOT activate
-    advanceTimeAndUpdate(baseTime + 6000); // Make system stale
+    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 10000); // Make system stale (past 10 minute timeout)
     EXPECT_FALSE(vehicleState.systemReady);
     EXPECT_TRUE(vehicleState.isParked); // State values don't change, just freshness
     EXPECT_TRUE(vehicleState.isUnlocked);
@@ -522,20 +537,25 @@ TEST_F(VehicleStateTest, EdgeCasesMessageTimeouts) {
     EXPECT_TRUE(vehicleState.systemReady);
     EXPECT_TRUE(vehicleState.toolboxShouldOpen);
     
-    // Advance time to just before timeout
-    advanceTimeAndUpdate(baseTime + 4900); // 4.9 seconds
+    // Advance time to just before timeout (10 minutes = 600000 ms)
+    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS - 1000); // 9:59 minutes
     EXPECT_TRUE(vehicleState.systemReady);
     EXPECT_TRUE(vehicleState.toolboxShouldOpen);
     
     // Advance time to just after timeout
-    advanceTimeAndUpdate(baseTime + 5100); // 5.1 seconds
+    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 1000); // 10:01 minutes
     EXPECT_FALSE(vehicleState.systemReady);
     EXPECT_FALSE(vehicleState.toolboxShouldOpen); // Should deactivate due to stale data
+    
+    // Test that system becomes ready again with just ONE fresh message
+    updateBCMLampStatus(PUDLAMP_OFF, 0, 0, baseTime + SYSTEM_READINESS_TIMEOUT_MS + 2000);
+    advanceTimeAndUpdate(baseTime + SYSTEM_READINESS_TIMEOUT_MS + 2100);
+    EXPECT_TRUE(vehicleState.systemReady); // Should be ready again with just BCM data
     
     // Individual state values should still be preserved
     EXPECT_TRUE(vehicleState.isParked);
     EXPECT_TRUE(vehicleState.isUnlocked);
-    EXPECT_TRUE(vehicleState.bedlightShouldBeOn);
+    EXPECT_FALSE(vehicleState.bedlightShouldBeOn); // Should reflect new BCM state
 }
 
 // Main function removed - using unified test runner in test_main.cpp

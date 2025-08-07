@@ -2,15 +2,15 @@
 
 ## Overview
 
-The Ford F150 Gen14 CAN Bus Interface system uses a sophisticated readiness detection mechanism to ensure safe and reliable operation. The system is considered "ready" only when it has current, reliable data from critical vehicle systems.
+The Ford F150 Gen14 CAN Bus Interface system uses a simplified readiness detection mechanism to ensure safe and reliable operation. The system is considered "ready" when it has received ANY valid CAN message from the monitored vehicle systems within the configured timeout window.
 
 ## System Ready Requirements
 
-### Critical Message Types Required
+### Message Types Monitored
 
-The system requires **recent data from 3 out of 4 monitored CAN message types** to be considered ready:
+The system monitors **4 CAN message types** for system readiness:
 
-#### Required Messages (All 3 Must Be Fresh):
+#### Monitored Messages (ANY 1 Must Be Fresh):
 1. **BCM_Lamp_Stat_FD1** (ID: 0x3C3 / 963 decimal)
    - Contains puddle lamp status that controls the bedlight
    - Signal: `PudLamp_D_Rq` (bits 11-12)
@@ -23,28 +23,28 @@ The system requires **recent data from 3 out of 4 monitored CAN message types** 
    - Contains transmission park status that controls the parked LED
    - Signal: `TrnPrkSys_D_Actl` (bits 31-34)
 
-#### Optional Message (Not Required for Readiness):
 4. **Battery_Mgmt_3_FD1** (ID: 0x43C / 1084 decimal)
    - Contains battery state of charge for monitoring
    - Signal: `BSBattSOC` (bits 22-28)
-   - **Note**: Battery data is monitored and logged but NOT required for system readiness
+
+**Note**: All monitored messages are now treated equally for system readiness determination.
 
 ### Timeout Configuration
 
-- **STATE_TIMEOUT_MS**: `10000` milliseconds (10 seconds)
-- Each required message must have been received within the last 10 seconds
+- **SYSTEM_READINESS_TIMEOUT_MS**: `600000` milliseconds (10 minutes)
+- The system is ready if ANY monitored message has been received within the last 10 minutes
 - The timeout is checked against the last update timestamp for each message type
 
 ### System Ready Logic
 
 ```cpp
-bool hasBCMData = (currentTime - vehicleState.lastBCMLampUpdate) < STATE_TIMEOUT_MS;
-bool hasLockingData = (currentTime - vehicleState.lastLockingSystemsUpdate) < STATE_TIMEOUT_MS;
-bool hasPowertrainData = (currentTime - vehicleState.lastPowertrainUpdate) < STATE_TIMEOUT_MS;
-bool hasBatteryData = (currentTime - vehicleState.lastBatteryUpdate) < STATE_TIMEOUT_MS;
+bool hasBCMData = (currentTime - vehicleState.lastBCMLampUpdate) < SYSTEM_READINESS_TIMEOUT_MS;
+bool hasLockingData = (currentTime - vehicleState.lastLockingSystemsUpdate) < SYSTEM_READINESS_TIMEOUT_MS;
+bool hasPowertrainData = (currentTime - vehicleState.lastPowertrainUpdate) < SYSTEM_READINESS_TIMEOUT_MS;
+bool hasBatteryData = (currentTime - vehicleState.lastBatteryUpdate) < SYSTEM_READINESS_TIMEOUT_MS;
 
-// System is ready if we have recent data from the critical systems
-vehicleState.systemReady = hasBCMData && hasLockingData && hasPowertrainData;
+// System is ready if we have recent data from ANY of the monitored systems
+vehicleState.systemReady = hasBCMData || hasLockingData || hasPowertrainData || hasBatteryData;
 ```
 
 ## Log Messages Related to System Readiness
@@ -54,23 +54,28 @@ vehicleState.systemReady = hasBCMData && hasLockingData && hasPowertrainData;
 When the system readiness state changes, an INFO level log message is generated:
 
 ```
-[INFO] System readiness changed: READY (BCM:OK, Lock:OK, PT:OK, Batt:OK)
-[INFO] System readiness changed: NOT_READY (BCM:TIMEOUT, Lock:OK, PT:OK, Batt:OK)
+[INFO] System readiness changed: READY (BCM:OK, Lock:TIMEOUT, PT:TIMEOUT, Batt:TIMEOUT)
+[INFO] System readiness changed: NOT_READY (BCM:TIMEOUT, Lock:TIMEOUT, PT:TIMEOUT, Batt:TIMEOUT)
 ```
 
 The message shows the status of each monitored system:
 - `OK`: Message received within timeout window
 - `TIMEOUT`: Message not received within timeout window
 
+**Note**: The system is ready as long as ANY message shows `OK` status.
+
 ### Timeout Warnings
 
-When individual message types timeout, warning messages are logged every 30 seconds:
+When ALL message types have timed out (system not ready), warning messages are logged every 30 seconds:
 
 ```
-[WARN] BCM lamp data timeout (last update 15000 ms ago)
-[WARN] Locking systems data timeout (last update 12000 ms ago)
-[WARN] Powertrain data timeout (last update 18000 ms ago)
+[WARN] BCM lamp data timeout (last update 650000 ms ago)
+[WARN] Locking systems data timeout (last update 620000 ms ago)
+[WARN] Powertrain data timeout (last update 680000 ms ago)
+[WARN] Battery data timeout (last update 615000 ms ago)
 ```
+
+**Note**: Individual timeout warnings are only logged when the entire system is not ready (all messages timed out).
 
 ## Effects of System Readiness
 
@@ -112,6 +117,8 @@ The system watchdog monitors readiness and triggers alerts:
 
 - **Recovery mode**: System enters recovery mode if readiness issues persist
 
+**Note**: With the new 10-minute timeout, watchdog alerts for system readiness are much less likely to occur during normal operation.
+
 ### Health Status Logging
 
 Regular health status is logged at DEBUG level when system is healthy:
@@ -141,11 +148,10 @@ Use the `can_debug` or `cd` command to monitor CAN message reception for 10 seco
 
 ### Common Causes of "Not Ready" Status
 
-1. **Message Processing Pipeline Issue (Fixed in Latest Version)**
-   - **Symptom**: Messages visible in `can_debug` but no processing logs
-   - **Cause**: Redundant message consumption in main loop
-   - **Fix**: Updated main.cpp to remove `processPendingCANMessages()` call
-   - **Detection**: Run `can_debug` - if you see target messages but no parsing logs, this was the issue
+1. **Complete CAN Bus Disconnection**
+   - **Symptom**: All monitored messages stop arriving
+   - **Cause**: Physical disconnection from vehicle CAN bus
+   - **Detection**: No target messages visible in `can_debug` for over 10 minutes
 
 2. **CAN Bus Connection Issues**
    - Check physical CAN bus connections
@@ -157,20 +163,19 @@ Use the `can_debug` or `cd` command to monitor CAN message reception for 10 seco
    - CAN message IDs may be different for your vehicle variant
    - Use `can_debug` command to see what messages are being received
 
-4. **Intermittent Reception**
-   - Poor CAN bus signal quality
-   - Electrical interference
-   - Check error counters and CAN statistics
+4. **Extended Vehicle Inactivity**
+   - Vehicle has been inactive for more than 10 minutes
+   - All monitored systems have gone to sleep
+   - Normal behavior when vehicle is parked and locked for extended periods
 
 ### Debug Steps
 
 1. **Check CAN Statistics**: Use `can_status` command
 2. **Monitor Message Reception**: Use `can_debug` command
-3. **Compare Debug vs Normal Logs**: 
-   - If `can_debug` shows target messages but normal operation doesn't process them, there's a pipeline issue
-   - If `can_debug` shows no target messages, it's a CAN bus/vehicle issue
+3. **Check System Uptime**: Look for extended periods without ANY monitored messages
 4. **Review Error Logs**: Look for parsing errors or CAN errors
 5. **Verify Message IDs**: Confirm your vehicle sends the expected message IDs
+6. **Check Vehicle Activity**: Ensure vehicle has been active within the last 10 minutes
 
 ### Expected Log Sequence for Working System
 
@@ -184,4 +189,4 @@ When a target message is received and processed, you should see:
 [INFO] Unlocked LED ON (vehicle lock status: 2)
 ```
 
-If you only see the first line or none at all, there's a processing issue.
+With the new system readiness logic, the system will remain ready as long as ANY of the monitored messages continue to arrive within the 10-minute window.
