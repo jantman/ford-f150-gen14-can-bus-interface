@@ -122,9 +122,9 @@ TEST_F(CANDataValidationTest, PowertrainData10_ParkStatus) {
 // Test Suite: Locking_Systems_2_FD1 (0x331) - Veh_Lock_Status
 // ===============================================
 
-TEST_F(CANDataValidationTest, LockingSystems2FD1_LockStatus) {
-    // Test cases from the log showing different lock states
-    // Signal position: bits 34-35 (2 bits, MSB at 35)
+TEST_F(CANDataValidationTest, LockingSystems2FD1_ActualLogData) {
+    // Test cases from can_logger_1754515370_locking.out showing actual lock states
+    // These are the exact data patterns that appear in the real CAN log
     
     struct TestCase {
         const char* hexData;
@@ -134,17 +134,22 @@ TEST_F(CANDataValidationTest, LockingSystems2FD1_LockStatus) {
     };
     
     TestCase testCases[] = {
-        {"00 0F 00 00 02 C7 44 10", "Lock All - case 1", VEH_LOCK_ALL, "LOCK_ALL"},
-        {"04 0F 00 00 02 C7 44 10", "Lock All - case 2", VEH_LOCK_ALL, "LOCK_ALL"},
-        {"00 0F 00 00 05 C2 44 10", "Unlock All - case 1", VEH_UNLOCK_ALL, "UNLOCK_ALL"},
-        {"00 0F 00 00 05 C3 44 10", "Unlock All - case 2", VEH_UNLOCK_ALL, "UNLOCK_ALL"},
-        {"00 0F 00 00 05 C4 44 10", "Unlock All - case 3", VEH_UNLOCK_ALL, "UNLOCK_ALL"},
-        {"00 0F 00 00 05 C4 94 10", "Unlock All - case 4", VEH_UNLOCK_ALL, "UNLOCK_ALL"},
-        {"00 0F 00 00 05 C5 94 10", "Unlock All - case 5", VEH_UNLOCK_ALL, "UNLOCK_ALL"},
-        {"00 0F 00 00 05 C6 44 10", "Unlock All - case 6", VEH_UNLOCK_ALL, "UNLOCK_ALL"},
-        {"00 0F 00 00 05 C6 94 10", "Unlock All - case 7", VEH_UNLOCK_ALL, "UNLOCK_ALL"},
-        {"00 0F 00 00 05 C8 94 10", "Unlock All - case 8", VEH_UNLOCK_ALL, "UNLOCK_ALL"}
+        // LOCK_ALL cases from actual log (sequences 1 and 10)
+        {"00 0F 00 00 02 C7 44 10", "LOCK_ALL - sequence 1", VEH_LOCK_ALL, "LOCK_ALL"},
+        {"04 0F 00 00 02 C7 44 10", "LOCK_ALL - sequence 10", VEH_LOCK_ALL, "LOCK_ALL"},
+        
+        // UNLOCK_ALL cases from actual log (sequences 2-9)
+        {"00 0F 00 00 05 C2 44 10", "UNLOCK_ALL - sequence 2", VEH_UNLOCK_ALL, "UNLOCK_ALL"},
+        {"00 0F 00 00 05 C3 44 10", "UNLOCK_ALL - sequence 3", VEH_UNLOCK_ALL, "UNLOCK_ALL"},
+        {"00 0F 00 00 05 C4 44 10", "UNLOCK_ALL - sequence 4", VEH_UNLOCK_ALL, "UNLOCK_ALL"},
+        {"00 0F 00 00 05 C4 94 10", "UNLOCK_ALL - sequence 5", VEH_UNLOCK_ALL, "UNLOCK_ALL"},
+        {"00 0F 00 00 05 C5 94 10", "UNLOCK_ALL - sequence 6", VEH_UNLOCK_ALL, "UNLOCK_ALL"},
+        {"00 0F 00 00 05 C6 44 10", "UNLOCK_ALL - sequence 7", VEH_UNLOCK_ALL, "UNLOCK_ALL"},
+        {"00 0F 00 00 05 C6 94 10", "UNLOCK_ALL - sequence 8", VEH_UNLOCK_ALL, "UNLOCK_ALL"},
+        {"00 0F 00 00 05 C8 94 10", "UNLOCK_ALL - sequence 9", VEH_UNLOCK_ALL, "UNLOCK_ALL"}
     };
+    
+    printf("=== Validating against actual CAN log data ===\n");
     
     for (const auto& testCase : testCases) {
         validateSignalExtraction(
@@ -152,13 +157,23 @@ TEST_F(CANDataValidationTest, LockingSystems2FD1_LockStatus) {
             LOCKING_SYSTEMS_2_FD1_ID, // 0x331
             testCase.hexData,
             "Veh_Lock_Status",
-            34, // From bit analysis output: Bit 34 (len 2): val1=1, val2=2
-            2,  // 2 bits (as in DBC file)
+            34, // Bit position needs validation - byte 4 contains the status
+            2,  // 2 bits for lock status
             testCase.expectedValue
         );
         
         printf("   → State: %s (value=%u)\n", testCase.expectedState, testCase.expectedValue);
     }
+    
+    // Key observation from the data:
+    // LOCK_ALL messages have byte 4 = 0x02
+    // UNLOCK_ALL messages have byte 4 = 0x05
+    // This suggests the lock status is in bits of byte 4
+    
+    printf("\n=== Data Pattern Analysis ===\n");
+    printf("LOCK_ALL patterns: byte 4 = 0x02\n");
+    printf("UNLOCK_ALL patterns: byte 4 = 0x05\n");
+    printf("Status appears to be encoded in byte 4 (bits 32-39)\n");
 }
 
 // ===============================================

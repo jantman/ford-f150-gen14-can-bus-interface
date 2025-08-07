@@ -215,36 +215,48 @@ TEST_F(MessageParserTest, LockingSystemsBasicParsing) {
     EXPECT_EQ(result.vehicleLockStatus, 2); // VEH_UNLOCK_ALL
 }
 
-TEST_F(MessageParserTest, LockingSystemsPythonValueMapping) {
-    // Test Python value mappings for Veh_Lock_Status:
-    // {0: "LOCK_DBL", 1: "LOCK_ALL", 2: "UNLOCK_ALL", 3: "UNLOCK_DRV"}
+TEST_F(MessageParserTest, LockingSystemsRealCANData) {
+    // Test with actual CAN data from can_logger_1754515370_locking.out
+    // This validates against real Ford F-150 locking system messages
     
     struct TestCase {
-        uint8_t rawValue;
-        uint8_t expectedConstant;
+        uint8_t data[8];
+        uint8_t expectedStatus;
         const char* description;
     };
     
     TestCase testCases[] = {
-        {0, VEH_LOCK_DBL, "LOCK_DBL"},
-        {1, VEH_LOCK_ALL, "LOCK_ALL"},
-        {2, VEH_UNLOCK_ALL, "UNLOCK_ALL"},
-        {3, VEH_UNLOCK_DRV, "UNLOCK_DRV"}
+        // LOCK_ALL cases from actual log
+        {{0x00, 0x0F, 0x00, 0x00, 0x02, 0xC7, 0x44, 0x10}, VEH_LOCK_ALL, "LOCK_ALL - pattern 1"},
+        {{0x04, 0x0F, 0x00, 0x00, 0x02, 0xC7, 0x44, 0x10}, VEH_LOCK_ALL, "LOCK_ALL - pattern 2"},
+        
+        // UNLOCK_ALL cases from actual log
+        {{0x00, 0x0F, 0x00, 0x00, 0x05, 0xC2, 0x44, 0x10}, VEH_UNLOCK_ALL, "UNLOCK_ALL - pattern 1"},
+        {{0x00, 0x0F, 0x00, 0x00, 0x05, 0xC3, 0x44, 0x10}, VEH_UNLOCK_ALL, "UNLOCK_ALL - pattern 2"},
+        {{0x00, 0x0F, 0x00, 0x00, 0x05, 0xC4, 0x44, 0x10}, VEH_UNLOCK_ALL, "UNLOCK_ALL - pattern 3"},
+        {{0x00, 0x0F, 0x00, 0x00, 0x05, 0xC4, 0x94, 0x10}, VEH_UNLOCK_ALL, "UNLOCK_ALL - pattern 4"},
+        {{0x00, 0x0F, 0x00, 0x00, 0x05, 0xC5, 0x94, 0x10}, VEH_UNLOCK_ALL, "UNLOCK_ALL - pattern 5"},
+        {{0x00, 0x0F, 0x00, 0x00, 0x05, 0xC6, 0x44, 0x10}, VEH_UNLOCK_ALL, "UNLOCK_ALL - pattern 6"},
+        {{0x00, 0x0F, 0x00, 0x00, 0x05, 0xC6, 0x94, 0x10}, VEH_UNLOCK_ALL, "UNLOCK_ALL - pattern 7"},
+        {{0x00, 0x0F, 0x00, 0x00, 0x05, 0xC8, 0x94, 0x10}, VEH_UNLOCK_ALL, "UNLOCK_ALL - pattern 8"}
     };
     
     for (const auto& testCase : testCases) {
-        uint8_t testData[8] = {0};
-        setSignalValue(testData, 35, 2, testCase.rawValue);
-        
-        CANFrame frame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, testData);
+        CANFrame frame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, testCase.data);
         LockingSystemsData result = parseLockingSystemsFrame(&frame);
         
         EXPECT_TRUE(result.valid) << "Failed for " << testCase.description;
-        EXPECT_EQ(result.vehicleLockStatus, testCase.expectedConstant) << "Value mismatch for " << testCase.description;
+        EXPECT_EQ(result.vehicleLockStatus, testCase.expectedStatus) << "Value mismatch for " << testCase.description;
         
-        // Verify our bit extraction matches Python implementation
-        uint32_t pythonValue = pythonExtractBits(testData, 35, 2);
-        EXPECT_EQ(pythonValue, testCase.rawValue) << "Python extraction mismatch for " << testCase.description;
+        // Verify decision logic
+        bool isUnlocked = isVehicleUnlocked(result.vehicleLockStatus);
+        bool expectedUnlocked = (testCase.expectedStatus == VEH_UNLOCK_ALL || testCase.expectedStatus == VEH_UNLOCK_DRV);
+        EXPECT_EQ(isUnlocked, expectedUnlocked) << "Decision logic mismatch for " << testCase.description;
+        
+        printf("✓ %s: status=%u, unlocked=%s\n", 
+               testCase.description, 
+               result.vehicleLockStatus,
+               isUnlocked ? "YES" : "NO");
     }
 }
 

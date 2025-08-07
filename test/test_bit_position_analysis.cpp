@@ -106,15 +106,72 @@ TEST_F(BitPositionAnalysisTest, AnalyzePudLampSignal) {
     );
 }
 
-// Analyze Locking Systems - Veh_Lock_Status signal
+// Analyze Locking Systems - Veh_Lock_Status signal  
 TEST_F(BitPositionAnalysisTest, AnalyzeLockStatusSignal) {
-    // Compare LOCK_ALL vs UNLOCK_ALL patterns
+    // Using actual data from can_logger_1754515370_locking.out
+    
+    // Compare LOCK_ALL vs UNLOCK_ALL patterns from the actual log
     analyzeSignalPosition(
-        "Veh_Lock_Status (LOCK_ALL vs UNLOCK_ALL)",
-        "00 0F 00 00 02 C7 44 10", // Veh_Lock_Status=LOCK_ALL (expected: 2)
-        "00 0F 00 00 05 C2 44 10", // Veh_Lock_Status=UNLOCK_ALL (expected: 5)
-        "2", "5"
+        "Veh_Lock_Status (LOCK_ALL vs UNLOCK_ALL from actual log)",
+        "00 0F 00 00 02 C7 44 10", // Veh_Lock_Status=LOCK_ALL from log sequence 1
+        "00 0F 00 00 05 C2 44 10", // Veh_Lock_Status=UNLOCK_ALL from log sequence 2
+        "LOCK_ALL", "UNLOCK_ALL"
     );
+    
+    // Additional analysis with more patterns from the log
+    printf("=== Additional Lock Status Pattern Analysis ===\n");
+    
+    struct LockPattern {
+        const char* data;
+        const char* description;
+        uint8_t expectedValue; // VEH_LOCK_ALL=1 or VEH_UNLOCK_ALL=2
+    };
+    
+    LockPattern patterns[] = {
+        // From actual log file - LOCK_ALL cases  
+        {"00 0F 00 00 02 C7 44 10", "LOCK_ALL sequence 1", VEH_LOCK_ALL},
+        {"04 0F 00 00 02 C7 44 10", "LOCK_ALL sequence 10", VEH_LOCK_ALL},
+        
+        // From actual log file - UNLOCK_ALL cases
+        {"00 0F 00 00 05 C2 44 10", "UNLOCK_ALL sequence 2", VEH_UNLOCK_ALL},
+        {"00 0F 00 00 05 C3 44 10", "UNLOCK_ALL sequence 3", VEH_UNLOCK_ALL},
+        {"00 0F 00 00 05 C4 44 10", "UNLOCK_ALL sequence 4", VEH_UNLOCK_ALL},
+        {"00 0F 00 00 05 C8 94 10", "UNLOCK_ALL sequence 9", VEH_UNLOCK_ALL}
+    };
+    
+    printf("Analyzing %d patterns from actual CAN log:\n", (int)(sizeof(patterns)/sizeof(patterns[0])));
+    
+    // Key observation: byte 4 differs (0x02 for LOCK_ALL, 0x05 for UNLOCK_ALL)
+    printf("\nKey pattern: byte 4 values\n");
+    printf("LOCK_ALL patterns: byte 4 = 0x02\n");
+    printf("UNLOCK_ALL patterns: byte 4 = 0x05\n");
+    
+    // Test bit positions in byte 4 (bits 32-39) to find the encoding
+    printf("\nTesting bit positions in byte 4 for lock status:\n");
+    
+    for (int startBit = 32; startBit <= 39; startBit++) {
+        for (int length = 1; length <= 4; length++) {
+            bool allCorrect = true;
+            printf("Bit %d (len %d): ", startBit, length);
+            
+            for (const auto& pattern : patterns) {
+                uint8_t data[8];
+                hexStringToBytes(pattern.data, data);
+                uint32_t extracted = extractBits(data, startBit, length);
+                
+                printf("%u ", extracted);
+                
+                if (extracted != pattern.expectedValue) {
+                    allCorrect = false;
+                }
+            }
+            
+            if (allCorrect) {
+                printf("✓ PERFECT MATCH FOR ALL PATTERNS!");
+            }
+            printf("\n");
+        }
+    }
 }
 
 // Analyze Powertrain Data - TrnPrkSys_D_Actl signal

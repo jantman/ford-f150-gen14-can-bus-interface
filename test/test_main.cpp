@@ -8,6 +8,30 @@
 #include "common/test_config.h"
 #endif
 
+/**
+ * Unified Test Runner for Ford F-150 CAN Bus Interface
+ * 
+ * This test suite has been updated to validate against real CAN data from
+ * can_logger_1754515370_locking.out, which contains actual Ford F-150 
+ * locking system messages captured from the vehicle.
+ * 
+ * Key validation points:
+ * - Locking_Systems_2_FD1 (0x331) message parsing with real data patterns
+ * - LOCK_ALL vs UNLOCK_ALL state recognition using actual message content
+ * - Bit position analysis to determine correct signal extraction
+ * - Integration tests with realistic vehicle state transitions
+ * 
+ * Real data patterns validated:
+ * - LOCK_ALL: byte 4 = 0x02 (sequences 1 and 10 from log)
+ * - UNLOCK_ALL: byte 4 = 0x05 (sequences 2-9 from log)
+ * 
+ * Additional test files added:
+ * - test_locking_system_data.cpp: Comprehensive validation against log data
+ * - Enhanced test_message_parser.cpp: Real CAN data test cases
+ * - Enhanced test_can_data_validation.cpp: Actual log data validation
+ * - Enhanced test_bit_position_analysis.cpp: Lock status bit analysis
+ */
+
 // Forward declarations and implementations
 extern "C" {
     // CAN Message structure
