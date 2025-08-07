@@ -206,7 +206,7 @@ TEST_F(MessageParserTest, LockingSystemsBasicParsing) {
     // Python defines: Veh_Lock_Status (bits 34-35, 2 bits)
     
     uint8_t testData[8] = {0};
-    setSignalValue(testData, 35, 2, 2); // Veh_Lock_Status = UNLOCK_ALL (2)
+    setSignalValue(testData, 34, 2, 2); // Veh_Lock_Status = UNLOCK_ALL (2) - corrected bit position
     
     CANFrame frame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, testData);
     LockingSystemsData result = parseLockingSystemsFrame(&frame);
@@ -413,7 +413,7 @@ TEST_F(MessageParserTest, ComprehensiveMessageValidation) {
     CANFrame bcmFrame = createCANFrame(BCM_LAMP_STAT_FD1_ID, bcmData);
     
     uint8_t lockData[8] = {0};
-    setSignalValue(lockData, 35, 2, VEH_UNLOCK_ALL);
+    setSignalValue(lockData, 34, 2, VEH_UNLOCK_ALL); // Corrected bit position
     CANFrame lockFrame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, lockData);
     
     uint8_t powerData[8] = {0};

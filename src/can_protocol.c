@@ -29,8 +29,9 @@ LockingSystemsData parseLockingSystemsFrame(const CANFrame* frame) {
         return result;
     }
     
-    // Extract signals according to DBC specification (using DBC MSB bit positions)
-    result.vehicleLockStatus = extractBits(frame->data, 35, 2);  // Bits 34-35 (DBC MSB position 35)
+    // Extract signals according to real CAN data analysis (corrected bit position)
+    // Based on test analysis: LOCK_ALL=0x02 (byte 4) -> value 1, UNLOCK_ALL=0x05 (byte 4) -> value 2
+    result.vehicleLockStatus = extractBits(frame->data, 34, 2);  // Bits 33-34 (corrected from analysis)
     
     // Basic validation
     result.valid = (result.vehicleLockStatus <= 3);  // Valid range 0-3

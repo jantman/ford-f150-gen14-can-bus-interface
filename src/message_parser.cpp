@@ -23,15 +23,15 @@ bool parseBCMLampStatus(const CANMessage& message, BCMLampStatus& status) {
 }
 
 // Parse Locking_Systems_2_FD1 message (ID: 817, 8 bytes)
-// Signal: Veh_Lock_Status (bits 34-35)
+// Signal: Veh_Lock_Status (bits 33-34)
 bool parseLockingSystemsStatus(const CANMessage& message, LockingSystemsStatus& status) {
     if (message.id != LOCKING_SYSTEMS_2_FD1_ID || message.length != 8) {
         LOG_WARN("Invalid Locking_Systems_2_FD1 message: ID=0x%03X, Length=%d", message.id, message.length);
         return false;
     }
     
-    // Extract vehicle lock status signal (using DBC MSB bit positions to match can_protocol.c)
-    status.vehicleLockStatus = extractBits(message.data, 35, 2);  // Bits 34-35 (DBC MSB position 35)
+    // Extract vehicle lock status signal (corrected bit position based on real CAN data analysis)
+    status.vehicleLockStatus = extractBits(message.data, 34, 2);  // Bits 33-34 (corrected from analysis)
     
     status.valid = true;
     status.timestamp = message.timestamp;

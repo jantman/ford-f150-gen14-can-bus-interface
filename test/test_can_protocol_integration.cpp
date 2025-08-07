@@ -4,6 +4,7 @@
 extern "C" {
     #include "../src/can_protocol.h"
     #include "../src/config.h"  // For CAN message ID constants
+    #include "../src/bit_utils.h"  // For setBits function
 }
 
 class CANProtocolTest : public ::testing::Test {
@@ -14,6 +15,12 @@ protected:
     
     void TearDown() override {
         // No cleanup needed
+    }
+    
+    // Helper function to set signal values (matches the DBC bit positioning)
+    void setSignalValue(uint8_t data[8], uint8_t startBit, uint8_t length, uint32_t value) {
+        memset(data, 0, 8);  // Clear data first
+        setBits(data, startBit, length, value);  // Use production setBits function
     }
     
     // Helper to create test CAN frames
@@ -60,8 +67,12 @@ TEST_F(CANProtocolTest, BCMLampParsingProduction) {
 
 // Test the ACTUAL locking systems parsing function  
 TEST_F(CANProtocolTest, LockingSystemsParsingProduction) {
-    // Create test frame with Veh_Lock_Status = 3 (UNLOCK_DRV) at bits 34-35
-    CANFrame frame = createFrame(LOCKING_SYSTEMS_2_FD1_ID, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00);
+    // Create test frame with Veh_Lock_Status = 3 (UNLOCK_DRV) at bits 33-34
+    uint8_t testData[8];
+    setSignalValue(testData, 34, 2, 3);  // Use corrected bit position  
+    CANFrame frame = createFrame(LOCKING_SYSTEMS_2_FD1_ID, 
+                                testData[0], testData[1], testData[2], testData[3],
+                                testData[4], testData[5], testData[6], testData[7]);
     
     LockingSystemsData result = parseLockingSystemsFrame(&frame);
     
@@ -109,9 +120,22 @@ TEST_F(CANProtocolTest, DecisionLogicProduction) {
 // Test realistic end-to-end scenario with ACTUAL production code
 TEST_F(CANProtocolTest, EndToEndScenarioProduction) {
     // Scenario: Vehicle unlocked and parked, PUD lamp should be on
-    CANFrame bcmFrame = createFrame(BCM_LAMP_STAT_FD1_ID, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00); // PudLamp = 1 (ON)
-    CANFrame lockFrame = createFrame(LOCKING_SYSTEMS_2_FD1_ID, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00); // Lock = 2 (UNLOCK_ALL)
-    CANFrame parkFrame = createFrame(POWERTRAIN_DATA_10_ID, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00); // Park = 1 (Park)
+    uint8_t bcmData[8], lockData[8], parkData[8];
+    
+    // Create proper test data using signal setting
+    setSignalValue(bcmData, 12, 2, 1);   // PudLamp = 1 (ON) 
+    setSignalValue(lockData, 34, 2, 2);  // Lock = 2 (UNLOCK_ALL) - corrected bit position
+    setSignalValue(parkData, 34, 4, 1);  // Park = 1 (Park) - matching production code extraction
+    
+    CANFrame bcmFrame = createFrame(BCM_LAMP_STAT_FD1_ID, 
+                                   bcmData[0], bcmData[1], bcmData[2], bcmData[3],
+                                   bcmData[4], bcmData[5], bcmData[6], bcmData[7]);
+    CANFrame lockFrame = createFrame(LOCKING_SYSTEMS_2_FD1_ID,
+                                    lockData[0], lockData[1], lockData[2], lockData[3],
+                                    lockData[4], lockData[5], lockData[6], lockData[7]);
+    CANFrame parkFrame = createFrame(POWERTRAIN_DATA_10_ID,
+                                    parkData[0], parkData[1], parkData[2], parkData[3],
+                                    parkData[4], parkData[5], parkData[6], parkData[7]);
     
     // Parse using ACTUAL production functions
     BCMLampData bcm = parseBCMLampFrame(&bcmFrame);
