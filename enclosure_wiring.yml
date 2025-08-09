@@ -71,16 +71,6 @@ connectors:
     image:
       src: images/jst-xh-6pin-housing.png
 
-  12vTap:
-    style: simple
-    type: Solder splice
-    notes: "Solder splice to GX26-8#1 +12VDC"
-
-  12vQD:
-    style: simple
-    type: Solder splice
-    notes: "Solder splice to X2#1 +12VDC"
-
   blunt:
     style: simple
     type: blunt end
@@ -121,9 +111,6 @@ cables:
   GX26-8-jst:
     category: bundle
     colors: [RD, YE, BU, VT, OG, GN, WH]
-  12vTap-QD:
-    category: simple
-    colors: [RD]
   JST-XH-4pin-wire:
     category: bundle
     colors: [BK, BU, RD, OG]
@@ -142,10 +129,6 @@ connections:
     - X2: [1-4]
     - X2-Splice1: [1-4]
     - Splice1: [1-4]
-  - 
-    - X2: [1]
-    - 12vTap-QD: [1]
-    - 12vTap.
   -
     - Splice1: [1, 2, 3, 4]
     - Splice-JST-SM-4-male: [1, 4, 3, 2]
@@ -159,7 +142,7 @@ connections:
     - GX26-8-jst: [2, 3, 4, 5, 6, 7]
     - GX26-8-female: [2, 3, 4, 5, 6, 7]
   - 
-    - 12vQD.
+    - X2: [1]
     - GX26-8-jst: [1]
     - GX26-8-female: [1]
   -
