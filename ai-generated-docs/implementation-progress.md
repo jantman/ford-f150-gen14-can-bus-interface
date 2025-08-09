@@ -88,11 +88,13 @@ This document tracks the progress of implementing the Ford F150 CAN bus interfac
 - Implemented button hold detection with configurable threshold (1000ms)
 - Added button press counting and timing statistics
 - Created comprehensive button state query functions (pressed, released, held, duration, count)
-- Integrated button events with toolbox activation logic
+- Integrated button events with toolbox activation logic (requires 1000ms hold, not immediate press)
+- Fixed toolbox activation to trigger on button hold threshold rather than immediate press
 - Added robust logging for all button events (press, release, hold)
 - Successfully compiled and verified all button functionality
 - Removed unused test function to keep code clean
 - Memory efficient implementation with excellent resource usage (6.2% RAM, 26.2% Flash)
+- **Behavioral Fix Applied**: Changed main loop to use `isButtonHeld()` transition detection instead of `isButtonPressed()` for toolbox activation
 
 ### Step 7: Output Control Logic ✅
 - Implemented comprehensive output control logic connecting vehicle state to GPIO outputs

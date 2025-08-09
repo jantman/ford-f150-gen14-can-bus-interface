@@ -7,7 +7,7 @@ This ESP32-S3 based device interfaces with your Ford F150 Gen14 CAN bus to provi
 ## Features
 
 - **Automated Bedlight Control**: Automatically turns on/off bedlight based on vehicle PUD lamp status
-- **Smart Toolbox Opener**: Opens toolbox when vehicle is parked and unlocked (with manual button override)
+- **Smart Toolbox Opener**: Opens toolbox when vehicle is parked and unlocked (with manual button that requires 1000ms hold)
 - **Visual Status Indicators**: LEDs show vehicle locked/unlocked and parked status
 - **Safety Systems**: Built-in watchdog, error recovery, and timeout protections
 - **CAN Bus Monitoring**: Real-time monitoring of Ford F150 CAN messages
@@ -113,9 +113,19 @@ Once installed and powered on, the device will:
 ### Toolbox Opener
 
 - **Automatic Enable**: When vehicle is parked AND unlocked
-- **Manual Button**: Press button when conditions are met
+- **Manual Button**: Hold button for 1000ms when conditions are met
 - **Safety Lockout**: Disabled when vehicle is moving or locked
 - **Pulse Duration**: 500ms activation pulse to opener relay
+
+#### Proper Button Usage
+
+1. **Check Vehicle State**: Ensure truck is parked and unlocked (LEDs will indicate)
+2. **Press and Hold**: Press the toolbox button and hold it down
+3. **Wait for Threshold**: Keep holding for at least 1000ms (1 second)
+4. **Toolbox Activation**: Device will activate toolbox opener for 500ms
+5. **Release Button**: You can release the button after toolbox starts opening
+
+**Important**: Brief button presses (less than 1000ms) are ignored for safety. The button must be held for the full threshold time to activate the toolbox opener.
 
 ## Troubleshooting
 

@@ -29,7 +29,7 @@ High-level functionality:
 * When `PudLamp_D_Rq` changes to `RAMP_DOWN` or `OFF`, turn off the `BEDLIGHT_PIN` output.
 * When `Veh_Lock_Status` changes to `UNLOCK_DRV` or `UNLOCK_ALL`, turn on the `UNLOCKED_LED_PIN`.
 * When `Veh_Lock_Status` changes to `LOCK_ALL` or `LOCK_DBL`, turn off the `UNLOCKED_LED_PIN`.
-* Read `TOOLBOX_BUTTON_PIN` as an input with debouncing, pulled high. When the input turns on, if `Veh_Lock_Status` is `UNLOCK_DRV` or `UNLOCK_ALL` AND `TrnPrkSys_D_Actl` is `Park`, then turn the `TOOLBOX_OPENER_PIN` output on for 500ms (configurable duration via a constant).
+* Read `TOOLBOX_BUTTON_PIN` as an input with debouncing, pulled high. When the button is held for 1000ms (configurable via `BUTTON_HOLD_THRESHOLD_MS`), if `Veh_Lock_Status` is `UNLOCK_DRV` or `UNLOCK_ALL` AND `TrnPrkSys_D_Actl` is `Park`, then turn the `TOOLBOX_OPENER_PIN` output on for 500ms (configurable duration via a constant). The button must be held for the full threshold time before activation occurs - brief presses are ignored.
 * When `TrnPrkSys_D_Actl` changes to `Park`, turn on the `PARKED_LED_PIN`.
 * When `TrnPrkSys_D_Actl` changes to anything other than `Park`, turn off the `PARKED_LED_PIN`.
 * All changes to inputs and CAN signal state should be logged.

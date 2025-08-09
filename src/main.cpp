@@ -209,14 +209,21 @@ void loop() {
     updateButtonState();
     
     // Process button events with enhanced debouncing
-    if (isButtonPressed()) {
+    // Only activate toolbox when button is held for the threshold time, not on immediate press
+    static bool previouslyHeld = false;
+    bool currentlyHeld = isButtonHeld();
+    
+    // Detect transition from not-held to held (button hold threshold reached)
+    if (currentlyHeld && !previouslyHeld) {
         if (shouldActivateToolbox()) {
-            LOG_INFO("Toolbox activation requested - conditions met, activating toolbox opener");
+            LOG_INFO("Toolbox activation requested - button held for %dms, conditions met, activating toolbox opener", BUTTON_HOLD_THRESHOLD_MS);
             setToolboxOpener(true);
         } else {
-            LOG_WARN("Toolbox activation requested but conditions not met (not ready/parked/unlocked)");
+            LOG_WARN("Toolbox activation requested - button held for %dms but conditions not met (not ready/parked/unlocked)", BUTTON_HOLD_THRESHOLD_MS);
         }
     }
+    
+    previouslyHeld = currentlyHeld;
     
     // Log long button holds (for diagnostics)
     if (isButtonHeld() && (getButtonHoldDuration() % 5000) == 0) {
