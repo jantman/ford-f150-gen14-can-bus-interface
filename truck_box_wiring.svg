@@ -25,7 +25,7 @@
 <polygon fill="none" stroke="black" points="132,-336.25 132,-360 163,-360 163,-336.25 132,-336.25"/>
 <text text-anchor="start" x="143.75" y="-342.7" font-family="arial" font-size="14.00">1</text>
 <polygon fill="none" stroke="black" points="11,-312.5 11,-336.25 132,-336.25 132,-312.5 11,-312.5"/>
-<text text-anchor="start" x="46.38" y="-318.95" font-family="arial" font-size="14.00">GPIO18</text>
+<text text-anchor="start" x="60.62" y="-318.95" font-family="arial" font-size="14.00">3v3</text>
 <polygon fill="none" stroke="black" points="132,-312.5 132,-336.25 163,-336.25 163,-312.5 132,-312.5"/>
 <text text-anchor="start" x="143.75" y="-318.95" font-family="arial" font-size="14.00">2</text>
 <polygon fill="none" stroke="black" points="11,-288.75 11,-312.5 132,-312.5 132,-288.75 11,-288.75"/>
@@ -68,7 +68,7 @@
 <polygon fill="#000000" stroke="none" points="318,-354.38 318,-356.38 631.5,-356.38 631.5,-354.38 318,-354.38"/>
 <polygon fill="#ffff00" stroke="none" points="318,-352.38 318,-354.38 631.5,-354.38 631.5,-352.38 318,-352.38"/>
 <polygon fill="#000000" stroke="none" points="318,-350.38 318,-352.38 631.5,-352.38 631.5,-350.38 318,-350.38"/>
-<text text-anchor="start" x="343.62" y="-335.07" font-family="arial" font-size="14.00">GX16&#45;8&#45;male:2:GPIO18</text>
+<text text-anchor="start" x="357.88" y="-335.07" font-family="arial" font-size="14.00">GX16&#45;8&#45;male:2:3v3</text>
 <text text-anchor="start" x="518.25" y="-335.07" font-family="arial" font-size="14.00"> &#160;&#160;&#160;&#160;YE &#160;&#160;&#160;</text>
 <text text-anchor="start" x="574" y="-335.07" font-family="arial" font-size="14.00">Splice1:2</text>
 <polygon fill="#000000" stroke="none" points="318,-328.62 318,-330.62 631.5,-330.62 631.5,-328.62 318,-328.62"/>
@@ -215,7 +215,7 @@
 <polygon fill="#000000" stroke="none" points="1033,-351.25 1033,-353.25 1326.25,-353.25 1326.25,-351.25 1033,-351.25"/>
 <text text-anchor="start" x="1035" y="-335.95" font-family="arial" font-size="14.00">Splice1:2</text>
 <text text-anchor="start" x="1095.25" y="-335.95" font-family="arial" font-size="14.00"> &#160;&#160;&#160;&#160;BK &#160;&#160;&#160;</text>
-<text text-anchor="start" x="1175.38" y="-335.95" font-family="arial" font-size="14.00">DT8&#45;male:7:GPIO18</text>
+<text text-anchor="start" x="1189.62" y="-335.95" font-family="arial" font-size="14.00">DT8&#45;male:7:3v3</text>
 <polygon fill="#000000" stroke="none" points="1033,-329.5 1033,-331.5 1326.25,-331.5 1326.25,-329.5 1033,-329.5"/>
 <polygon fill="#000000" stroke="none" points="1033,-327.5 1033,-329.5 1326.25,-329.5 1326.25,-327.5 1033,-327.5"/>
 <polygon fill="#000000" stroke="none" points="1033,-325.5 1033,-327.5 1326.25,-327.5 1326.25,-325.5 1033,-325.5"/>
@@ -350,7 +350,7 @@
 <polygon fill="none" stroke="black" points="1470.25,-181.75 1470.25,-205.5 1506.62,-205.5 1506.62,-181.75 1470.25,-181.75"/>
 <text text-anchor="start" x="1484.69" y="-188.2" font-family="arial" font-size="14.00">7</text>
 <polygon fill="none" stroke="black" points="1506.62,-181.75 1506.62,-205.5 1633,-205.5 1633,-181.75 1506.62,-181.75"/>
-<text text-anchor="start" x="1544.69" y="-188.2" font-family="arial" font-size="14.00">GPIO18</text>
+<text text-anchor="start" x="1558.94" y="-188.2" font-family="arial" font-size="14.00">3v3</text>
 <polygon fill="none" stroke="black" points="1470.25,-158 1470.25,-181.75 1506.62,-181.75 1506.62,-158 1470.25,-158"/>
 <text text-anchor="start" x="1484.69" y="-164.45" font-family="arial" font-size="14.00">8</text>
 <polygon fill="none" stroke="black" points="1506.62,-158 1506.62,-181.75 1633,-181.75 1633,-158 1506.62,-158"/>
@@ -393,7 +393,7 @@
 <polygon fill="none" stroke="black" points="132,-1131 132,-1154.75 174,-1154.75 174,-1131 132,-1131"/>
 <text text-anchor="start" x="149.25" y="-1137.45" font-family="arial" font-size="14.00">6</text>
 <polygon fill="none" stroke="black" points="0,-1107.25 0,-1131 132,-1131 132,-1107.25 0,-1107.25"/>
-<text text-anchor="start" x="40.88" y="-1113.7" font-family="arial" font-size="14.00">GPIO18</text>
+<text text-anchor="start" x="55.12" y="-1113.7" font-family="arial" font-size="14.00">3v3</text>
 <polygon fill="none" stroke="black" points="132,-1107.25 132,-1131 174,-1131 174,-1107.25 132,-1107.25"/>
 <text text-anchor="start" x="149.25" y="-1113.7" font-family="arial" font-size="14.00">7</text>
 <polygon fill="none" stroke="black" points="0,-1083.5 0,-1107.25 132,-1107.25 132,-1083.5 0,-1083.5"/>
@@ -442,7 +442,7 @@
 <polygon fill="#000000" stroke="none" points="350.25,-1140.5 350.25,-1142.5 599.25,-1142.5 599.25,-1140.5 350.25,-1140.5"/>
 <polygon fill="#ffff00" stroke="none" points="350.25,-1138.5 350.25,-1140.5 599.25,-1140.5 599.25,-1138.5 350.25,-1138.5"/>
 <polygon fill="#000000" stroke="none" points="350.25,-1136.5 350.25,-1138.5 599.25,-1138.5 599.25,-1136.5 350.25,-1136.5"/>
-<text text-anchor="start" x="375.88" y="-1121.2" font-family="arial" font-size="14.00">DT8&#45;female:7:GPIO18</text>
+<text text-anchor="start" x="390.12" y="-1121.2" font-family="arial" font-size="14.00">DT8&#45;female:7:3v3</text>
 <text text-anchor="start" x="540.75" y="-1121.2" font-family="arial" font-size="14.00"> &#160;&#160;&#160;&#160;BK &#160;&#160;&#160;</text>
 <polygon fill="#000000" stroke="none" points="350.25,-1114.75 350.25,-1116.75 599.25,-1116.75 599.25,-1114.75 350.25,-1114.75"/>
 <polygon fill="#000000" stroke="none" points="350.25,-1112.75 350.25,-1114.75 599.25,-1114.75 599.25,-1112.75 350.25,-1112.75"/>
@@ -711,7 +711,7 @@
 <polygon fill="none" stroke="black" points="802.75,-995.75 802.75,-1019.5 861.75,-1019.5 861.75,-995.75 802.75,-995.75"/>
 <text text-anchor="start" x="806.75" y="-1002.2" font-family="arial" font-size="14.00">blunt cut</text>
 <polygon fill="none" stroke="black" points="802.75,-972 802.75,-995.75 861.75,-995.75 861.75,-972 802.75,-972"/>
-<text text-anchor="start" x="807.12" y="-978.45" font-family="arial" font-size="14.00">GPIO18</text>
+<text text-anchor="start" x="821.38" y="-978.45" font-family="arial" font-size="14.00">3v3</text>
 </g>
 <!-- __relay&#45;vcc_1 -->
 <g id="node17" class="node">

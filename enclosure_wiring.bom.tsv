@@ -7,19 +7,18 @@ Id	Description	Qty	Unit	Designators
 6	Connector, JST SM, male, 4 pins	1		JST-SM-4-male
 7	Connector, JST XH, 4-pin male plug, 4 pins	1		JST-XH-4pin
 8	Connector, JST XH, 6-pin male plug, 6 pins	1		JST-XH-6pin
-9	Connector, Quick Disconnect	1		
-10	Connector, Tap	1		
-11	Connector, blunt end	13		
-12	Connector, butt splice	4		
-13	Connector, butt splices, 4 pins	2		Splice1, Splice2
-14	Connector, waterproof 5-pin, female plug, 5 pins	1		waterproof5pin-plug
-15	Connector, waterproof 5-pin, male housing, 5 pins	1		waterproof5pin-housing
-16	Wire, BK	0	m	5pinHousing, GX26-8-truck, JST-SM-4-female-blunt, JST-XH-4pin-wire, Splice-JST-SM-4-male, Splice2-JST-XH-4, X2-Splice1
-17	Wire, BU	0	m	5pinHousing, GX26-8-jst, GX26-8-truck, JST-SM-4-female-blunt, JST-XH-4pin-wire, Splice-JST-SM-4-male, Splice2-JST-XH-4
-18	Wire, BUYE	0	m	GX26-8-truck
-19	Wire, GN	0	m	5pinHousing, GX26-8-jst, GX26-8-truck, Splice2-JST-XH-4
-20	Wire, OG	0	m	GX26-8-jst, JST-XH-4pin-wire
-21	Wire, RD	0	m	5pinHousing, GX26-8-jst, GX26-8-truck, JST-SM-4-female-blunt, JST-XH-4pin-wire, Splice-JST-SM-4-male, Splice2-JST-XH-4, X2-Splice1
-22	Wire, VT	0	m	GX26-8-jst
-23	Wire, WH	0	m	GX26-8-jst, GX26-8-truck, JST-SM-4-female-blunt, Splice-JST-SM-4-male, X2-Splice1
-24	Wire, YE	0	m	5pinHousing, GX26-8-jst, GX26-8-truck, Splice2-JST-XH-4, X2-Splice1
+9	Connector, Solder splice	2		
+10	Connector, blunt end	13		
+11	Connector, butt splice	4		
+12	Connector, butt splices, 4 pins	2		Splice1, Splice2
+13	Connector, waterproof 5-pin, female plug, 5 pins	1		waterproof5pin-plug
+14	Connector, waterproof 5-pin, male housing, 5 pins	1		waterproof5pin-housing
+15	Wire, BK	0	m	5pinHousing, GX26-8-truck, JST-SM-4-female-blunt, JST-XH-4pin-wire, Splice-JST-SM-4-male, Splice2-JST-XH-4, X2-Splice1
+16	Wire, BU	0	m	5pinHousing, GX26-8-jst, GX26-8-truck, JST-SM-4-female-blunt, JST-XH-4pin-wire, Splice-JST-SM-4-male, Splice2-JST-XH-4
+17	Wire, BUYE	0	m	GX26-8-truck
+18	Wire, GN	0	m	5pinHousing, GX26-8-jst, GX26-8-truck, Splice2-JST-XH-4
+19	Wire, OG	0	m	GX26-8-jst, JST-XH-4pin-wire
+20	Wire, RD	0	m	5pinHousing, GX26-8-jst, GX26-8-truck, JST-SM-4-female-blunt, JST-XH-4pin-wire, Splice-JST-SM-4-male, Splice2-JST-XH-4, X2-Splice1
+21	Wire, VT	0	m	GX26-8-jst
+22	Wire, WH	0	m	GX26-8-jst, GX26-8-truck, JST-SM-4-female-blunt, Splice-JST-SM-4-male, X2-Splice1
+23	Wire, YE	0	m	5pinHousing, GX26-8-jst, GX26-8-truck, Splice2-JST-XH-4, X2-Splice1

@@ -3,7 +3,7 @@ connectors:
   GX16-8-male:
     type: GX16-8
     subtype: male
-    pinlabels: ["SBA40 +12VDC", "GPIO18", "GPIO17", "GPIO16", "GPIO15", "GPIO5", "GPIO4", ""]
+    pinlabels: ["SBA40 +12VDC", "3v3", "GPIO17", "GPIO16", "GPIO15", "GPIO5", "GPIO4", ""]
     image:
       src: images/gx16-8-male.png
 
@@ -14,14 +14,14 @@ connectors:
   DT8-male:
     type: Deutsch DT8
     subtype: male
-    pinlabels: ["GPIO4", "GPIO15", "GPIO17", "", "GPIO5", "GPIO16", "GPIO18", "SBA40 +12VDC"]
+    pinlabels: ["GPIO4", "GPIO15", "GPIO17", "", "GPIO5", "GPIO16", "3v3", "SBA40 +12VDC"]
     image:
       src: images/DT8-male.png
 
   DT8-female:
     type: Deutsch DT8
     subtype: female
-    pinlabels: ["GPIO4", "GPIO15", "GPIO17", "", "GPIO5", "GPIO16", "GPIO18", "SBA40 +12VDC"]
+    pinlabels: ["GPIO4", "GPIO15", "GPIO17", "", "GPIO5", "GPIO16", "3v3", "SBA40 +12VDC"]
     image:
       src: images/DT8-female.png
 
@@ -86,7 +86,7 @@ connectors:
   gpio18-gland:
     style: simple
     type: blunt cut
-    notes: "GPIO18"
+    notes: "3v3"
 
   relay-vcc:
     style: simple

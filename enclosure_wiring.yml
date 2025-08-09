@@ -53,33 +53,33 @@ connectors:
   GX26-8-female:
     type: GX26-8
     subtype: female
-    pinlabels: ["SBA40 +12VDC", "GPIO18", "GPIO17", "GPIO16", "GPIO15", "GPIO5", "GPIO4", ""]
+    pinlabels: ["SBA40 +12VDC", "3v3", "GPIO17", "GPIO16", "GPIO15", "GPIO5", "GPIO4", ""]
     image:
       src: images/gx16-8-female.png
 
   GX26-8-male:
     type: GX26-8
     subtype: male
-    pinlabels: ["SBA40 +12VDC", "GPIO18", "GPIO17", "GPIO16", "GPIO15", "GPIO5", "GPIO4", ""]
+    pinlabels: ["SBA40 +12VDC", "3v3", "GPIO17", "GPIO16", "GPIO15", "GPIO5", "GPIO4", ""]
     image:
       src: images/gx16-8-male.png
 
   JST-XH-6pin:
     type: JST XH
     subtype: 6-pin male plug
-    pinlabels: ["SV2#6 GPIO18", "SV2#5 GPIO17", "SV2#4 GPIO16", "SV2#3 GPIO15", "SV2#2 GPIO5", "SV2#1 GPIO4"]
+    pinlabels: ["SV2#13 3v3", "SV2#5 GPIO17", "SV2#4 GPIO16", "SV2#3 GPIO15", "SV2#2 GPIO5", "SV2#1 GPIO4"]
     image:
       src: images/jst-xh-6pin-housing.png
 
   12vTap:
     style: simple
-    type: Tap
-    notes: "Tap used by GX26-8-female pin 1"
+    type: Solder splice
+    notes: "Solder splice to GX26-8#1 +12VDC"
 
   12vQD:
     style: simple
-    type: Quick Disconnect
-    notes: "Quick Disconnect to tap off of X2"
+    type: Solder splice
+    notes: "Solder splice to X2#1 +12VDC"
 
   blunt:
     style: simple
