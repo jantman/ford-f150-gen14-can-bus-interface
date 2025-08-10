@@ -22,6 +22,30 @@ This document details the specific CAN messages and## System Health Monitoring
 - **Frame Format**: Standard CAN 2.0A (11-bit identifiers)
 - **Bus**: High-Speed CAN (HS-CAN)
 - **Termination**: 120Ω (verify termination requirements for your specific installation)
+- **Filtering**: Hybrid hardware + software filtering
+  - **Hardware Filtering**: Configurable via `ENABLE_HARDWARE_CAN_FILTERING` (default: enabled)
+  - **Software Filtering**: Always active as backup using `isTargetCANMessage()`
+  - **Debugging**: Disable hardware filtering to receive all messages for troubleshooting
+
+### Hardware Filtering Configuration
+
+The MCP2515 controller supports hardware-level message filtering which is enabled by default for optimal performance:
+
+```cpp
+// In src/config.h - enabled by default
+#define ENABLE_HARDWARE_CAN_FILTERING 1
+```
+
+**When enabled (recommended for production):**
+- Only target message IDs are received by hardware
+- Improved system efficiency and reduced CPU load
+- Messages filtered before reaching software processing
+
+**When disabled (for debugging CAN issues):**
+- All CAN messages are received by hardware
+- Software filtering still applies as backup
+- Required when troubleshooting message reception problems
+- Use `can_debug` serial command to see all traffic
 
 ## Monitored CAN Messages
 
@@ -249,8 +273,22 @@ src/
    - Verify 500kbps bus speed
    - Check termination resistors
    - Monitor serial output for CAN errors
+   - **⚠️ CRITICAL**: Disable hardware filtering for debugging:
+     ```cpp
+     // In src/config.h, change:
+     #define ENABLE_HARDWARE_CAN_FILTERING 0
+     ```
+   - Use `can_debug` serial command to monitor ALL CAN traffic
+   - Re-enable hardware filtering once CAN reception is confirmed
 
-2. **Invalid Message Data**
+2. **Target Messages Not Processed (but CAN activity detected)**
+   - Temporarily disable hardware filtering to verify message IDs
+   - Check that vehicle sends the expected message IDs (0x3C3, 0x331, 0x176, 0x43C)
+   - Use `can_debug` to see all received messages and verify target IDs are present
+   - Verify hardware filter configuration in initialization logs
+   - Re-enable hardware filtering once message IDs are confirmed
+
+3. **Invalid Message Data**
    - Verify message IDs match specification
    - Check bit positions in signal extraction
    - Validate message length (8 bytes)

@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-The Ford F-150 Gen14 CAN Bus Interface application implements **software-based CAN message filtering** that is **always active during normal operation**. The system receives all CAN messages from the bus but only processes 4 specific target message types, filtering out all other traffic for efficiency and focus.
+The Ford F-150 Gen14 CAN Bus Interface application implements **hybrid CAN message filtering** that combines both hardware and software filtering for optimal performance and debugging flexibility. The system can be configured to use hardware-level filtering on the MCP2515 controller for maximum efficiency, while maintaining software filtering as a backup. When hardware filtering is enabled (default), only the 4 specific target message types are received by the hardware. When disabled (for debugging), all messages are received and filtered in software.
 
 ## Overview
 
@@ -17,39 +17,59 @@ CAN message filtering is a technique used to process only relevant CAN messages 
 
 ### Filtering Approach Used
 
-- **Type:** Software-based filtering (not hardware filtering)
+- **Type:** Hybrid hardware + software filtering (configurable)
+- **Hardware filtering:** Conditionally enabled via `ENABLE_HARDWARE_CAN_FILTERING` (default: enabled)
+- **Software filtering:** Always active as backup/safety net
 - **Scope:** Always active during normal operation
-- **Method:** Runtime ID comparison using `isTargetCANMessage()` function
+- **Method:** Runtime ID comparison using `isTargetCANMessage()` function + MCP2515 hardware filters
 - **Coverage:** 4 specific message IDs out of 2048 possible CAN IDs (11-bit)
+- **Debugging:** Hardware filtering can be disabled to receive all messages
 
 ## Hardware vs Software Filtering
 
-### Hardware Filtering (NOT Used)
+### Hardware Filtering (CONFIGURABLE)
 
-The MCP2515 CAN controller supports hardware-level message filtering through acceptance filters, but this capability is **intentionally disabled** in this application:
+The MCP2515 CAN controller supports hardware-level message filtering through acceptance filters. This capability is **conditionally enabled** based on the `ENABLE_HARDWARE_CAN_FILTERING` configuration:
 
 ```cpp
-// From can_interface_test/src/main.cpp
-static const twai_filter_config_t filter_config = {
-    .acceptance_code = 0x00000000,  // Accept all
-    .acceptance_mask = 0x00000000,  // No masking
-    .single_filter = true
-};
+// From src/config.h
+// Hardware CAN Filtering Configuration
+// Enable hardware filtering on MCP2515 to only receive target messages
+// This improves efficiency by filtering at hardware level before software processing
+// Can be disabled for debugging to receive all messages
+#define ENABLE_HARDWARE_CAN_FILTERING 1
 ```
 
-**Why hardware filtering is disabled:**
-- Maximum flexibility for debugging
+**When hardware filtering is ENABLED (default):**
+- Only target message IDs are received by the MCP2515
+- Improved system efficiency and reduced CPU load
+- Messages filtered at hardware level before reaching software
+- Recommended for normal operation
+
+**When hardware filtering is DISABLED (for debugging):**
+- All CAN messages are received by the MCP2515
+- Maximum flexibility for debugging CAN issues
 - Ability to monitor all CAN traffic when needed
-- Simplified hardware configuration
-- Software filtering provides sufficient efficiency
+- Required when troubleshooting message reception problems
+
+**To disable hardware filtering for debugging:**
+Change the configuration in `src/config.h`:
+```cpp
+#define ENABLE_HARDWARE_CAN_FILTERING 0
+```
 
 ### Software Filtering (ALWAYS Used)
 
 The application implements efficient software filtering that:
-- Receives all CAN messages from the bus
-- Applies filtering logic in the main processing loop
+- Provides a backup filter for all received CAN messages
+- Applies filtering logic in the main processing loop even when hardware filtering is active
 - Only processes messages that match target criteria
 - Discards non-target messages immediately
+
+**Software filtering runs regardless of hardware filtering setting** to provide:
+- **Defense in depth**: Double-filtering ensures only target messages are processed
+- **Debugging capability**: When hardware filtering is disabled, software filtering still works
+- **Consistency**: Same filtering logic applies in all configurations
 
 ## Target Messages
 
@@ -259,7 +279,7 @@ To add a new target message:
    #define NEW_MESSAGE_ID 0x123  // Example ID
    ```
 
-2. **Update the filtering function** in `src/can_manager.cpp`:
+2. **Update the software filtering function** in `src/can_manager.cpp`:
    ```cpp
    bool isTargetCANMessage(uint32_t messageId) {
        return (messageId == BCM_LAMP_STAT_FD1_ID ||
@@ -270,12 +290,39 @@ To add a new target message:
    }
    ```
 
-3. **Add message parsing** in the main loop switch statement
-4. **Update test cases** to include the new message ID
+3. **Update the hardware filtering setup** in `src/can_manager.cpp` (when `ENABLE_HARDWARE_CAN_FILTERING` is enabled):
+   - Add the new message ID to the hardware filter configuration
+   - You may need additional filter banks depending on MCP2515 capabilities
+
+4. **Add message parsing** in the main loop switch statement
+5. **Update test cases** to include the new message ID
 
 ### Removing Target Messages
 
-Simply remove the message ID from the `isTargetCANMessage()` function and corresponding parsing logic.
+1. Remove the message ID from the `isTargetCANMessage()` function
+2. Remove from hardware filter configuration 
+3. Remove corresponding parsing logic
+4. Update test cases
+
+### Configuring Hardware Filtering
+
+**Enable hardware filtering (recommended for production):**
+```cpp
+// In src/config.h
+#define ENABLE_HARDWARE_CAN_FILTERING 1
+```
+
+**Disable hardware filtering (for debugging CAN issues):**
+```cpp
+// In src/config.h  
+#define ENABLE_HARDWARE_CAN_FILTERING 0
+```
+
+**When to disable hardware filtering:**
+- When no CAN messages are being received
+- When debugging message reception issues
+- When you need to see all CAN bus traffic
+- When developing new message parsing logic
 
 ## Troubleshooting
 
@@ -284,6 +331,7 @@ Simply remove the message ID from the `isTargetCANMessage()` function and corres
 **No CAN messages being processed:**
 - Check if `isTargetCANMessage()` recognizes your expected message IDs
 - Verify message IDs match the actual Ford F-150 CAN specification
+- **IMPORTANT**: Disable hardware filtering for debugging by setting `ENABLE_HARDWARE_CAN_FILTERING 0` in `src/config.h`
 - Use debug mode to see all received messages
 
 **Unexpected messages being processed:**
@@ -293,7 +341,12 @@ Simply remove the message ID from the `isTargetCANMessage()` function and corres
 **Performance issues:**
 - Monitor filter efficiency - should be >50%
 - Check for excessive non-target message volume
-- Consider hardware filtering if software filtering becomes insufficient
+- Enable hardware filtering (`ENABLE_HARDWARE_CAN_FILTERING 1`) for maximum efficiency
+
+**Hardware filtering troubleshooting:**
+- If no target messages are received, temporarily disable hardware filtering
+- Check MCP2515 filter setup by examining initialization logs
+- Verify target message IDs are correctly configured in hardware filters
 
 ### Debug Commands
 
@@ -302,31 +355,55 @@ The application provides serial commands for filtering diagnostics:
 - Enable/disable debug message monitoring
 - Monitor real-time filtering decisions
 
+### Debugging CAN Reception Issues
+
+**Step 1: Disable Hardware Filtering**
+```cpp
+// In src/config.h, change:
+#define ENABLE_HARDWARE_CAN_FILTERING 0
+```
+
+**Step 2: Enable Debug Mode**
+Use serial commands to enable reception of all CAN messages for troubleshooting.
+
+**Step 3: Re-enable Hardware Filtering**
+Once CAN reception is confirmed working, re-enable hardware filtering:
+```cpp
+#define ENABLE_HARDWARE_CAN_FILTERING 1
+```
+
 ## Future Considerations
 
 ### Potential Improvements
 
 1. **Dynamic Filtering:** Runtime configuration of target message IDs
-2. **Hardware Filtering:** Enable MCP2515 hardware filters for maximum efficiency
+2. **Advanced Hardware Filtering:** Multiple filter banks for different message groups
 3. **Adaptive Filtering:** Automatically adjust filtering based on bus load
 4. **Message Prioritization:** Different processing priorities for different message types
 
 ### Scalability
 
 The current implementation can easily handle:
-- Additional target message IDs (simply extend the boolean logic)
-- Higher CAN bus loads (software filtering is very efficient)
+- Additional target message IDs (simply extend the boolean logic and hardware filters)
+- Higher CAN bus loads (hardware + software filtering is very efficient)
 - Different vehicle models (modify message IDs as needed)
+
+### Configuration Management
+
+The hardware filtering feature provides flexibility:
+- **Production use**: Enable hardware filtering for maximum efficiency
+- **Development/debugging**: Disable hardware filtering to see all traffic
+- **Hybrid approach**: Use both hardware and software filtering for defense in depth
 
 ## Conclusion
 
-The Ford F-150 Gen14 CAN Bus Interface implements a robust, efficient software-based CAN message filtering system that:
+The Ford F-150 Gen14 CAN Bus Interface implements a robust, efficient hybrid CAN message filtering system that:
 
-- **Always operates** during normal system function
+- **Combines hardware and software filtering** for optimal performance and flexibility
 - **Focuses processing** on 4 specific target message types
-- **Filters out** irrelevant CAN bus traffic efficiently
+- **Filters out** irrelevant CAN bus traffic at both hardware and software levels
 - **Maintains compatibility** with Python reference implementations
-- **Provides flexibility** for debugging and troubleshooting
+- **Provides debugging flexibility** through configurable hardware filtering
 - **Scales well** for future enhancements
 
-This filtering approach provides an optimal balance between performance, flexibility, and maintainability for the embedded automotive application.
+This filtering approach provides an optimal balance between performance, flexibility, and maintainability for the embedded automotive application. The configurable hardware filtering ensures maximum efficiency during normal operation while maintaining full debugging capabilities when needed.

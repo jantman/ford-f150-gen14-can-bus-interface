@@ -131,9 +131,24 @@ Once installed and powered on, the device will:
 
 ### No CAN Communication
 - **Check Connections**: Verify CAN H/L wires are correct
-- **Check Termination**: Ensure proper 120Ω termination
+- **Check Termination**: Ensure proper 120Ω termination  
 - **Check Power**: Verify stable 3.3V supply to ESP32-S3
 - **Check Serial**: Monitor serial output for CAN error messages
+- **⚠️ IMPORTANT**: If no CAN messages are received, disable hardware filtering for debugging:
+  ```cpp
+  // In src/config.h, change:
+  #define ENABLE_HARDWARE_CAN_FILTERING 0
+  ```
+  Then recompile and flash. This allows reception of ALL CAN messages for troubleshooting.
+- **Debug Commands**: Use `can_debug` command via serial to monitor all CAN traffic
+- **Re-enable Filtering**: Once CAN reception is confirmed working, re-enable hardware filtering
+
+### CAN Messages Received But Not Processed
+- **Hardware Filtering**: If you see CAN activity but target messages aren't processed:
+  1. Temporarily disable hardware filtering: `#define ENABLE_HARDWARE_CAN_FILTERING 0`
+  2. Use `can_debug` serial command to verify target message IDs are present
+  3. Check that target message IDs match your vehicle's actual IDs
+  4. Re-enable hardware filtering once confirmed: `#define ENABLE_HARDWARE_CAN_FILTERING 1`
 
 ### LEDs Not Working
 - **Check Wiring**: Verify GPIO connections to LEDs

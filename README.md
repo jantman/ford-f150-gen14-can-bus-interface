@@ -108,6 +108,12 @@ Before flashing, you may want to adjust the pin assignments in `src/config.h`:
 
 - **Upload fails**: Ensure the ESP32 is in download mode (hold BOOT button while pressing RESET)
 - **CAN messages not received**: Verify CAN bus connections and 120Ω termination
+- **⚠️ IMPORTANT - No CAN messages**: If no CAN messages are received, disable hardware filtering for debugging:
+  ```cpp
+  // In src/config.h, change:
+  #define ENABLE_HARDWARE_CAN_FILTERING 0
+  ```
+  Recompile and flash, then use `can_debug` command to see all CAN traffic
 - **No serial output**: Check that `ARDUINO_USB_CDC_ON_BOOT=1` is set in platformio.ini
 - **Memory issues**: Monitor free heap in serial output; reduce debug level if needed
 

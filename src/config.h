@@ -98,6 +98,12 @@
 #define LOG_DEBUG(format, ...)
 #endif
 
+// Hardware CAN Filtering Configuration
+// Enable hardware filtering on MCP2515 to only receive target messages
+// This improves efficiency by filtering at hardware level before software processing
+// Can be disabled for debugging to receive all messages
+#define ENABLE_HARDWARE_CAN_FILTERING 1
+
 // System Health Tracking Structure
 struct SystemHealth {
     unsigned long canErrors;

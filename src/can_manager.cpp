@@ -42,6 +42,67 @@ bool initializeCAN() {
         return false;
     }
     
+#if ENABLE_HARDWARE_CAN_FILTERING
+    // Configure hardware filtering to only receive our target messages
+    // This improves efficiency by filtering at the MCP2515 level
+    LOG_INFO("Configuring hardware CAN message filtering...");
+    
+    // MCP2515 has 2 RXB buffers, each with 2 filters (total 4 filters + 2 masks)
+    // We have exactly 4 target messages, so we can use one filter per message
+    
+    // Set all filters to our target message IDs
+    result = mcp2515.setFilter(MCP2515::RXF0, false, BCM_LAMP_STAT_FD1_ID);
+    if (result != MCP2515::ERROR_OK) {
+        LOG_ERROR("Failed to set filter RXF0: %d", (int)result);
+        canErrors++;
+        return false;
+    }
+    
+    result = mcp2515.setFilter(MCP2515::RXF1, false, LOCKING_SYSTEMS_2_FD1_ID);
+    if (result != MCP2515::ERROR_OK) {
+        LOG_ERROR("Failed to set filter RXF1: %d", (int)result);
+        canErrors++;
+        return false;
+    }
+    
+    result = mcp2515.setFilter(MCP2515::RXF2, false, POWERTRAIN_DATA_10_ID);
+    if (result != MCP2515::ERROR_OK) {
+        LOG_ERROR("Failed to set filter RXF2: %d", (int)result);
+        canErrors++;
+        return false;
+    }
+    
+    result = mcp2515.setFilter(MCP2515::RXF3, false, BATTERY_MGMT_3_FD1_ID);
+    if (result != MCP2515::ERROR_OK) {
+        LOG_ERROR("Failed to set filter RXF3: %d", (int)result);
+        canErrors++;
+        return false;
+    }
+    
+    // Set masks to match exact IDs (0x7FF masks all 11 bits for standard CAN)
+    result = mcp2515.setFilterMask(MCP2515::MASK0, false, 0x7FF);
+    if (result != MCP2515::ERROR_OK) {
+        LOG_ERROR("Failed to set filter mask MASK0: %d", (int)result);
+        canErrors++;
+        return false;
+    }
+    
+    result = mcp2515.setFilterMask(MCP2515::MASK1, false, 0x7FF);
+    if (result != MCP2515::ERROR_OK) {
+        LOG_ERROR("Failed to set filter mask MASK1: %d", (int)result);
+        canErrors++;
+        return false;
+    }
+    
+    LOG_INFO("Hardware filtering configured for 4 target messages:");
+    LOG_INFO("  BCM_Lamp_Stat_FD1: 0x%03X (%d)", BCM_LAMP_STAT_FD1_ID, BCM_LAMP_STAT_FD1_ID);
+    LOG_INFO("  Locking_Systems_2_FD1: 0x%03X (%d)", LOCKING_SYSTEMS_2_FD1_ID, LOCKING_SYSTEMS_2_FD1_ID);
+    LOG_INFO("  PowertrainData_10: 0x%03X (%d)", POWERTRAIN_DATA_10_ID, POWERTRAIN_DATA_10_ID);
+    LOG_INFO("  Battery_Mgmt_3_FD1: 0x%03X (%d)", BATTERY_MGMT_3_FD1_ID, BATTERY_MGMT_3_FD1_ID);
+#else
+    LOG_INFO("Hardware filtering disabled - receiving all CAN messages");
+#endif
+    
     // Set to listen-only mode (no ACK, no error frames)
     result = mcp2515.setListenOnlyMode();
     if (result != MCP2515::ERROR_OK) {
@@ -53,7 +114,11 @@ bool initializeCAN() {
     canInitialized = true;
     canConnected = true;
     LOG_INFO("CAN bus initialized successfully using MCP2515");
-    LOG_INFO("Ready to receive messages on X2 header (CAN2H/CAN2L)");
+#if ENABLE_HARDWARE_CAN_FILTERING
+    LOG_INFO("Ready to receive messages on X2 header (CAN2H/CAN2L) with hardware filtering");
+#else
+    LOG_INFO("Ready to receive messages on X2 header (CAN2H/CAN2L) without hardware filtering");
+#endif
     
     return true;
 }
