@@ -34,6 +34,10 @@ void initializeStateManager() {
     vehicleState.bedlightShouldBeOn = false;
     vehicleState.systemReady = false;
     
+    // Initialize manual bed light control
+    vehicleState.bedlightManualOverride = false;
+    vehicleState.bedlightManualState = false;
+    
     // Initialize button state
     buttonState.currentState = false;
     buttonState.previousState = false;
@@ -46,6 +50,10 @@ void initializeStateManager() {
     buttonState.lastReleaseTime = 0;
     buttonState.pressCount = 0;
     buttonState.holdDuration = 0;
+    
+    // Initialize double-click detection
+    buttonState.doubleClickDetected = false;
+    buttonState.secondToLastPressTime = 0;
     
     stateManagerInitialized = true;
     LOG_INFO("State Manager initialized successfully");
@@ -73,6 +81,14 @@ void updateBCMLampState(const BCMLampStatus& status) {
     // Update derived state
     vehicleState.bedlightShouldBeOn = (vehicleState.pudLampRequest == PUDLAMP_ON || 
                                       vehicleState.pudLampRequest == PUDLAMP_RAMP_UP);
+    
+    // Clear manual override if CAN requests lights OFF or RAMP_DOWN
+    if ((vehicleState.pudLampRequest == PUDLAMP_OFF || vehicleState.pudLampRequest == PUDLAMP_RAMP_DOWN) &&
+        vehicleState.bedlightManualOverride) {
+        vehicleState.bedlightManualOverride = false;
+        vehicleState.bedlightManualState = false;
+        LOG_INFO("Bed light manual override cleared due to CAN OFF/RAMP_DOWN request");
+    }
     
     // Log state changes
     if (vehicleState.prevPudLampRequest != vehicleState.pudLampRequest) {
@@ -295,9 +311,23 @@ void updateButtonState() {
             // Detect press event (transition from false to true)
             if (buttonState.currentState && !buttonState.previousState) {
                 buttonState.pressed = true;
+                
+                // Check for double-click: two presses within BUTTON_DOUBLE_CLICK_MS, but not held
+                unsigned long timeSinceLastPress = currentTime - buttonState.lastPressTime;
+                if (buttonState.pressCount > 0 && 
+                    timeSinceLastPress <= BUTTON_DOUBLE_CLICK_MS && 
+                    timeSinceLastPress > BUTTON_DEBOUNCE_MS) {
+                    
+                    buttonState.doubleClickDetected = true;
+                    LOG_INFO("Toolbox button double-clicked (%lu ms between presses)", timeSinceLastPress);
+                }
+                
+                // Update press timing tracking
+                buttonState.secondToLastPressTime = buttonState.lastPressTime;
                 buttonState.lastPressTime = currentTime;
                 buttonState.pressCount++;
                 buttonState.holdDuration = 0;
+                
                 LOG_INFO("Toolbox button pressed (count: %lu)", buttonState.pressCount);
             }
             
@@ -394,4 +424,68 @@ void resetButtonPressCount() {
 // Get button state (read-only copy)
 ButtonState getButtonState() {
     return buttonState;
+}
+
+// Check if button was double-clicked (and clear the flag)
+bool isButtonDoubleClicked() {
+    if (!stateManagerInitialized) {
+        return false;
+    }
+    
+    bool wasDoubleClicked = buttonState.doubleClickDetected;
+    buttonState.doubleClickDetected = false; // Clear flag after reading
+    return wasDoubleClicked;
+}
+
+// Check if button input should be processed (only when vehicle is unlocked for security)
+bool shouldProcessButtonInput() {
+    if (!stateManagerInitialized) {
+        return false;
+    }
+    
+    // For security reasons, only process button input when the vehicle is unlocked
+    return vehicleState.isUnlocked;
+}
+
+// Toggle bed light manual override
+void toggleBedlightManualOverride() {
+    if (!stateManagerInitialized) {
+        return;
+    }
+    
+    if (vehicleState.bedlightManualOverride) {
+        // Currently in manual mode, toggle the manual state
+        vehicleState.bedlightManualState = !vehicleState.bedlightManualState;
+        LOG_INFO("Bed light manual override toggled: %s", 
+                 vehicleState.bedlightManualState ? "ON" : "OFF");
+    } else {
+        // Not in manual mode, enter manual mode and set to opposite of current automatic state
+        vehicleState.bedlightManualOverride = true;
+        vehicleState.bedlightManualState = !vehicleState.bedlightShouldBeOn;
+        LOG_INFO("Bed light manual override activated: %s (was automatic %s)", 
+                 vehicleState.bedlightManualState ? "ON" : "OFF",
+                 vehicleState.bedlightShouldBeOn ? "ON" : "OFF");
+    }
+}
+
+// Check if bed light is manually overridden
+bool isBedlightManuallyOverridden() {
+    if (!stateManagerInitialized) {
+        return false;
+    }
+    
+    return vehicleState.bedlightManualOverride;
+}
+
+// Clear bed light manual override (return to automatic mode)
+void clearBedlightManualOverride() {
+    if (!stateManagerInitialized) {
+        return;
+    }
+    
+    if (vehicleState.bedlightManualOverride) {
+        vehicleState.bedlightManualOverride = false;
+        vehicleState.bedlightManualState = false;
+        LOG_INFO("Bed light manual override cleared, returning to automatic mode");
+    }
 }

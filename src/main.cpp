@@ -208,6 +208,16 @@ void loop() {
     // Handle button input (Step 6) 
     updateButtonState();
     
+    // Check for double-click to toggle bed light manual override
+    // Only process button input when vehicle is unlocked for security
+    if (shouldProcessButtonInput() && isButtonDoubleClicked()) {
+        LOG_INFO("Button double-click detected - toggling bed light override");
+        toggleBedlightManualOverride();
+    } else if (!shouldProcessButtonInput() && isButtonDoubleClicked()) {
+        // Clear the flag but don't process the input
+        LOG_WARN("Button double-click ignored - vehicle must be unlocked for button input");
+    }
+    
     // Process button events with enhanced debouncing
     // Only activate toolbox when button is held for the threshold time, not on immediate press
     static bool previouslyHeld = false;
@@ -272,9 +282,15 @@ void updateOutputControlLogic() {
     outputState.prevUnlockedLEDActive = outputState.unlockedLEDActive;
     
     // === Bed Light Control Logic ===
-    // Control bedlight based on PudLamp_D_Rq signal from BCM_Lamp_Stat_FD1
+    // Control bedlight based on manual override or PudLamp_D_Rq signal from BCM_Lamp_Stat_FD1
     if (vehicleState.systemReady) {
-        outputState.bedlightActive = vehicleState.bedlightShouldBeOn;
+        if (isBedlightManuallyOverridden()) {
+            // Manual override mode - use manual state
+            outputState.bedlightActive = vehicleState.bedlightManualState;
+        } else {
+            // Automatic mode - use CAN signal
+            outputState.bedlightActive = vehicleState.bedlightShouldBeOn;
+        }
     } else {
         // If system not ready, turn off bedlight for safety
         outputState.bedlightActive = false;
@@ -303,9 +319,14 @@ void updateOutputControlLogic() {
     // Update bedlight if state changed
     if (outputState.bedlightActive != outputState.prevBedlightActive) {
         setBedlight(outputState.bedlightActive);
-        LOG_INFO("Bedlight %s (PudLamp state: %d)", 
-                 outputState.bedlightActive ? "ON" : "OFF", 
-                 vehicleState.pudLampRequest);
+        if (isBedlightManuallyOverridden()) {
+            LOG_INFO("Bedlight %s (Manual Override)", 
+                     outputState.bedlightActive ? "ON" : "OFF");
+        } else {
+            LOG_INFO("Bedlight %s (PudLamp state: %d)", 
+                     outputState.bedlightActive ? "ON" : "OFF", 
+                     vehicleState.pudLampRequest);
+        }
     }
     
     // Update parked LED if state changed

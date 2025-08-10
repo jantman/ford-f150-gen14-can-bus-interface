@@ -27,6 +27,7 @@ High-level functionality:
 * `TOOLBOX_BUTTON_PIN` is an input pin, which should have the internal pullup activated.
 * When `PudLamp_D_Rq` changes to `RAMP_UP` or `ON`, turn on the `BEDLIGHT_PIN` output.
 * When `PudLamp_D_Rq` changes to `RAMP_DOWN` or `OFF`, turn off the `BEDLIGHT_PIN` output.
+* **Manual Bed Light Override**: When the toolbox button is double-clicked (pressed twice within 300ms) AND the vehicle is unlocked, toggle the bed light manual override mode. In manual mode, the bed lights operate independently of CAN bus signals. Manual override is automatically cleared when CAN requests `OFF` or `RAMP_DOWN`. Button input is ignored when vehicle is locked for security.
 * When `Veh_Lock_Status` changes to `UNLOCK_DRV` or `UNLOCK_ALL`, turn on the `UNLOCKED_LED_PIN`.
 * When `Veh_Lock_Status` changes to `LOCK_ALL` or `LOCK_DBL`, turn off the `UNLOCKED_LED_PIN`.
 * Read `TOOLBOX_BUTTON_PIN` as an input with debouncing, pulled high. When the button is held for 1000ms (configurable via `BUTTON_HOLD_THRESHOLD_MS`), if `Veh_Lock_Status` is `UNLOCK_DRV` or `UNLOCK_ALL` AND `TrnPrkSys_D_Actl` is `Park`, then turn the `TOOLBOX_OPENER_PIN` output on for 500ms (configurable duration via a constant). The button must be held for the full threshold time before activation occurs - brief presses are ignored.

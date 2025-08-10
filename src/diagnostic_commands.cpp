@@ -32,6 +32,8 @@ void processSerialCommands() {
         cmd_can_buffers();
     } else if (command == "system_info" || command == "si") {
         cmd_system_info();
+    } else if (command == "clear_bedlight" || command == "clb") {
+        cmd_clear_bedlight_override();
     } else if (command.length() > 0) {
         LOG_ERROR("Unknown command: '%s'. Type 'help' for available commands.", command.c_str());
     }
@@ -51,6 +53,12 @@ void cmd_help() {
     LOG_INFO("can_reset (cr)  - Reset CAN system");
     LOG_INFO("can_buffers (cb)- Show CAN buffer status and message loss");
     LOG_INFO("system_info (si)- Show system information");
+    LOG_INFO("clear_bedlight (clb) - Clear bed light manual override");
+    LOG_INFO("============================");
+    LOG_INFO("");
+    LOG_INFO("=== BED LIGHT CONTROLS ===");
+    LOG_INFO("Double-click toolbox button to toggle bed light override");
+    LOG_INFO("Hold toolbox button 1000ms to activate toolbox opener");
     LOG_INFO("============================");
 }
 
@@ -182,6 +190,14 @@ void cmd_status() {
              vehicleState.isUnlocked ? "Y" : "N",
              vehicleState.bedlightShouldBeOn ? "Y" : "N");
     
+    // Bed Light Override Status
+    if (isBedlightManuallyOverridden()) {
+        LOG_INFO("Bed Light Override: ACTIVE (Manual: %s)", 
+                 vehicleState.bedlightManualState ? "ON" : "OFF");
+    } else {
+        LOG_INFO("Bed Light Override: DISABLED (Automatic Mode)");
+    }
+    
     // Vehicle State Raw Values
     LOG_INFO("Raw Values: PUD=%d Lock=%d Park=%d SOC=%d%%", 
              vehicleState.pudLampRequest, vehicleState.vehicleLockStatus,
@@ -207,4 +223,15 @@ void cmd_status() {
              isCANConnected() ? "OK" : "FAIL",
              systemHealth.canErrors, systemHealth.parseErrors, systemHealth.criticalErrors,
              systemHealth.recoveryMode ? "Y" : "N");
+}
+
+void cmd_clear_bedlight_override() {
+    LOG_INFO("=== CLEARING BED LIGHT MANUAL OVERRIDE ===");
+    if (isBedlightManuallyOverridden()) {
+        clearBedlightManualOverride();
+        LOG_INFO("Bed light manual override cleared successfully");
+        LOG_INFO("Bed light now follows automatic CAN signal control");
+    } else {
+        LOG_INFO("Bed light is already in automatic mode");
+    }
 }

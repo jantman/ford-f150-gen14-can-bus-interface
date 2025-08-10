@@ -202,6 +202,22 @@ Toolbox- ●────● Relay 87a
 2. **Wire Connection**: Connect to GPIO_17 with pullup
 3. **Test Operation**: Verify button press detection
 
+#### Button Functionality
+The toolbox button supports two distinct operation modes:
+
+**Double-Click (Bed Light Toggle)**:
+- Press and release twice within 300ms
+- Toggles bed light manual override mode
+- **Security**: Only works when vehicle is unlocked (Blue LED ON)
+- Ignored when vehicle is locked for security
+
+**Hold (Toolbox Activation)**:
+- Press and hold for 1000ms (1 second)
+- Activates toolbox opener when vehicle is parked and unlocked
+- Safety lockout prevents activation when driving or locked
+
+**Important**: The button uses software debouncing and timing to distinguish between double-click and hold operations. Quick double-clicks will not interfere with toolbox activation, and holding the button will not trigger bed light toggles.
+
 ### Step 6: Power Supply
 1. **12V Source**: Tap into appropriate 12V circuit (accessory or ignition)
 2. **Voltage Regulation**: Convert 12V to stable 3.3V

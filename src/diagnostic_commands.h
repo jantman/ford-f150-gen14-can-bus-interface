@@ -14,5 +14,6 @@ void cmd_can_buffers();
 void cmd_system_info();
 void cmd_status();
 void cmd_help();
+void cmd_clear_bedlight_override();
 
 #endif // DIAGNOSTIC_COMMANDS_H

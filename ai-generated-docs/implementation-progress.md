@@ -87,15 +87,31 @@ This document tracks the progress of implementing the Ford F150 CAN bus interfac
 - Implemented advanced software debouncing with stable state detection
 - Added support for press/release event detection with flag clearing
 - Implemented button hold detection with configurable threshold (1000ms)
+- **NEW**: Added double-click detection within 300ms window for bed light toggle
 - Added button press counting and timing statistics
-- Created comprehensive button state query functions (pressed, released, held, duration, count)
+- Created comprehensive button state query functions (pressed, released, held, duration, count, double-clicked)
 - Integrated button events with toolbox activation logic (requires 1000ms hold, not immediate press)
+- **NEW**: Integrated double-click events with bed light manual override functionality
 - Fixed toolbox activation to trigger on button hold threshold rather than immediate press
-- Added robust logging for all button events (press, release, hold)
+- Added robust logging for all button events (press, release, hold, double-click)
 - Successfully compiled and verified all button functionality
 - Removed unused test function to keep code clean
 - Memory efficient implementation with excellent resource usage (6.2% RAM, 26.2% Flash)
 - **Behavioral Fix Applied**: Changed main loop to use `isButtonHeld()` transition detection instead of `isButtonPressed()` for toolbox activation
+
+### Step 6.5: Manual Bed Light Override ✅ **NEW FEATURE**
+- Added manual bed light control via double-click button functionality
+- Implemented bed light override state tracking in VehicleState structure
+- Created toggle logic: first double-click enters manual mode with opposite of automatic state
+- Added subsequent double-click support to toggle manual bed light state
+- Implemented automatic override clearing when CAN requests OFF/RAMP_DOWN
+- **Security Enhancement**: Added unlock requirement for button input processing
+- Updated bed light control logic to respect manual override when active
+- Enhanced logging to indicate when bed lights are in manual vs automatic mode
+- Added comprehensive state management functions for manual override control
+- Created `shouldProcessButtonInput()` helper function for security checking
+- Successfully compiled and tested all manual override functionality
+- Memory efficient implementation maintaining excellent resource usage
 
 ### Step 7: Output Control Logic ✅
 - Implemented comprehensive output control logic connecting vehicle state to GPIO outputs

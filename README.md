@@ -22,7 +22,8 @@ This project implements a Ford F150 Gen14 CAN bus interface using Arduino Framew
 ### Features
 
 * Monitors CAN bus messages for bed lights, door locks, transmission park status, and battery state
-* Controls bed light relay based on vehicle puddle lamp status
+* Controls bed light relay based on vehicle puddle lamp status with manual override capability
+* Manual bed light control via double-click button (independent of CAN bus signals)
 * Controls status LEDs for vehicle lock and park status
 * Provides secure toolbox unlock functionality (only when vehicle is unlocked and in park)
 * Comprehensive logging and error handling

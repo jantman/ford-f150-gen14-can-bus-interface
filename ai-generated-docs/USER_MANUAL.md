@@ -110,7 +110,27 @@ Once installed and powered on, the device will:
 
 - **Automatic ON**: When F150 PUD lamps are ON or RAMPING UP
 - **Automatic OFF**: When F150 PUD lamps are OFF or RAMPING DOWN
-- **Manual Override**: Not available (follows vehicle state for safety)
+- **Manual Override**: Double-click toolbox button to toggle bed lights manually
+
+#### Manual Bed Light Override
+
+The toolbox button can be used to manually control the bed lights independently of the vehicle's PUD lamp system:
+
+1. **Security Requirement**: Vehicle must be unlocked for button input to be processed
+2. **Double-Click to Toggle**: Press and release the toolbox button twice within 300ms
+3. **First Double-Click**: Enters manual override mode with opposite state of current automatic setting
+4. **Subsequent Double-Clicks**: Toggle bed lights ON/OFF while in manual mode
+5. **Automatic Clearing**: Manual override is automatically cleared when vehicle requests lights OFF or RAMP_DOWN
+
+**Examples**:
+- If automatic bed lights are currently OFF, double-click turns them ON in manual mode
+- If automatic bed lights are currently ON, double-click turns them OFF in manual mode
+- While in manual mode, double-click toggles between manual ON and manual OFF
+- When vehicle turns PUD lamps to OFF/RAMP_DOWN, manual override is cleared and returns to automatic mode
+
+**Security Note**: Double-clicks are ignored when the vehicle is locked for security reasons. The Unlocked LED (Blue) must be ON for button input to be processed.
+
+**Note**: Double-clicks are only detected on quick press/release cycles. Holding the button for 1000ms will activate the toolbox opener instead.
 
 ### Toolbox Opener
 

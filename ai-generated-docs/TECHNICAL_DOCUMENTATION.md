@@ -138,6 +138,10 @@ typedef struct {
     bool isParked;
     bool bedlightShouldBeOn;
     bool systemReady;
+    
+    // Manual bed light control
+    bool bedlightManualOverride;    // True when bed lights are manually controlled
+    bool bedlightManualState;       // Manual override state (ON/OFF)
 } VehicleState;
 ```
 
@@ -169,6 +173,110 @@ bool shouldActivateToolbox(bool systemReady, bool isParked, bool isUnlocked) {
     return systemReady && isParked && isUnlocked;
 }
 ```
+
+### Manual Bed Light Override Logic
+The system supports manual bed light control independent of CAN bus signals:
+
+```c
+// Manual override decision logic
+bool getBedlightState(VehicleState* state) {
+    if (state->bedlightManualOverride) {
+        // Use manual state when override is active
+        return state->bedlightManualState;
+    } else {
+        // Use automatic CAN-based control
+        return state->bedlightShouldBeOn;
+    }
+}
+
+// Toggle manual override state
+void toggleBedlightManualOverride(VehicleState* state) {
+    if (state->bedlightManualOverride) {
+        // Already in manual mode - toggle manual state
+        state->bedlightManualState = !state->bedlightManualState;
+    } else {
+        // Enter manual mode with opposite of current automatic state
+        state->bedlightManualOverride = true;
+        state->bedlightManualState = !state->bedlightShouldBeOn;
+    }
+}
+
+// Automatic clearing when CAN requests OFF/RAMP_DOWN
+void clearManualOverrideIfNeeded(VehicleState* state, uint8_t pudLampRequest) {
+    if ((pudLampRequest == PUDLAMP_OFF || pudLampRequest == PUDLAMP_RAMP_DOWN) &&
+        state->bedlightManualOverride) {
+        state->bedlightManualOverride = false;
+        state->bedlightManualState = false;
+    }
+}
+```
+
+## Button Input Processing
+
+### Button Hardware Configuration
+- **Pin**: GPIO_17 (TOOLBOX_BUTTON_PIN)
+- **Type**: INPUT_PULLUP (active low)
+- **Debouncing**: Software debouncing with 50ms threshold
+- **Detection**: Supports both press/release events and hold detection
+
+### Button Event Types
+
+#### Hold Detection (Toolbox Activation)
+- **Threshold**: 1000ms continuous press
+- **Purpose**: Activate toolbox opener when vehicle conditions are met
+- **Safety**: Only activates when vehicle is parked, unlocked, and system ready
+
+#### Double-Click Detection (Bed Light Toggle)
+- **Timing**: Two presses within 300ms window
+- **Purpose**: Toggle bed light manual override mode
+- **Security**: Only processes button input when vehicle is unlocked
+- **Logic**: 
+  - First double-click: Enter manual mode with opposite of current automatic state
+  - Subsequent double-clicks: Toggle manual state
+  - Automatic clearing: When CAN requests OFF/RAMP_DOWN
+  - Ignored when locked: Double-clicks are ignored for security when vehicle is locked
+
+#### Implementation Details
+```c
+// Double-click detection logic
+if (buttonState.pressCount > 0 && 
+    timeSinceLastPress <= BUTTON_DOUBLE_CLICK_MS && 
+    timeSinceLastPress > BUTTON_DEBOUNCE_MS) {
+    buttonState.doubleClickDetected = true;
+}
+
+// Security check for button input processing
+if (shouldProcessButtonInput() && isButtonDoubleClicked()) {
+    // Process bed light toggle only when vehicle is unlocked
+    toggleBedlightManualOverride();
+} else if (!shouldProcessButtonInput() && isButtonDoubleClicked()) {
+    // Ignore button input when vehicle is locked
+    LOG_WARN("Button double-click ignored - vehicle must be unlocked");
+}
+
+// Manual bed light control
+if (vehicleState.bedlightManualOverride) {
+    // Use manual state instead of CAN-derived state
+    bedlightState = vehicleState.bedlightManualState;
+} else {
+    // Use automatic CAN-based control
+    bedlightState = vehicleState.bedlightShouldBeOn;
+}
+```
+
+### Timing Constants
+
+The system uses several critical timing constants for reliable operation:
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `BUTTON_DEBOUNCE_MS` | 50ms | Minimum stable time for button state changes |
+| `BUTTON_DOUBLE_CLICK_MS` | 300ms | Maximum time between clicks for double-click detection |
+| `BUTTON_HOLD_THRESHOLD_MS` | 1000ms | Minimum hold time for toolbox activation |
+| `TOOLBOX_OPENER_DURATION_MS` | 500ms | Duration to keep toolbox opener relay active |
+| `SYSTEM_READINESS_TIMEOUT_MS` | 600000ms (10 min) | Timeout for system readiness based on CAN activity |
+
+**Double-Click Detection Logic**: A double-click is detected when two button presses occur within 300ms of each other, but with proper debouncing (must be > 50ms apart to avoid switch bounce). This timing ensures reliable detection while preventing interference with the 1000ms hold threshold for toolbox activation.
 
 ## System Health Monitoring
 

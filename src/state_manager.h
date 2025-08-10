@@ -30,6 +30,10 @@ struct VehicleState {
     bool isParked;
     bool bedlightShouldBeOn;
     bool systemReady;
+    
+    // Manual bed light control
+    bool bedlightManualOverride;    // True when bed lights are manually controlled
+    bool bedlightManualState;       // Manual override state (ON/OFF)
 };
 
 // Button state structure
@@ -45,6 +49,10 @@ struct ButtonState {
     unsigned long lastReleaseTime;  // Time of last release event
     unsigned long pressCount;       // Total number of button presses
     unsigned long holdDuration;     // Current hold duration (if held)
+    
+    // Double-click detection
+    bool doubleClickDetected;       // Flag: double-click was detected (cleared after reading)
+    unsigned long secondToLastPressTime;  // Time of second-to-last press for double-click detection
 };
 
 // Function declarations (to be implemented in Step 5)
@@ -67,5 +75,12 @@ unsigned long getButtonHoldDuration();
 unsigned long getButtonPressCount();
 void resetButtonPressCount();
 ButtonState getButtonState();
+bool isButtonDoubleClicked();
+bool shouldProcessButtonInput();
+
+// Function declarations for bed light manual override
+void toggleBedlightManualOverride();
+bool isBedlightManuallyOverridden();
+void clearBedlightManualOverride();
 
 #endif // STATE_MANAGER_H
