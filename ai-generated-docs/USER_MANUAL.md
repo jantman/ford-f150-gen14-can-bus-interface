@@ -120,13 +120,13 @@ The toolbox button can be used to manually control the bed lights independently 
 2. **Double-Click to Toggle**: Press and release the toolbox button twice within 300ms
 3. **First Double-Click**: Enters manual override mode with opposite state of current automatic setting
 4. **Subsequent Double-Clicks**: Toggle bed lights ON/OFF while in manual mode
-5. **Automatic Clearing**: Manual override is automatically cleared when vehicle requests lights OFF or RAMP_DOWN
+5. **Automatic Clearing**: Manual override is automatically cleared when the vehicle is locked
 
 **Examples**:
 - If automatic bed lights are currently OFF, double-click turns them ON in manual mode
 - If automatic bed lights are currently ON, double-click turns them OFF in manual mode
 - While in manual mode, double-click toggles between manual ON and manual OFF
-- When vehicle turns PUD lamps to OFF/RAMP_DOWN, manual override is cleared and returns to automatic mode
+- When vehicle is locked, manual override is cleared and returns to automatic mode
 
 **Security Note**: Double-clicks are ignored when the vehicle is locked for security reasons. The Unlocked LED (Blue) must be ON for button input to be processed.
 

@@ -201,10 +201,10 @@ void toggleBedlightManualOverride(VehicleState* state) {
     }
 }
 
-// Automatic clearing when CAN requests OFF/RAMP_DOWN
-void clearManualOverrideIfNeeded(VehicleState* state, uint8_t pudLampRequest) {
-    if ((pudLampRequest == PUDLAMP_OFF || pudLampRequest == PUDLAMP_RAMP_DOWN) &&
-        state->bedlightManualOverride) {
+// Automatic clearing when vehicle is locked
+void clearManualOverrideIfNeeded(VehicleState* state, uint8_t vehicleLockStatus) {
+    bool isUnlocked = (vehicleLockStatus == VEH_UNLOCK_ALL || vehicleLockStatus == VEH_UNLOCK_DRV);
+    if (!isUnlocked && state->bedlightManualOverride) {
         state->bedlightManualOverride = false;
         state->bedlightManualState = false;
     }

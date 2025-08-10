@@ -82,14 +82,6 @@ void updateBCMLampState(const BCMLampStatus& status) {
     vehicleState.bedlightShouldBeOn = (vehicleState.pudLampRequest == PUDLAMP_ON || 
                                       vehicleState.pudLampRequest == PUDLAMP_RAMP_UP);
     
-    // Clear manual override if CAN requests lights OFF or RAMP_DOWN
-    if ((vehicleState.pudLampRequest == PUDLAMP_OFF || vehicleState.pudLampRequest == PUDLAMP_RAMP_DOWN) &&
-        vehicleState.bedlightManualOverride) {
-        vehicleState.bedlightManualOverride = false;
-        vehicleState.bedlightManualState = false;
-        LOG_INFO("Bed light manual override cleared due to CAN OFF/RAMP_DOWN request");
-    }
-    
     // Log state changes
     if (vehicleState.prevPudLampRequest != vehicleState.pudLampRequest) {
         const char* stateNames[] = {"OFF", "ON", "RAMP_UP", "RAMP_DOWN"};
@@ -123,6 +115,13 @@ void updateLockingSystemsState(const LockingSystemsStatus& status) {
     // Update derived state
     vehicleState.isUnlocked = (vehicleState.vehicleLockStatus == VEH_UNLOCK_ALL || 
                                vehicleState.vehicleLockStatus == VEH_UNLOCK_DRV);
+    
+    // Clear manual bed light override when vehicle is locked
+    if (!vehicleState.isUnlocked && vehicleState.bedlightManualOverride) {
+        vehicleState.bedlightManualOverride = false;
+        vehicleState.bedlightManualState = false;
+        LOG_INFO("Bed light manual override cleared due to vehicle lock");
+    }
     
     // Log state changes
     if (vehicleState.prevVehicleLockStatus != vehicleState.vehicleLockStatus) {
