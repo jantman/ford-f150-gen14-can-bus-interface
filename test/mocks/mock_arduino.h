@@ -2,8 +2,14 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <cstring>  // For memcpy, memset
 #include <map>
 #include <string>
+
+// Ensure Arduino.h compatibility
+#ifndef ARDUINO_H
+#define ARDUINO_H
+#endif
 
 // Mock Arduino constants
 #define HIGH 1

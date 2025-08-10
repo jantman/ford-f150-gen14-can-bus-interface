@@ -3,9 +3,27 @@
 #include <gtest/gtest.h>
 #include "../mocks/mock_arduino.h"
 
-// Include production bit utilities
+// Include production headers for conversion functions
+// Note: The production headers work in native tests because 
+// we have mock_arduino.h providing Arduino compatibility
+#include "../../src/message_parser.h"
+#include "../../src/can_manager.h"
+
+// Include CAN protocol for test utility functions
 extern "C" {
+    #include "../../src/can_protocol.h"
     #include "../../src/bit_utils.h"
+}
+
+// Helper function to convert CANFrame to CANMessage for any future production function usage
+inline CANMessage convertToCANMessage(const CANFrame& frame) {
+    CANMessage message;
+    message.id = frame.id;
+    message.length = frame.length;
+    for (int i = 0; i < frame.length && i < 8; i++) {
+        message.data[i] = frame.data[i];
+    }
+    return message;
 }
 
 // Test helper class for Arduino mock setup/teardown

@@ -1,12 +1,16 @@
 #include <gtest/gtest.h>
 #include "common/can_test_utils.h"
+#include "common/test_helpers.h"
 
-// Include the ACTUAL production code (pure logic, no Arduino dependencies)
+// Include the ACTUAL production code
 extern "C" {
-    #include "../src/can_protocol.h"
-    #include "../src/config.h"  // For CAN message ID constants
+    #include "../src/config.h"  // For CAN message IDs
     #include "../src/bit_utils.h"  // For setBits function
+    #include "../src/can_protocol.h"  // For decision logic functions
 }
+
+// Include production message parser
+#include "../src/message_parser.h"
 
 class CANProtocolTest : public ::testing::Test {
 protected:
@@ -43,8 +47,12 @@ TEST_F(CANProtocolTest, BCMLampParsingProduction) {
     // Bit 11 is in byte 1, position 3: 0x08
     CANFrame frame = CANTestUtils::createCANFrame(BCM_LAMP_STAT_FD1_ID, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
     
-    BCMLampData result = parseBCMLampFrame(&frame);
+    // Convert to CANMessage and use production function
+    CANMessage message = convertToCANMessage(frame);
+    BCMLampStatus result;
+    bool success = parseBCMLampStatus(message, result);
     
+    EXPECT_TRUE(success);
     EXPECT_TRUE(result.valid);
     EXPECT_EQ(result.pudLampRequest, 2);  // RAMP_UP
 }
@@ -58,8 +66,12 @@ TEST_F(CANProtocolTest, LockingSystemsParsingProduction) {
                                 testData[0], testData[1], testData[2], testData[3],
                                 testData[4], testData[5], testData[6], testData[7]);
     
-    LockingSystemsData result = parseLockingSystemsFrame(&frame);
+    // Convert to CANMessage and use production function
+    CANMessage message = convertToCANMessage(frame);
+    LockingSystemsStatus result;
+    bool success = parseLockingSystemsStatus(message, result);
     
+    EXPECT_TRUE(success);
     EXPECT_TRUE(result.valid);
     EXPECT_EQ(result.vehicleLockStatus, 3);  // UNLOCK_DRV
 }
@@ -73,8 +85,12 @@ TEST_F(CANProtocolTest, PowertrainParsingProduction) {
                                 testData[0], testData[1], testData[2], testData[3],
                                 testData[4], testData[5], testData[6], testData[7]);
     
-    PowertrainData result = parsePowertrainFrame(&frame);
+    // Convert to CANMessage and use production function
+    CANMessage message = convertToCANMessage(frame);
+    PowertrainData result;
+    bool success = parsePowertrainData(message, result);
     
+    EXPECT_TRUE(success);
     EXPECT_TRUE(result.valid);
     EXPECT_EQ(result.transmissionParkStatus, 1);  // Park
 }
@@ -126,11 +142,22 @@ TEST_F(CANProtocolTest, EndToEndScenarioProduction) {
                                     parkData[4], parkData[5], parkData[6], parkData[7]);
     
     // Parse using ACTUAL production functions
-    BCMLampData bcm = parseBCMLampFrame(&bcmFrame);
-    LockingSystemsData lock = parseLockingSystemsFrame(&lockFrame);
-    PowertrainData park = parsePowertrainFrame(&parkFrame);
+    CANMessage bcmMessage = convertToCANMessage(bcmFrame);
+    CANMessage lockMessage = convertToCANMessage(lockFrame);
+    CANMessage parkMessage = convertToCANMessage(parkFrame);
+    
+    BCMLampStatus bcm;
+    LockingSystemsStatus lock;
+    PowertrainData park;
+    
+    bool bcmSuccess = parseBCMLampStatus(bcmMessage, bcm);
+    bool lockSuccess = parseLockingSystemsStatus(lockMessage, lock);
+    bool parkSuccess = parsePowertrainData(parkMessage, park);
     
     // Verify parsing worked
+    EXPECT_TRUE(bcmSuccess);
+    EXPECT_TRUE(lockSuccess);
+    EXPECT_TRUE(parkSuccess);
     EXPECT_TRUE(bcm.valid);
     EXPECT_TRUE(lock.valid);
     EXPECT_TRUE(park.valid);
@@ -150,21 +177,27 @@ TEST_F(CANProtocolTest, EndToEndScenarioProduction) {
 TEST_F(CANProtocolTest, InvalidFrameHandling) {
     // Test wrong CAN ID
     CANFrame wrongId = CANTestUtils::createCANFrame(0x999, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
-    BCMLampData bcmResult = parseBCMLampFrame(&wrongId);
-    EXPECT_FALSE(bcmResult.valid);
+    CANMessage wrongMessage = convertToCANMessage(wrongId);
+    BCMLampStatus bcmResult;
+    bool bcmSuccess = parseBCMLampStatus(wrongMessage, bcmResult);
+    EXPECT_FALSE(bcmSuccess);
     
-    // Test null pointer
-    BCMLampData nullResult = parseBCMLampFrame(nullptr);
-    EXPECT_FALSE(nullResult.valid);
+    // Test null frame
+    CANMessage nullMessage = {};
+    BCMLampStatus nullResult;
+    bool nullSuccess = parseBCMLampStatus(nullMessage, nullResult);
+    EXPECT_FALSE(nullSuccess);
     
-    // Test wrong length
+    // Test wrong frame length
     CANFrame shortFrame = CANTestUtils::createCANFrame(BCM_LAMP_STAT_FD1_ID, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
-    shortFrame.length = 4;  // Wrong length
-    BCMLampData shortResult = parseBCMLampFrame(&shortFrame);
-    EXPECT_FALSE(shortResult.valid);
+    CANMessage shortMessage = convertToCANMessage(shortFrame);
+    shortMessage.length = 4;  // Wrong length
+    BCMLampStatus shortResult;
+    bool shortSuccess = parseBCMLampStatus(shortMessage, shortResult);
+    EXPECT_FALSE(shortSuccess);
 }
 
-// Critical: Test that changes to production code affect tests appropriately
+// Test to detect if production code parsing logic changes unexpectedly
 TEST_F(CANProtocolTest, DetectProductionCodeChanges) {
     // If someone changes bit positions in production code, these tests WILL FAIL
     // This ensures our tests actually reflect the production implementation
@@ -174,12 +207,18 @@ TEST_F(CANProtocolTest, DetectProductionCodeChanges) {
     CANFrame testFrame = CANTestUtils::createCANFrame(BCM_LAMP_STAT_FD1_ID, 
                                     testData[0], testData[1], testData[2], testData[3],
                                     testData[4], testData[5], testData[6], testData[7]);
-    BCMLampData result = parseBCMLampFrame(&testFrame);
     
-    // Based on current bit positions (11-12) in production code
+    // Use production function
+    CANMessage message = convertToCANMessage(testFrame);
+    BCMLampStatus result;
+    bool success = parseBCMLampStatus(message, result);
+    
+    // This MUST match what the production code returns
+    EXPECT_TRUE(success);
+    EXPECT_TRUE(result.valid);
     EXPECT_EQ(result.pudLampRequest, 2);  // RAMP_UP
     
-    // If production logic changes, this will fail - which is GOOD!
+    // Test decision logic consistency
     EXPECT_FALSE(shouldEnableBedlight(0));  // OFF should not enable bedlight  
     EXPECT_TRUE(shouldEnableBedlight(1));   // ON should enable bedlight
 }

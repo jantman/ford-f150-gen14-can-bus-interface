@@ -9,3 +9,4 @@
 #include "../src/gpio_controller.cpp"
 #include "../src/arduino_interface.cpp"
 #include "../src/native_arduino_compat.cpp"
+// Note: message_parser.cpp is included via build_src_filter in platformio.ini
