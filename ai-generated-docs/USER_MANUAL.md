@@ -104,6 +104,8 @@ Once installed and powered on, the device will:
 | Unlocked LED (Blue) | ON | Vehicle is unlocked (all doors or driver door) |
 | Unlocked LED (Blue) | OFF | Vehicle is locked or status unknown |
 
+**Note**: When the vehicle is not running and the system has not received transmission status data, the Parked LED will be ON by default, as the system assumes the vehicle is parked in this scenario.
+
 ### Bedlight Control
 
 - **Automatic ON**: When F150 PUD lamps are ON or RAMPING UP

@@ -78,6 +78,7 @@ This document tracks the progress of implementing the Ford F150 CAN bus interfac
 - Implemented system health monitoring with timeout detection and periodic warnings
 - Created toolbox activation condition checking (system ready + parked + unlocked)
 - Added basic button state management with debouncing functionality
+- **Updated**: Transmission park status now defaults to `TRNPRKSTS_PARK` when `POWERTRAIN_DATA_10` message not received (e.g., vehicle not running)
 - Successfully compiled and verified all state management functionality
 - Memory efficient implementation maintaining excellent resource usage (6.2% RAM, 26.1% Flash)
 

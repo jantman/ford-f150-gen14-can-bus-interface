@@ -94,6 +94,7 @@ pio device monitor
 #### Step 6: Signal Validation
 1. **Lock/Unlock Test**: Change vehicle lock state, verify LED response
 2. **Park Test**: Shift to/from Park, verify LED response
+   - **Note**: When the vehicle is not running, the Parked LED should be ON by default (system assumes parked state until powertrain data is received)
 3. **Puddle Lamp Test**: Activate puddle lamps, verify bedlight response
 
 ### Phase 3: Output Integration
@@ -202,6 +203,7 @@ pio run -e esp32-s3-devkitc-1 --target upload --verbose
 - Check bit positions for signal extraction
 - Validate signal value mappings
 - Test with known vehicle states
+- **Note**: When vehicle is not running, parked status defaults to PARK (LED ON) until powertrain data is received
 
 #### Issue: Bedlight Not Responding
 **Symptoms**: Bedlight doesn't follow puddle lamp state

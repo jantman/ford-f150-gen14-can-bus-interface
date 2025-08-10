@@ -33,6 +33,7 @@ The embedded CAN logger monitors 4 specific CAN messages from the Ford F-150's C
 - **Purpose**: Transmission and parking system data
 - **Signals**:
   - `TrnPrkSys_D_Actl` - Transmission park system actual status
+- **Default Behavior**: When this message is not received (e.g., vehicle not running), the system defaults to `TRNPRKSTS_PARK` (value 1), meaning the vehicle is considered parked until actual transmission data is available.
 
 ### 4. Battery_Mgmt_3_FD1 (0x43C / 1084)
 **Battery Management System**
@@ -139,9 +140,10 @@ def extract_signal_value(self, data, start_bit, length):
 #### TrnPrkSys_D_Actl
 - **Start Bit**: 31
 - **Length**: 4 bits
+- **Default Value**: `TRNPRKSTS_PARK` (1) when message not received
 - **Values**:
   - `0`: "NotKnown"
-  - `1`: "Park"
+  - `1`: "Park" *(Default when POWERTRAIN_DATA_10 message not seen)*
   - `2`: "TransitionCloseToPark"
   - `3`: "AtNoSpring"
   - `4`: "TransitionCloseToOutOfPark"

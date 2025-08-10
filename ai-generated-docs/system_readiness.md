@@ -22,6 +22,7 @@ The system monitors **4 CAN message types** for system readiness:
 3. **PowertrainData_10** (ID: 0x176 / 374 decimal)
    - Contains transmission park status that controls the parked LED
    - Signal: `TrnPrkSys_D_Actl` (bits 31-34)
+   - **Default Behavior**: When this message has not been received (e.g., vehicle not running), the system defaults to assuming the vehicle is parked (`TRNPRKSTS_PARK`)
 
 4. **Battery_Mgmt_3_FD1** (ID: 0x43C / 1084 decimal)
    - Contains battery state of charge for monitoring

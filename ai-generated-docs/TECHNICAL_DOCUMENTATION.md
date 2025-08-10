@@ -83,6 +83,7 @@ The MCP2515 controller supports hardware-level message filtering which is enable
 **Usage**: Controls parked LED and toolbox activation logic
 - Parked LED ON when TrnPrkSys_D_Actl = 1 (PARK)
 - Required for toolbox activation (must be parked)
+- **Default Value**: When the `POWERTRAIN_DATA_10` message is not received (e.g., vehicle not running), the system defaults to `TRNPRKSTS_PARK` (1), meaning the vehicle is considered parked until the actual transmission status is received.
 
 ### Battery_Mgmt_3_FD1 (0x3D2)
 **Battery Management Status**
@@ -139,6 +140,8 @@ typedef struct {
     bool systemReady;
 } VehicleState;
 ```
+
+**Important State Initialization**: The transmission park status (`transmissionParkStatus`) defaults to `TRNPRKSTS_PARK` when the system initializes, which means the vehicle is considered parked by default until the `POWERTRAIN_DATA_10` message is received and processed. This ensures safe operation when the vehicle is not running and the powertrain message is not being transmitted on the CAN bus.
 
 ## Decision Logic Functions
 

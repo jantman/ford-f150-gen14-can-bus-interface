@@ -12,13 +12,13 @@ void initializeStateManager() {
     // Initialize vehicle state with default values
     vehicleState.pudLampRequest = PUDLAMP_OFF;
     vehicleState.vehicleLockStatus = VEH_LOCK_UNKNOWN;
-    vehicleState.transmissionParkStatus = TRNPRKSTS_UNKNOWN;
+    vehicleState.transmissionParkStatus = TRNPRKSTS_PARK;  // Default to PARK if POWERTRAIN_DATA_10 not seen yet
     vehicleState.batterySOC = 0;
     
     // Initialize previous values
     vehicleState.prevPudLampRequest = PUDLAMP_OFF;
     vehicleState.prevVehicleLockStatus = VEH_LOCK_UNKNOWN;
-    vehicleState.prevTransmissionParkStatus = TRNPRKSTS_UNKNOWN;
+    vehicleState.prevTransmissionParkStatus = TRNPRKSTS_PARK;  // Default to PARK if POWERTRAIN_DATA_10 not seen yet
     vehicleState.prevBatterySOC = 0;
     
     // Initialize timestamps
@@ -30,7 +30,7 @@ void initializeStateManager() {
     
     // Initialize state flags
     vehicleState.isUnlocked = false;
-    vehicleState.isParked = false;
+    vehicleState.isParked = true;  // Default to parked if POWERTRAIN_DATA_10 not seen yet
     vehicleState.bedlightShouldBeOn = false;
     vehicleState.systemReady = false;
     
