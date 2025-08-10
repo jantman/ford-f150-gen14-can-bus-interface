@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "common/can_test_utils.h"
 
 // Include the ACTUAL production code (pure logic, no Arduino dependencies)
 extern "C" {
@@ -15,23 +16,6 @@ protected:
     
     void TearDown() override {
         // No cleanup needed
-    }
-    
-    // Helper function to set signal values (matches the DBC bit positioning)
-    void setSignalValue(uint8_t data[8], uint8_t startBit, uint8_t length, uint32_t value) {
-        memset(data, 0, 8);  // Clear data first
-        setBits(data, startBit, length, value);  // Use production setBits function
-    }
-    
-    // Helper to create test CAN frames
-    CANFrame createFrame(uint32_t id, uint8_t b0, uint8_t b1, uint8_t b2, uint8_t b3, 
-                        uint8_t b4, uint8_t b5, uint8_t b6, uint8_t b7) {
-        CANFrame frame;
-        frame.id = id;
-        frame.length = 8;
-        frame.data[0] = b0; frame.data[1] = b1; frame.data[2] = b2; frame.data[3] = b3;
-        frame.data[4] = b4; frame.data[5] = b5; frame.data[6] = b6; frame.data[7] = b7;
-        return frame;
     }
 };
 
@@ -57,7 +41,7 @@ TEST_F(CANProtocolTest, BCMLampParsingProduction) {
     // Create test frame with PudLamp_D_Rq = 2 (RAMP_UP) at start_bit=11, length=2
     // Value 2 = binary 10, bit_pos = 11-2+1 = 10, so bits 10=0, 11=1
     // Bit 11 is in byte 1, position 3: 0x08
-    CANFrame frame = createFrame(BCM_LAMP_STAT_FD1_ID, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
+    CANFrame frame = CANTestUtils::createCANFrame(BCM_LAMP_STAT_FD1_ID, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
     
     BCMLampData result = parseBCMLampFrame(&frame);
     
@@ -69,8 +53,8 @@ TEST_F(CANProtocolTest, BCMLampParsingProduction) {
 TEST_F(CANProtocolTest, LockingSystemsParsingProduction) {
     // Create test frame with Veh_Lock_Status = 3 (UNLOCK_DRV) at bits 33-34
     uint8_t testData[8];
-    setSignalValue(testData, 34, 2, 3);  // Use corrected bit position  
-    CANFrame frame = createFrame(LOCKING_SYSTEMS_2_FD1_ID, 
+    CANTestUtils::setSignalValue(testData, 34, 2, 3);  // Use corrected bit position  
+    CANFrame frame = CANTestUtils::createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, 
                                 testData[0], testData[1], testData[2], testData[3],
                                 testData[4], testData[5], testData[6], testData[7]);
     
@@ -84,8 +68,8 @@ TEST_F(CANProtocolTest, LockingSystemsParsingProduction) {
 TEST_F(CANProtocolTest, PowertrainParsingProduction) {
     // Create test frame with TrnPrkSys_D_Actl = 1 (Park) at bits 28-31 (MSB at 31)
     uint8_t testData[8];
-    setSignalValue(testData, 31, 4, 1);  // Use setSignalValue to get correct bit pattern
-    CANFrame frame = createFrame(POWERTRAIN_DATA_10_ID, 
+    CANTestUtils::setSignalValue(testData, 31, 4, 1);  // Use setSignalValue to get correct bit pattern
+    CANFrame frame = CANTestUtils::createCANFrame(POWERTRAIN_DATA_10_ID, 
                                 testData[0], testData[1], testData[2], testData[3],
                                 testData[4], testData[5], testData[6], testData[7]);
     
@@ -127,17 +111,17 @@ TEST_F(CANProtocolTest, EndToEndScenarioProduction) {
     uint8_t bcmData[8], lockData[8], parkData[8];
     
     // Create proper test data using signal setting
-    setSignalValue(bcmData, 11, 2, 1);   // PudLamp = 1 (ON) - corrected bit position
-    setSignalValue(lockData, 34, 2, 2);  // Lock = 2 (UNLOCK_ALL) - match production bit position
-    setSignalValue(parkData, 31, 4, 1);  // Park = 1 (Park) - corrected bit position
+    CANTestUtils::setSignalValue(bcmData, 11, 2, 1);   // PudLamp = 1 (ON) - corrected bit position
+    CANTestUtils::setSignalValue(lockData, 34, 2, 2);  // Lock = 2 (UNLOCK_ALL) - match production bit position
+    CANTestUtils::setSignalValue(parkData, 31, 4, 1);  // Park = 1 (Park) - corrected bit position
     
-    CANFrame bcmFrame = createFrame(BCM_LAMP_STAT_FD1_ID, 
+    CANFrame bcmFrame = CANTestUtils::createCANFrame(BCM_LAMP_STAT_FD1_ID, 
                                    bcmData[0], bcmData[1], bcmData[2], bcmData[3],
                                    bcmData[4], bcmData[5], bcmData[6], bcmData[7]);
-    CANFrame lockFrame = createFrame(LOCKING_SYSTEMS_2_FD1_ID,
+    CANFrame lockFrame = CANTestUtils::createCANFrame(LOCKING_SYSTEMS_2_FD1_ID,
                                     lockData[0], lockData[1], lockData[2], lockData[3],
                                     lockData[4], lockData[5], lockData[6], lockData[7]);
-    CANFrame parkFrame = createFrame(POWERTRAIN_DATA_10_ID,
+    CANFrame parkFrame = CANTestUtils::createCANFrame(POWERTRAIN_DATA_10_ID,
                                     parkData[0], parkData[1], parkData[2], parkData[3],
                                     parkData[4], parkData[5], parkData[6], parkData[7]);
     
@@ -165,7 +149,7 @@ TEST_F(CANProtocolTest, EndToEndScenarioProduction) {
 // Test invalid frames are rejected properly
 TEST_F(CANProtocolTest, InvalidFrameHandling) {
     // Test wrong CAN ID
-    CANFrame wrongId = createFrame(0x999, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
+    CANFrame wrongId = CANTestUtils::createCANFrame(0x999, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
     BCMLampData bcmResult = parseBCMLampFrame(&wrongId);
     EXPECT_FALSE(bcmResult.valid);
     
@@ -174,7 +158,7 @@ TEST_F(CANProtocolTest, InvalidFrameHandling) {
     EXPECT_FALSE(nullResult.valid);
     
     // Test wrong length
-    CANFrame shortFrame = createFrame(BCM_LAMP_STAT_FD1_ID, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
+    CANFrame shortFrame = CANTestUtils::createCANFrame(BCM_LAMP_STAT_FD1_ID, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
     shortFrame.length = 4;  // Wrong length
     BCMLampData shortResult = parseBCMLampFrame(&shortFrame);
     EXPECT_FALSE(shortResult.valid);
@@ -186,8 +170,8 @@ TEST_F(CANProtocolTest, DetectProductionCodeChanges) {
     // This ensures our tests actually reflect the production implementation
     
     uint8_t testData[8];
-    setSignalValue(testData, 11, 2, 2);  // PudLamp = 2 (RAMP_UP) at correct bit position
-    CANFrame testFrame = createFrame(BCM_LAMP_STAT_FD1_ID, 
+    CANTestUtils::setSignalValue(testData, 11, 2, 2);  // PudLamp = 2 (RAMP_UP) at correct bit position
+    CANFrame testFrame = CANTestUtils::createCANFrame(BCM_LAMP_STAT_FD1_ID, 
                                     testData[0], testData[1], testData[2], testData[3],
                                     testData[4], testData[5], testData[6], testData[7]);
     BCMLampData result = parseBCMLampFrame(&testFrame);

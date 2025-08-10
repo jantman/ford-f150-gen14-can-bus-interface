@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "mocks/mock_arduino.h"
 #include "common/test_config.h"
+#include "common/can_test_utils.h"
 
 // Import production code structures and functions
 extern "C" {
@@ -30,51 +31,6 @@ protected:
     
     void TearDown() override {
         ArduinoMock::instance().reset();
-    }
-    
-    // Helper to create CAN frame with specific data pattern
-    CANFrame createCANFrame(uint32_t id, const uint8_t data[8]) {
-        CANFrame frame;
-        frame.id = id;
-        frame.length = 8;
-        memcpy(frame.data, data, 8);
-        return frame;
-    }
-    
-    // Helper to set specific bits in data array (little-endian, DBC-style bit positioning)
-    void setSignalValue(uint8_t data[8], uint8_t startBit, uint8_t length, uint32_t value) {
-        // Clear data first
-        memset(data, 0, 8);
-        
-        // Convert to 64-bit integer for bit manipulation (little-endian)
-        uint64_t dataValue = 0;
-        memcpy(&dataValue, data, 8);
-        
-        // Calculate bit position (DBC uses MSB bit numbering)
-        uint8_t bitPos = startBit - length + 1;
-        
-        // Create mask and set value
-        uint64_t mask = ((1ULL << length) - 1) << bitPos;
-        dataValue = (dataValue & ~mask) | ((uint64_t)value << bitPos);
-        
-        // Copy back to data array
-        memcpy(data, &dataValue, 8);
-    }
-    
-    // Helper to verify bit extraction matches Python implementation
-    uint32_t pythonExtractBits(const uint8_t data[8], uint8_t startBit, uint8_t length) {
-        // Convert 8 bytes to 64-bit integer (little-endian)
-        uint64_t dataInt = 0;
-        memcpy(&dataInt, data, 8);
-        
-        // Calculate bit position from MSB (DBC uses MSB bit numbering)
-        uint8_t bitPos = startBit - length + 1;
-        
-        // Create mask and extract value
-        uint64_t mask = (1ULL << length) - 1;
-        uint32_t value = (dataInt >> bitPos) & mask;
-        
-        return value;
     }
 };
 
@@ -139,9 +95,9 @@ TEST_F(MessageParserTest, BCMLampStatusBasicParsing) {
     // Python defines: PudLamp_D_Rq (bits 11-12, 2 bits)
     
     uint8_t testData[8] = {0};
-    setSignalValue(testData, 11, 2, 1); // PudLamp_D_Rq = ON (1)
+    CANTestUtils::setSignalValue(testData, 11, 2, 1); // PudLamp_D_Rq = ON (1)
     
-    CANFrame frame = createCANFrame(BCM_LAMP_STAT_FD1_ID, testData);
+    CANFrame frame = CANTestUtils::createCANFrame(BCM_LAMP_STAT_FD1_ID, testData);
     BCMLampData result = parseBCMLampFrame(&frame);
     
     EXPECT_TRUE(result.valid);
@@ -167,16 +123,16 @@ TEST_F(MessageParserTest, BCMLampStatusPythonValueMapping) {
     
     for (const auto& testCase : testCases) {
         uint8_t testData[8] = {0};
-        setSignalValue(testData, 11, 2, testCase.rawValue);
+        CANTestUtils::setSignalValue(testData, 11, 2, testCase.rawValue);
         
-        CANFrame frame = createCANFrame(BCM_LAMP_STAT_FD1_ID, testData);
+        CANFrame frame = CANTestUtils::createCANFrame(BCM_LAMP_STAT_FD1_ID, testData);
         BCMLampData result = parseBCMLampFrame(&frame);
         
         EXPECT_TRUE(result.valid) << "Failed for " << testCase.description;
         EXPECT_EQ(result.pudLampRequest, testCase.expectedConstant) << "Value mismatch for " << testCase.description;
         
         // Verify our bit extraction matches Python implementation
-        uint32_t pythonValue = pythonExtractBits(testData, 11, 2);
+        uint32_t pythonValue = CANTestUtils::extractSignalValue(testData, 11, 2);
         EXPECT_EQ(pythonValue, testCase.rawValue) << "Python extraction mismatch for " << testCase.description;
     }
 }
@@ -184,7 +140,7 @@ TEST_F(MessageParserTest, BCMLampStatusPythonValueMapping) {
 TEST_F(MessageParserTest, BCMLampStatusInvalidMessage) {
     // Test invalid message ID
     uint8_t testData[8] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
-    CANFrame frame = createCANFrame(0x999, testData); // Wrong ID
+    CANFrame frame = CANTestUtils::createCANFrame(0x999, testData); // Wrong ID
     BCMLampData result = parseBCMLampFrame(&frame);
     
     EXPECT_FALSE(result.valid);
@@ -206,9 +162,9 @@ TEST_F(MessageParserTest, LockingSystemsBasicParsing) {
     // Python defines: Veh_Lock_Status (bits 34-35, 2 bits)
     
     uint8_t testData[8] = {0};
-    setSignalValue(testData, 34, 2, 2); // Veh_Lock_Status = UNLOCK_ALL (2) - match production bit position
+    CANTestUtils::setSignalValue(testData, 34, 2, 2); // Veh_Lock_Status = UNLOCK_ALL (2) - match production bit position
     
-    CANFrame frame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, testData);
+    CANFrame frame = CANTestUtils::createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, testData);
     LockingSystemsData result = parseLockingSystemsFrame(&frame);
     
     EXPECT_TRUE(result.valid);
@@ -242,7 +198,7 @@ TEST_F(MessageParserTest, LockingSystemsRealCANData) {
     };
     
     for (const auto& testCase : testCases) {
-        CANFrame frame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, testCase.data);
+        CANFrame frame = CANTestUtils::createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, testCase.data);
         LockingSystemsData result = parseLockingSystemsFrame(&frame);
         
         EXPECT_TRUE(result.valid) << "Failed for " << testCase.description;
@@ -269,9 +225,9 @@ TEST_F(MessageParserTest, PowertrainDataBasicParsing) {
     // Python defines: TrnPrkSys_D_Actl (bits 31-34, 4 bits)
     
     uint8_t testData[8] = {0};
-    setSignalValue(testData, 31, 4, 1); // TrnPrkSys_D_Actl = PARK (1)
+    CANTestUtils::setSignalValue(testData, 31, 4, 1); // TrnPrkSys_D_Actl = PARK (1)
     
-    CANFrame frame = createCANFrame(POWERTRAIN_DATA_10_ID, testData);
+    CANFrame frame = CANTestUtils::createCANFrame(POWERTRAIN_DATA_10_ID, testData);
     PowertrainData result = parsePowertrainFrame(&frame);
     
     EXPECT_TRUE(result.valid);
@@ -304,16 +260,16 @@ TEST_F(MessageParserTest, PowertrainDataPythonValueMapping) {
     
     for (const auto& testCase : testCases) {
         uint8_t testData[8] = {0};
-        setSignalValue(testData, 31, 4, testCase.rawValue);
+        CANTestUtils::setSignalValue(testData, 31, 4, testCase.rawValue);
         
-        CANFrame frame = createCANFrame(POWERTRAIN_DATA_10_ID, testData);
+        CANFrame frame = CANTestUtils::createCANFrame(POWERTRAIN_DATA_10_ID, testData);
         PowertrainData result = parsePowertrainFrame(&frame);
         
         EXPECT_TRUE(result.valid) << "Failed for " << testCase.description;
         EXPECT_EQ(result.transmissionParkStatus, testCase.expectedConstant) << "Value mismatch for " << testCase.description;
         
         // Verify our bit extraction matches Python implementation
-        uint32_t pythonValue = pythonExtractBits(testData, 31, 4);
+        uint32_t pythonValue = CANTestUtils::extractSignalValue(testData, 31, 4);
         EXPECT_EQ(pythonValue, testCase.rawValue) << "Python extraction mismatch for " << testCase.description;
     }
 }
@@ -327,9 +283,9 @@ TEST_F(MessageParserTest, BatteryManagementBasicParsing) {
     // Python defines: BSBattSOC (bits 22-28, 7 bits) - Raw percentage value
     
     uint8_t testData[8] = {0};
-    setSignalValue(testData, 22, 7, 85); // Battery SOC = 85%
+    CANTestUtils::setSignalValue(testData, 22, 7, 85); // Battery SOC = 85%
     
-    CANFrame frame = createCANFrame(BATTERY_MGMT_3_FD1_ID, testData);
+    CANFrame frame = CANTestUtils::createCANFrame(BATTERY_MGMT_3_FD1_ID, testData);
     BatteryData result = parseBatteryFrame(&frame);
     
     EXPECT_TRUE(result.valid);
@@ -354,16 +310,16 @@ TEST_F(MessageParserTest, BatteryManagementRangeValues) {
     
     for (const auto& testCase : testCases) {
         uint8_t testData[8] = {0};
-        setSignalValue(testData, 22, 7, testCase.rawValue);
+        CANTestUtils::setSignalValue(testData, 22, 7, testCase.rawValue);
         
-        CANFrame frame = createCANFrame(BATTERY_MGMT_3_FD1_ID, testData);
+        CANFrame frame = CANTestUtils::createCANFrame(BATTERY_MGMT_3_FD1_ID, testData);
         BatteryData result = parseBatteryFrame(&frame);
         
         EXPECT_TRUE(result.valid) << "Failed for " << testCase.description;
         EXPECT_EQ(result.batterySOC, testCase.rawValue) << "Value mismatch for " << testCase.description;
         
         // Verify our bit extraction matches Python implementation
-        uint32_t pythonValue = pythonExtractBits(testData, 22, 7);
+        uint32_t pythonValue = CANTestUtils::extractSignalValue(testData, 22, 7);
         EXPECT_EQ(pythonValue, testCase.rawValue) << "Python extraction mismatch for " << testCase.description;
     }
 }
@@ -409,20 +365,20 @@ TEST_F(MessageParserTest, ComprehensiveMessageValidation) {
     
     // Create test messages for all types
     uint8_t bcmData[8] = {0};
-    setSignalValue(bcmData, 11, 2, PUDLAMP_ON);
-    CANFrame bcmFrame = createCANFrame(BCM_LAMP_STAT_FD1_ID, bcmData);
+    CANTestUtils::setSignalValue(bcmData, 11, 2, PUDLAMP_ON);
+    CANFrame bcmFrame = CANTestUtils::createCANFrame(BCM_LAMP_STAT_FD1_ID, bcmData);
     
     uint8_t lockData[8] = {0};
-    setSignalValue(lockData, 34, 2, VEH_UNLOCK_ALL); // Match production bit position
-    CANFrame lockFrame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, lockData);
+    CANTestUtils::setSignalValue(lockData, 34, 2, VEH_UNLOCK_ALL); // Match production bit position
+    CANFrame lockFrame = CANTestUtils::createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, lockData);
     
     uint8_t powerData[8] = {0};
-    setSignalValue(powerData, 31, 4, TRNPRKSTS_PARK);
-    CANFrame powerFrame = createCANFrame(POWERTRAIN_DATA_10_ID, powerData);
+    CANTestUtils::setSignalValue(powerData, 31, 4, TRNPRKSTS_PARK);
+    CANFrame powerFrame = CANTestUtils::createCANFrame(POWERTRAIN_DATA_10_ID, powerData);
     
     uint8_t battData[8] = {0};
-    setSignalValue(battData, 22, 7, 95);
-    CANFrame battFrame = createCANFrame(BATTERY_MGMT_3_FD1_ID, battData);
+    CANTestUtils::setSignalValue(battData, 22, 7, 95);
+    CANFrame battFrame = CANTestUtils::createCANFrame(BATTERY_MGMT_3_FD1_ID, battData);
     
     // Parse all messages
     BCMLampData bcmResult = parseBCMLampFrame(&bcmFrame);

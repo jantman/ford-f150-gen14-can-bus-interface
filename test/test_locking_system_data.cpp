@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "mocks/mock_arduino.h"
 #include "common/test_config.h"
+#include "common/can_test_utils.h"
 
 // Import production code structures and functions
 extern "C" {
@@ -31,19 +32,10 @@ protected:
         ArduinoMock::instance().reset();
     }
     
-    // Helper to create CAN frame with specific data pattern
-    CANFrame createCANFrame(uint32_t id, const uint8_t data[8]) {
-        CANFrame frame;
-        frame.id = id;
-        frame.length = 8;
-        memcpy(frame.data, data, 8);
-        return frame;
-    }
-    
     // Helper to validate a locking system message
     void validateLockingMessage(const char* testName, const uint8_t data[8], 
                                uint8_t expectedStatus, const char* expectedAction) {
-        CANFrame frame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, data);
+        CANFrame frame = CANTestUtils::createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, data);
         LockingSystemsData result = parseLockingSystemsFrame(&frame);
         
         EXPECT_TRUE(result.valid) << "Parsing failed for " << testName;
@@ -185,7 +177,7 @@ TEST_F(LockingSystemDataTest, VehicleLogicIntegration) {
     
     // Scenario 1: Vehicle locks, toolbox should NOT open
     uint8_t lockData[8] = {0x00, 0x0F, 0x00, 0x00, 0x02, 0xC7, 0x44, 0x10};
-    CANFrame lockFrame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, lockData);
+    CANFrame lockFrame = CANTestUtils::createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, lockData);
     LockingSystemsData lockResult = parseLockingSystemsFrame(&lockFrame);
     
     EXPECT_TRUE(lockResult.valid);
@@ -200,7 +192,7 @@ TEST_F(LockingSystemDataTest, VehicleLogicIntegration) {
     
     // Scenario 2: Vehicle unlocks, toolbox SHOULD open (if other conditions met)
     uint8_t unlockData[8] = {0x00, 0x0F, 0x00, 0x00, 0x05, 0xC2, 0x44, 0x10};
-    CANFrame unlockFrame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, unlockData);
+    CANFrame unlockFrame = CANTestUtils::createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, unlockData);
     LockingSystemsData unlockResult = parseLockingSystemsFrame(&unlockFrame);
     
     EXPECT_TRUE(unlockResult.valid);
@@ -254,7 +246,7 @@ TEST_F(LockingSystemDataTest, MessageSequenceAnalysis) {
     int unlockCount = 0;
     
     for (const auto& step : sequence) {
-        CANFrame frame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, step.data);
+        CANFrame frame = CANTestUtils::createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, step.data);
         LockingSystemsData result = parseLockingSystemsFrame(&frame);
         
         EXPECT_TRUE(result.valid) << "Step " << step.sequenceNumber << " parsing failed";
@@ -290,12 +282,12 @@ TEST_F(LockingSystemDataTest, ErrorConditions) {
     
     // Test invalid message ID
     uint8_t validData[8] = {0x00, 0x0F, 0x00, 0x00, 0x02, 0xC7, 0x44, 0x10};
-    CANFrame invalidIdFrame = createCANFrame(0x999, validData);
+    CANFrame invalidIdFrame = CANTestUtils::createCANFrame(0x999, validData);
     LockingSystemsData result1 = parseLockingSystemsFrame(&invalidIdFrame);
     EXPECT_FALSE(result1.valid) << "Should reject invalid message ID";
     
     // Test invalid message length
-    CANFrame invalidLengthFrame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, validData);
+    CANFrame invalidLengthFrame = CANTestUtils::createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, validData);
     invalidLengthFrame.length = 4; // Wrong length
     LockingSystemsData result2 = parseLockingSystemsFrame(&invalidLengthFrame);
     EXPECT_FALSE(result2.valid) << "Should reject invalid message length";
@@ -316,7 +308,7 @@ TEST_F(LockingSystemDataTest, PerformanceValidation) {
     // This ensures our implementation is efficient enough for real-time use
     
     uint8_t testData[8] = {0x00, 0x0F, 0x00, 0x00, 0x05, 0xC2, 0x44, 0x10};
-    CANFrame frame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, testData);
+    CANFrame frame = CANTestUtils::createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, testData);
     
     const int iterations = 1000;
     unsigned long startTime = millis();
