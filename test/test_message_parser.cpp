@@ -139,7 +139,7 @@ TEST_F(MessageParserTest, BCMLampStatusBasicParsing) {
     // Python defines: PudLamp_D_Rq (bits 11-12, 2 bits)
     
     uint8_t testData[8] = {0};
-    setSignalValue(testData, 12, 2, 1); // PudLamp_D_Rq = ON (1)
+    setSignalValue(testData, 11, 2, 1); // PudLamp_D_Rq = ON (1)
     
     CANFrame frame = createCANFrame(BCM_LAMP_STAT_FD1_ID, testData);
     BCMLampData result = parseBCMLampFrame(&frame);
@@ -167,7 +167,7 @@ TEST_F(MessageParserTest, BCMLampStatusPythonValueMapping) {
     
     for (const auto& testCase : testCases) {
         uint8_t testData[8] = {0};
-        setSignalValue(testData, 12, 2, testCase.rawValue);
+        setSignalValue(testData, 11, 2, testCase.rawValue);
         
         CANFrame frame = createCANFrame(BCM_LAMP_STAT_FD1_ID, testData);
         BCMLampData result = parseBCMLampFrame(&frame);
@@ -176,7 +176,7 @@ TEST_F(MessageParserTest, BCMLampStatusPythonValueMapping) {
         EXPECT_EQ(result.pudLampRequest, testCase.expectedConstant) << "Value mismatch for " << testCase.description;
         
         // Verify our bit extraction matches Python implementation
-        uint32_t pythonValue = pythonExtractBits(testData, 12, 2);
+        uint32_t pythonValue = pythonExtractBits(testData, 11, 2);
         EXPECT_EQ(pythonValue, testCase.rawValue) << "Python extraction mismatch for " << testCase.description;
     }
 }
@@ -206,7 +206,7 @@ TEST_F(MessageParserTest, LockingSystemsBasicParsing) {
     // Python defines: Veh_Lock_Status (bits 34-35, 2 bits)
     
     uint8_t testData[8] = {0};
-    setSignalValue(testData, 34, 2, 2); // Veh_Lock_Status = UNLOCK_ALL (2) - corrected bit position
+    setSignalValue(testData, 34, 2, 2); // Veh_Lock_Status = UNLOCK_ALL (2) - match production bit position
     
     CANFrame frame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, testData);
     LockingSystemsData result = parseLockingSystemsFrame(&frame);
@@ -269,7 +269,7 @@ TEST_F(MessageParserTest, PowertrainDataBasicParsing) {
     // Python defines: TrnPrkSys_D_Actl (bits 31-34, 4 bits)
     
     uint8_t testData[8] = {0};
-    setSignalValue(testData, 34, 4, 1); // TrnPrkSys_D_Actl = PARK (1)
+    setSignalValue(testData, 31, 4, 1); // TrnPrkSys_D_Actl = PARK (1)
     
     CANFrame frame = createCANFrame(POWERTRAIN_DATA_10_ID, testData);
     PowertrainData result = parsePowertrainFrame(&frame);
@@ -304,7 +304,7 @@ TEST_F(MessageParserTest, PowertrainDataPythonValueMapping) {
     
     for (const auto& testCase : testCases) {
         uint8_t testData[8] = {0};
-        setSignalValue(testData, 34, 4, testCase.rawValue);
+        setSignalValue(testData, 31, 4, testCase.rawValue);
         
         CANFrame frame = createCANFrame(POWERTRAIN_DATA_10_ID, testData);
         PowertrainData result = parsePowertrainFrame(&frame);
@@ -313,7 +313,7 @@ TEST_F(MessageParserTest, PowertrainDataPythonValueMapping) {
         EXPECT_EQ(result.transmissionParkStatus, testCase.expectedConstant) << "Value mismatch for " << testCase.description;
         
         // Verify our bit extraction matches Python implementation
-        uint32_t pythonValue = pythonExtractBits(testData, 34, 4);
+        uint32_t pythonValue = pythonExtractBits(testData, 31, 4);
         EXPECT_EQ(pythonValue, testCase.rawValue) << "Python extraction mismatch for " << testCase.description;
     }
 }
@@ -327,7 +327,7 @@ TEST_F(MessageParserTest, BatteryManagementBasicParsing) {
     // Python defines: BSBattSOC (bits 22-28, 7 bits) - Raw percentage value
     
     uint8_t testData[8] = {0};
-    setSignalValue(testData, 28, 7, 85); // Battery SOC = 85%
+    setSignalValue(testData, 22, 7, 85); // Battery SOC = 85%
     
     CANFrame frame = createCANFrame(BATTERY_MGMT_3_FD1_ID, testData);
     BatteryData result = parseBatteryFrame(&frame);
@@ -354,7 +354,7 @@ TEST_F(MessageParserTest, BatteryManagementRangeValues) {
     
     for (const auto& testCase : testCases) {
         uint8_t testData[8] = {0};
-        setSignalValue(testData, 28, 7, testCase.rawValue);
+        setSignalValue(testData, 22, 7, testCase.rawValue);
         
         CANFrame frame = createCANFrame(BATTERY_MGMT_3_FD1_ID, testData);
         BatteryData result = parseBatteryFrame(&frame);
@@ -363,7 +363,7 @@ TEST_F(MessageParserTest, BatteryManagementRangeValues) {
         EXPECT_EQ(result.batterySOC, testCase.rawValue) << "Value mismatch for " << testCase.description;
         
         // Verify our bit extraction matches Python implementation
-        uint32_t pythonValue = pythonExtractBits(testData, 28, 7);
+        uint32_t pythonValue = pythonExtractBits(testData, 22, 7);
         EXPECT_EQ(pythonValue, testCase.rawValue) << "Python extraction mismatch for " << testCase.description;
     }
 }
@@ -409,19 +409,19 @@ TEST_F(MessageParserTest, ComprehensiveMessageValidation) {
     
     // Create test messages for all types
     uint8_t bcmData[8] = {0};
-    setSignalValue(bcmData, 12, 2, PUDLAMP_ON);
+    setSignalValue(bcmData, 11, 2, PUDLAMP_ON);
     CANFrame bcmFrame = createCANFrame(BCM_LAMP_STAT_FD1_ID, bcmData);
     
     uint8_t lockData[8] = {0};
-    setSignalValue(lockData, 34, 2, VEH_UNLOCK_ALL); // Corrected bit position
+    setSignalValue(lockData, 34, 2, VEH_UNLOCK_ALL); // Match production bit position
     CANFrame lockFrame = createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, lockData);
     
     uint8_t powerData[8] = {0};
-    setSignalValue(powerData, 34, 4, TRNPRKSTS_PARK);
+    setSignalValue(powerData, 31, 4, TRNPRKSTS_PARK);
     CANFrame powerFrame = createCANFrame(POWERTRAIN_DATA_10_ID, powerData);
     
     uint8_t battData[8] = {0};
-    setSignalValue(battData, 28, 7, 95);
+    setSignalValue(battData, 22, 7, 95);
     CANFrame battFrame = createCANFrame(BATTERY_MGMT_3_FD1_ID, battData);
     
     // Parse all messages

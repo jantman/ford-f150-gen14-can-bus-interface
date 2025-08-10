@@ -11,9 +11,9 @@ BCMLampData parseBCMLampFrame(const CANFrame* frame) {
     }
     
     // Extract signals according to DBC specification (using DBC MSB bit positions)
-    result.pudLampRequest = extractBits(frame->data, 12, 2);  // Bits 11-12 (DBC MSB position 12)
-    result.illuminatedEntryStatus = extractBits(frame->data, 64, 2);  // Bits 63-64 (DBC MSB position 64) 
-    result.drCourtesyLightStatus = extractBits(frame->data, 50, 2);   // Bits 49-50 (DBC MSB position 50)   
+    result.pudLampRequest = extractBits(frame->data, 11, 2);  // Bits 10-11 (DBC start_bit 11, length 2)
+    result.illuminatedEntryStatus = extractBits(frame->data, 63, 2);  // Bits 62-63 (DBC start_bit 63, length 2) 
+    result.drCourtesyLightStatus = extractBits(frame->data, 49, 2);   // Bits 48-49 (DBC start_bit 49, length 2)   
     
     // Basic validation
     result.valid = (result.pudLampRequest <= 3);  // Valid range 0-3
@@ -31,7 +31,7 @@ LockingSystemsData parseLockingSystemsFrame(const CANFrame* frame) {
     
     // Extract signals according to real CAN data analysis (corrected bit position)
     // Based on test analysis: LOCK_ALL=0x02 (byte 4) -> value 1, UNLOCK_ALL=0x05 (byte 4) -> value 2
-    result.vehicleLockStatus = extractBits(frame->data, 34, 2);  // Bits 33-34 (corrected from analysis)
+    result.vehicleLockStatus = extractBits(frame->data, 34, 2);  // Bits 33-34 (original working position)
     
     // Basic validation
     result.valid = (result.vehicleLockStatus <= 3);  // Valid range 0-3
@@ -48,7 +48,7 @@ PowertrainData parsePowertrainFrame(const CANFrame* frame) {
     }
     
     // Extract signals according to DBC specification (using DBC MSB bit positions)
-    result.transmissionParkStatus = extractBits(frame->data, 34, 4);  // Bits 31-34 (DBC MSB position 34)
+    result.transmissionParkStatus = extractBits(frame->data, 31, 4);  // Bits 28-31 (DBC start_bit 31, length 4)
     
     // Basic validation
     result.valid = (result.transmissionParkStatus <= 15);  // Valid range 0-15
@@ -65,7 +65,7 @@ BatteryData parseBatteryFrame(const CANFrame* frame) {
     }
     
     // Extract signals according to DBC specification (using DBC MSB bit positions)
-    result.batterySOC = extractBits(frame->data, 28, 7);  // Bits 22-28 (DBC MSB position 28), 7 bits for 0-127%
+    result.batterySOC = extractBits(frame->data, 22, 7);  // Bits 16-22 (DBC start_bit 22, length 7)
     
     // Basic validation
     result.valid = (result.batterySOC <= 127);  // Valid range 0-127%

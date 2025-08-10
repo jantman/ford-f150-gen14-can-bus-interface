@@ -54,10 +54,10 @@ TEST_F(CANProtocolTest, BitExtractionProduction) {
 
 // Test the ACTUAL BCM lamp parsing function
 TEST_F(CANProtocolTest, BCMLampParsingProduction) {
-    // Create test frame with PudLamp_D_Rq = 2 (RAMP_UP) at bits 11-12
-    // Value 2 = binary 10, so bit 11=0, bit 12=1
-    // Bit 12 is in byte 1, position 4: 0x10
-    CANFrame frame = createFrame(BCM_LAMP_STAT_FD1_ID, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
+    // Create test frame with PudLamp_D_Rq = 2 (RAMP_UP) at start_bit=11, length=2
+    // Value 2 = binary 10, bit_pos = 11-2+1 = 10, so bits 10=0, 11=1
+    // Bit 11 is in byte 1, position 3: 0x08
+    CANFrame frame = createFrame(BCM_LAMP_STAT_FD1_ID, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
     
     BCMLampData result = parseBCMLampFrame(&frame);
     
@@ -82,8 +82,12 @@ TEST_F(CANProtocolTest, LockingSystemsParsingProduction) {
 
 // Test the ACTUAL powertrain parsing function
 TEST_F(CANProtocolTest, PowertrainParsingProduction) {
-    // Create test frame with TrnPrkSys_D_Actl = 1 (Park) at bits 31-34
-    CANFrame frame = createFrame(POWERTRAIN_DATA_10_ID, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00);
+    // Create test frame with TrnPrkSys_D_Actl = 1 (Park) at bits 28-31 (MSB at 31)
+    uint8_t testData[8];
+    setSignalValue(testData, 31, 4, 1);  // Use setSignalValue to get correct bit pattern
+    CANFrame frame = createFrame(POWERTRAIN_DATA_10_ID, 
+                                testData[0], testData[1], testData[2], testData[3],
+                                testData[4], testData[5], testData[6], testData[7]);
     
     PowertrainData result = parsePowertrainFrame(&frame);
     
@@ -123,9 +127,9 @@ TEST_F(CANProtocolTest, EndToEndScenarioProduction) {
     uint8_t bcmData[8], lockData[8], parkData[8];
     
     // Create proper test data using signal setting
-    setSignalValue(bcmData, 12, 2, 1);   // PudLamp = 1 (ON) 
-    setSignalValue(lockData, 34, 2, 2);  // Lock = 2 (UNLOCK_ALL) - corrected bit position
-    setSignalValue(parkData, 34, 4, 1);  // Park = 1 (Park) - matching production code extraction
+    setSignalValue(bcmData, 11, 2, 1);   // PudLamp = 1 (ON) - corrected bit position
+    setSignalValue(lockData, 34, 2, 2);  // Lock = 2 (UNLOCK_ALL) - match production bit position
+    setSignalValue(parkData, 31, 4, 1);  // Park = 1 (Park) - corrected bit position
     
     CANFrame bcmFrame = createFrame(BCM_LAMP_STAT_FD1_ID, 
                                    bcmData[0], bcmData[1], bcmData[2], bcmData[3],
@@ -181,7 +185,11 @@ TEST_F(CANProtocolTest, DetectProductionCodeChanges) {
     // If someone changes bit positions in production code, these tests WILL FAIL
     // This ensures our tests actually reflect the production implementation
     
-    CANFrame testFrame = createFrame(BCM_LAMP_STAT_FD1_ID, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
+    uint8_t testData[8];
+    setSignalValue(testData, 11, 2, 2);  // PudLamp = 2 (RAMP_UP) at correct bit position
+    CANFrame testFrame = createFrame(BCM_LAMP_STAT_FD1_ID, 
+                                    testData[0], testData[1], testData[2], testData[3],
+                                    testData[4], testData[5], testData[6], testData[7]);
     BCMLampData result = parseBCMLampFrame(&testFrame);
     
     // Based on current bit positions (11-12) in production code

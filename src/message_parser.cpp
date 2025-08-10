@@ -9,9 +9,9 @@ bool parseBCMLampStatus(const CANMessage& message, BCMLampStatus& status) {
     }
     
     // Extract signals according to real CAN data analysis (FINAL CORRECTED bit positions)
-    status.pudLampRequest = extractBits(message.data, 10, 2);           // Bits 10-11, 2 bits (VALIDATED: 1,2,3 perfect match)
-    status.illuminatedEntryStatus = extractBits(message.data, 63, 1);   // Bit 63, 1 bit (placeholder - needs analysis)
-    status.drCourtesyLightStatus = extractBits(message.data, 49, 1);    // Bit 49, 1 bit (placeholder - needs analysis)
+    status.pudLampRequest = extractBits(message.data, 11, 2);           // Bits 10-11, 2 bits (start_bit=11, length=2 per Python)
+    status.illuminatedEntryStatus = extractBits(message.data, 63, 2);   // Bits 62-63, 2 bits (start_bit=63, length=2 per Python)
+    status.drCourtesyLightStatus = extractBits(message.data, 49, 2);    // Bits 48-49, 2 bits (start_bit=49, length=2 per Python)
     
     status.valid = true;
     status.timestamp = message.timestamp;
@@ -31,7 +31,7 @@ bool parseLockingSystemsStatus(const CANMessage& message, LockingSystemsStatus& 
     }
     
     // Extract vehicle lock status signal (corrected bit position based on real CAN data analysis)
-    status.vehicleLockStatus = extractBits(message.data, 34, 2);  // Bits 33-34 (corrected from analysis)
+    status.vehicleLockStatus = extractBits(message.data, 34, 2);  // Bits 33-34 (original working position)
     
     status.valid = true;
     status.timestamp = message.timestamp;
@@ -50,7 +50,7 @@ bool parsePowertrainData(const CANMessage& message, PowertrainData& data) {
     }
     
     // Extract transmission park system status (corrected bit position based on test analysis)
-    data.transmissionParkStatus = extractBits(message.data, 28, 1);  // Bit 28, 1 bit (corrected from test analysis)
+    data.transmissionParkStatus = extractBits(message.data, 31, 4);  // Bits 28-31, 4 bits (start_bit=31, length=4 per Python)
     
     data.valid = true;
     data.timestamp = message.timestamp;
@@ -69,7 +69,7 @@ bool parseBatteryManagement(const CANMessage& message, BatteryManagement& data) 
     }
     
     // Extract battery state of charge (FINAL CORRECTED bit position - VALIDATED)
-    data.batterySOC = extractBits(message.data, 16, 8);  // Bits 16-23 (byte 2), 8 bits (VALIDATED: 65,66 perfect match)
+    data.batterySOC = extractBits(message.data, 22, 7);  // Bits 16-22, 7 bits (start_bit=22, length=7 per Python)
     
     data.valid = true;
     data.timestamp = message.timestamp;
