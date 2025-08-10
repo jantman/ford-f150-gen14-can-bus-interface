@@ -173,3 +173,7 @@ connections:
     - GX26-8-male: [1-7]
     - GX26-8-truck: [1-7]
     - blunt.
+
+tweak:
+  append: |-
+    graph [bgcolor=white fontname=arial label=<<table border="0" cellspacing="0" cellpadding="3" cellborder="1"><tr><td>github.com/jantman/ford-f150-gen14-can-bus-interface</td><td>enclosure_wiring.yml</td><td>Revised 2025-08-10</td></tr></table>>]

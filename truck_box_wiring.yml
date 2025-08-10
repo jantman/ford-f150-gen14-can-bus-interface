@@ -233,3 +233,7 @@ connections:
   -
     - ground.
     - Enclosure-Gland-B: [7]
+
+tweak:
+  append: |-
+    graph [bgcolor=white fontname=arial label=<<table border="0" cellspacing="0" cellpadding="3" cellborder="1"><tr><td>github.com/jantman/ford-f150-gen14-can-bus-interface</td><td>truck_box_wiring.yml</td><td>Revised 2025-08-10</td></tr></table>>]
