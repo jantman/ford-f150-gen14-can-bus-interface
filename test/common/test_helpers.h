@@ -3,6 +3,11 @@
 #include <gtest/gtest.h>
 #include "../mocks/mock_arduino.h"
 
+// Include production bit utilities
+extern "C" {
+    #include "../../src/bit_utils.h"
+}
+
 // Test helper class for Arduino mock setup/teardown
 class ArduinoTest : public ::testing::Test {
 protected:
@@ -51,28 +56,7 @@ protected:
 // Bit manipulation helpers for creating test CAN data using DBC-style positioning
 // startBit: MSB bit position (DBC format), length: number of bits
 // Uses Intel (little-endian) byte order as specified in DBC (@0+)
-inline void setBits(uint8_t* data, int startBit, int length, uint32_t value) {
-    // Convert existing data to 64-bit integer (little-endian)
-    uint64_t dataValue = 0;
-    for (int i = 0; i < 8; i++) {
-        dataValue |= ((uint64_t)data[i]) << (i * 8);
-    }
-    
-    // Calculate bit position (DBC uses MSB bit numbering)
-    int bitPos = startBit - length + 1;
-    
-    // Clear the target bits
-    uint64_t mask = ((1ULL << length) - 1) << bitPos;
-    dataValue &= ~mask;
-    
-    // Set the new value at the correct bit position
-    dataValue |= ((uint64_t)value) << bitPos;
-    
-    // Convert back to byte array (little-endian)
-    for (int i = 0; i < 8; i++) {
-        data[i] = (dataValue >> (i * 8)) & 0xFF;
-    }
-}
+// Note: Now using production setBits function from bit_utils.h
 
 // Helper to create BCM_Lamp_Stat_FD1 test message
 inline void createBCMLampMessage(uint8_t* data, uint32_t pudLampValue) {
