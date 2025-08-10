@@ -313,7 +313,7 @@ TEST_F(ArduinoTest, StateUpdateBCMLampStatus) {
         testState.prevPudLampRequest = testState.pudLampRequest;
         testState.pudLampRequest = lampStatus.pudLampRequest;
         testState.lastBCMLampUpdate = lampStatus.timestamp;
-        testState.bedlightShouldBeOn = (lampStatus.pudLampRequest == 1 || lampStatus.pudLampRequest == 2); // ON or RAMP_UP
+        testState.bedlightShouldBeOn = shouldEnableBedlight(lampStatus.pudLampRequest);
     }
     
     // Verify state was updated correctly
@@ -368,7 +368,7 @@ TEST_F(ArduinoTest, StateUpdateLockingStatus) {
         testState.prevVehicleLockStatus = testState.vehicleLockStatus;
         testState.vehicleLockStatus = lockStatus.vehicleLockStatus;
         testState.lastLockingSystemsUpdate = lockStatus.timestamp;
-        testState.isUnlocked = (lockStatus.vehicleLockStatus == 2 || lockStatus.vehicleLockStatus == 3); // UNLOCK_ALL or UNLOCK_DRV
+        testState.isUnlocked = isVehicleUnlocked(lockStatus.vehicleLockStatus);
     }
     
     // Verify unlock state
@@ -385,7 +385,7 @@ TEST_F(ArduinoTest, StateUpdateLockingStatus) {
         testState.prevVehicleLockStatus = testState.vehicleLockStatus;
         testState.vehicleLockStatus = lockStatus.vehicleLockStatus;
         testState.lastLockingSystemsUpdate = lockStatus.timestamp;
-        testState.isUnlocked = (lockStatus.vehicleLockStatus == 2 || lockStatus.vehicleLockStatus == 3);
+        testState.isUnlocked = isVehicleUnlocked(lockStatus.vehicleLockStatus);
     }
     
     // Verify locked state
@@ -438,7 +438,7 @@ TEST_F(ArduinoTest, StateUpdatePowertrainStatus) {
         testState.prevTransmissionParkStatus = testState.transmissionParkStatus;
         testState.transmissionParkStatus = powertrainData.transmissionParkStatus;
         testState.lastPowertrainUpdate = powertrainData.timestamp;
-        testState.isParked = (powertrainData.transmissionParkStatus == 1); // TRNPRKSTS_PARK
+        testState.isParked = isVehicleParked(powertrainData.transmissionParkStatus);
     }
     
     // Verify parked state
@@ -480,9 +480,9 @@ TEST_F(ArduinoTest, ToolboxActivationLogic) {
     testState.lastPowertrainUpdate = 4000;
     
     // Simulate shouldActivateToolbox logic (timeout check is in systemReady)
-    bool shouldActivate = testState.systemReady && 
-                         testState.isParked && 
-                         testState.isUnlocked;
+    bool shouldActivate = shouldActivateToolbox(testState.systemReady, 
+                                               testState.isParked, 
+                                               testState.isUnlocked);
     
     EXPECT_FALSE(shouldActivate);
     
@@ -490,9 +490,9 @@ TEST_F(ArduinoTest, ToolboxActivationLogic) {
     testState.isParked = true;
     testState.isUnlocked = false;
     
-    shouldActivate = testState.systemReady && 
-                    testState.isParked && 
-                    testState.isUnlocked;
+    shouldActivate = shouldActivateToolbox(testState.systemReady, 
+                                          testState.isParked, 
+                                          testState.isUnlocked);
     
     EXPECT_FALSE(shouldActivate);
     
@@ -500,9 +500,9 @@ TEST_F(ArduinoTest, ToolboxActivationLogic) {
     testState.isParked = false;
     testState.isUnlocked = true;
     
-    shouldActivate = testState.systemReady && 
-                    testState.isParked && 
-                    testState.isUnlocked;
+    shouldActivate = shouldActivateToolbox(testState.systemReady, 
+                                          testState.isParked, 
+                                          testState.isUnlocked);
     
     EXPECT_FALSE(shouldActivate);
     
@@ -510,18 +510,18 @@ TEST_F(ArduinoTest, ToolboxActivationLogic) {
     testState.isParked = true;
     testState.isUnlocked = true;
     
-    shouldActivate = testState.systemReady && 
-                    testState.isParked && 
-                    testState.isUnlocked;
+    shouldActivate = shouldActivateToolbox(testState.systemReady, 
+                                          testState.isParked, 
+                                          testState.isUnlocked);
     
     EXPECT_TRUE(shouldActivate);
     
     // Test case 5: Conditions met but system not ready (stale data) - should NOT activate
     testState.systemReady = false;  // System not ready due to stale data
     
-    shouldActivate = testState.systemReady && 
-                    testState.isParked && 
-                    testState.isUnlocked;
+    shouldActivate = shouldActivateToolbox(testState.systemReady, 
+                                          testState.isParked, 
+                                          testState.isUnlocked);
     
     EXPECT_FALSE(shouldActivate);
 }
