@@ -1,0 +1,478 @@
+# DRY Up Code Analysis - Duplicate Functions Removal
+
+**Date:** August 10, 2025  
+**Analysis Scope:** Identification and resolution of duplicate functions between production (`src/`) and test (`test/`) code
+
+## Executive Summary
+
+During code review, multiple instances of duplicate functions were identified where the same functionality exists in both production code and test code. This violates the DRY (Don't Repeat Yourself) principle and creates maintenance overhead where changes to production logic need to be manually synchronized with test implementations.
+
+This document provides a comprehensive analysis of all identified duplicates and actionable recommendations for consolidation.
+
+## Identified Duplicate Functions
+
+### 1. **`setBits` Function** - HIGH PRIORITY
+
+**Issue:** Complete duplication of bit manipulation logic
+
+**Production Version:** `/src/bit_utils.c`
+```c
+void setBits(uint8_t* data, uint8_t startBit, uint8_t length, uint32_t value) {
+    if (length > 16 || startBit > 63) return; // Bounds check
+    
+    // Convert existing data to 64-bit integer (little-endian)
+    uint64_t dataValue = 0;
+    for (int i = 0; i < 8; i++) {
+        dataValue |= ((uint64_t)data[i]) << (i * 8);
+    }
+    
+    // Calculate bit position (DBC uses MSB bit numbering)
+    uint8_t bitPos = startBit - length + 1;
+    
+    // Clear the target bits
+    uint64_t mask = ((1ULL << length) - 1) << bitPos;
+    dataValue &= ~mask;
+    
+    // Set the new value at the correct bit position
+    dataValue |= ((uint64_t)value) << bitPos;
+    
+    // Convert back to byte array (little-endian)
+    for (int i = 0; i < 8; i++) {
+        data[i] = (dataValue >> (i * 8)) & 0xFF;
+    }
+}
+```
+
+**Test Version:** `/test/common/test_helpers.h`
+```cpp
+inline void setBits(uint8_t* data, int startBit, int length, uint32_t value) {
+    // Convert existing data to 64-bit integer (little-endian)
+    uint64_t dataValue = 0;
+    for (int i = 0; i < 8; i++) {
+        dataValue |= ((uint64_t)data[i]) << (i * 8);
+    }
+    
+    // Calculate bit position (DBC uses MSB bit numbering)
+    int bitPos = startBit - length + 1;
+    
+    // Clear the target bits
+    uint64_t mask = ((1ULL << length) - 1) << bitPos;
+    dataValue &= ~mask;
+    
+    // Set the new value at the correct bit position
+    dataValue |= ((uint64_t)value) << bitPos;
+    
+    // Convert back to byte array (little-endian)
+    for (int i = 0; i < 8; i++) {
+        data[i] = (dataValue >> (i * 8)) & 0xFF;
+    }
+}
+```
+
+**Analysis:** Nearly identical implementations. The test version uses `int` parameters while production uses `uint8_t`, but the core logic is exactly the same.
+
+**Impact:** Any changes to bit manipulation logic must be made in two places.
+
+### 2. **GPIO Control Functions** - HIGH PRIORITY
+
+**Issue:** Complete duplication of GPIO control interface
+
+**Production Versions:** `/src/gpio_controller.cpp`
+- `bool initializeGPIO()`
+- `void setBedlight(bool state)`
+- `void setParkedLED(bool state)`
+- `void setUnlockedLED(bool state)`
+- `void setSystemReady(bool state)`
+- `void setToolboxOpener(bool state)`
+- `bool readToolboxButton()`
+- `void updateToolboxOpenerTiming()`
+- `GPIOState getGPIOState()`
+
+**Test Versions:** `/test/native/test_output_control/test_output_decisions.cpp`
+
+Example comparison:
+
+**Production:**
+```cpp
+void setBedlight(bool state) {
+    if (gpioState.bedlight != state) {
+        gpioState.bedlight = state;
+        digitalWrite(BEDLIGHT_PIN, state ? HIGH : LOW);
+        LOG_INFO("Bedlight changed to: %s", state ? "ON" : "OFF");
+    }
+}
+```
+
+**Test:**
+```cpp
+void setBedlight(bool state) {
+    if (!gpioInitialized) return;
+    
+    if (gpioState.bedlight != state) {
+        gpioState.bedlight = state;
+        ArduinoMock::instance().setDigitalWrite(BEDLIGHT_PIN, state ? HIGH : LOW);
+    }
+}
+```
+
+**Analysis:** Complete duplication where test versions replicate exact behavior but use `ArduinoMock` instead of real Arduino functions. The test implementations maintain the same state management logic, timing behavior, and GPIO pin control patterns.
+
+**Impact:** 
+- All GPIO logic changes must be made in two places
+- Risk of test and production behavior diverging
+- Test complexity is unnecessarily high
+
+### 3. **Bit Extraction Helper Functions** - MEDIUM PRIORITY
+
+**Issue:** Multiple reimplementations of the same bit extraction logic
+
+**Production Version:** `extractBits()` in `/src/bit_utils.c`
+
+**Test Duplicates:**
+- `pythonExtractSignalValue()` in `/test/test_can_bit_extraction.cpp`
+- `pythonExtractBits()` in `/test/test_message_parser.cpp`
+- `setBitPattern()` in `/test/test_can_bit_extraction.cpp`
+- `setSignalValue()` in multiple test files
+
+**Example Comparison:**
+
+**Production (`extractBits`):**
+```c
+uint8_t extractBits(const uint8_t* data, uint8_t startBit, uint8_t length) {
+    if (length > 8 || startBit > 63) return 0; // Bounds check
+    
+    // Convert 8 bytes to 64-bit integer (little-endian)
+    uint64_t data_int = 0;
+    for (int i = 0; i < 8; i++) {
+        data_int |= ((uint64_t)data[i]) << (i * 8);
+    }
+    
+    // Calculate bit position from MSB (DBC uses MSB bit numbering)
+    uint8_t bit_pos = startBit - length + 1;
+    
+    // Create mask and extract value
+    uint64_t mask = (1ULL << length) - 1;
+    uint8_t value = (data_int >> bit_pos) & mask;
+    
+    return value;
+}
+```
+
+**Test (`pythonExtractSignalValue`):**
+```cpp
+uint32_t pythonExtractSignalValue(const uint8_t data[8], uint8_t startBit, uint8_t length) {
+    // Convert 8 bytes to 64-bit integer (little-endian)
+    uint64_t dataInt = 0;
+    for (int i = 0; i < 8; i++) {
+        dataInt |= ((uint64_t)data[i]) << (i * 8);
+    }
+    
+    // Calculate bit position from MSB (DBC uses MSB bit numbering)
+    uint8_t bitPos = startBit - length + 1;
+    
+    // Create mask and extract value
+    uint64_t mask = (1ULL << length) - 1;
+    uint32_t value = (dataInt >> bitPos) & mask;
+    
+    return value;
+}
+```
+
+**Analysis:** Identical DBC bit extraction logic implemented multiple times with slightly different return types and naming conventions.
+
+**Impact:** 
+- Bit manipulation bugs could be fixed in production but remain in tests
+- Tests may not accurately reflect production behavior
+
+### 4. **CAN Frame Parsing Functions** - HIGH PRIORITY
+
+**Issue:** Complete duplication of CAN frame creation and message parsing helper functions
+
+**Production Versions:** `src/can_protocol.c` and `src/message_parser.cpp`
+- `parseBCMLampFrame()` - Production parsing logic
+- `parseLockingSystemsFrame()` - Production parsing logic  
+- `parsePowertrainFrame()` - Production parsing logic
+- `parseBatteryFrame()` - Production parsing logic
+
+**Test Duplicates:** Found across multiple test files
+- `createCANFrame()` helper function duplicated in multiple test classes
+- `setSignalValue()` / `setBitPattern()` duplicated signal setting functions
+- `pythonExtractBits()` / `pythonExtractSignalValue()` duplicated extraction functions
+
+**Example Comparison:**
+
+**Production Message Parsing (`src/can_protocol.c`):**
+```c
+BCMLampData parseBCMLampFrame(const CANFrame* frame) {
+    BCMLampData result = {0};
+    
+    if (!frame || frame->id != BCM_LAMP_STAT_FD1_ID || frame->length != 8) {
+        result.valid = false;
+        return result;
+    }
+    
+    result.pudLampRequest = extractBits(frame->data, 11, 2);
+    result.illuminatedEntryStatus = extractBits(frame->data, 63, 2);
+    result.drCourtesyLightStatus = extractBits(frame->data, 49, 2);
+    
+    result.valid = (result.pudLampRequest <= 3);
+    return result;
+}
+```
+
+**Test Helper Functions (duplicated across test files):**
+```cpp
+// From test_message_parser.cpp
+CANFrame createCANFrame(uint32_t id, const uint8_t data[8]) {
+    CANFrame frame;
+    frame.id = id;
+    frame.length = 8;
+    memcpy(frame.data, data, 8);
+    return frame;
+}
+
+// From test_can_bit_extraction.cpp  
+void setBitPattern(uint8_t data[8], uint8_t startBit, uint8_t length, uint32_t value) {
+    memset(data, 0, 8);
+    uint64_t dataValue = 0;
+    uint8_t bitPos = startBit - length + 1;
+    dataValue |= ((uint64_t)value) << bitPos;
+    for (int i = 0; i < 8; i++) {
+        data[i] = (dataValue >> (i * 8)) & 0xFF;
+    }
+}
+
+// From multiple test files
+uint32_t pythonExtractSignalValue(const uint8_t data[8], uint8_t startBit, uint8_t length) {
+    uint64_t dataInt = 0;
+    for (int i = 0; i < 8; i++) {
+        dataInt |= ((uint64_t)data[i]) << (i * 8);
+    }
+    uint8_t bitPos = startBit - length + 1;
+    uint64_t mask = (1ULL << length) - 1;
+    uint32_t value = (dataInt >> bitPos) & mask;
+    return value;
+}
+```
+
+**Analysis:** Multiple test files duplicate the exact same CAN frame creation, signal setting, and bit extraction helper functions. Each test class reimplements identical frame parsing helpers instead of using shared utilities.
+
+**Files with Duplicates:**
+- `test/test_message_parser.cpp` - `createCANFrame()`, `setSignalValue()`, `pythonExtractBits()`
+- `test/test_can_bit_extraction.cpp` - `setBitPattern()`, `pythonExtractSignalValue()`  
+- `test/test_can_protocol_integration.cpp` - `createFrame()`, `setSignalValue()`
+- `test/test_locking_system_data.cpp` - `createCANFrame()`
+- `test/test_can_data_validation.cpp` - Frame creation helpers
+
+**Impact:**
+- **18+ duplicate helper functions** across test files
+- Changes to frame format require updates in multiple places
+- Inconsistent helper function implementations
+- Test maintenance complexity significantly increased
+
+### 5. **Vehicle State Decision Logic** - MEDIUM PRIORITY
+
+**Issue:** Manual reimplementation of decision logic in tests
+
+**Production Functions:** `/src/can_protocol.c`
+- `bool shouldActivateToolbox(bool systemReady, bool isParked, bool isUnlocked)`
+- `bool shouldEnableBedlight(uint8_t pudLampRequest)`
+- `bool isVehicleUnlocked(uint8_t vehicleLockStatus)`
+- `bool isVehicleParked(uint8_t transmissionParkStatus)`
+
+**Test Duplicates:** Found in `/test/test_main.cpp` and other test files
+
+**Example:**
+
+**Production:**
+```c
+bool shouldActivateToolbox(bool systemReady, bool isParked, bool isUnlocked) {
+    return systemReady && isParked && isUnlocked;
+}
+```
+
+**Test (inline logic):**
+```cpp
+// From test_main.cpp
+bool shouldActivate = testState.systemReady && 
+                     testState.isParked && 
+                     testState.isUnlocked;
+```
+
+**Analysis:** Tests reimplement the same decision logic inline instead of calling the production functions, creating risk of logic divergence.
+
+## Risk Assessment
+
+| Function Category | Risk Level | Maintenance Impact | Test Accuracy Risk |
+|------------------|------------|-------------------|-------------------|
+| `setBits` | HIGH | Changes need dual maintenance | High - core functionality |
+| GPIO Functions | HIGH | 9 functions × 2 = 18 functions to maintain | High - hardware interface behavior |
+| CAN Frame Parsing | **HIGH** | 18+ helper functions duplicated | High - frame parsing accuracy |
+| Bit Extraction | MEDIUM | Multiple test implementations | Medium - signal parsing accuracy |
+| Decision Logic | MEDIUM | Logic scattered across test files | Medium - business logic validation |
+| **TOTAL** | | **41+ duplicate functions** | | |
+
+## Recommendations
+
+### 1. **Consolidate `setBits` Function** - IMMEDIATE ACTION
+
+**Action:** Remove duplicate from `test/common/test_helpers.h` and use production version
+
+**Steps:**
+1. Update all test files to include `../src/bit_utils.h`
+2. Remove the duplicate `setBits` implementation from `test_helpers.h`
+3. Update test compilation to link with `bit_utils.c`
+
+**Files to Update:**
+- `test/common/test_helpers.h` - Remove duplicate function
+- All test files using `setBits` - Add proper include
+- Test build configuration - Ensure linking with production code
+
+### 2. **Refactor GPIO Test Functions** - HIGH PRIORITY
+
+**Strategy:** Implement dependency injection pattern
+
+**Recommended Approach:**
+```cpp
+// Create abstract interface
+class ArduinoInterface {
+public:
+    virtual void digitalWrite(uint8_t pin, uint8_t value) = 0;
+    virtual uint8_t digitalRead(uint8_t pin) = 0;
+    virtual void pinMode(uint8_t pin, uint8_t mode) = 0;
+    virtual unsigned long millis() = 0;
+};
+
+// Production implementation
+class ArduinoHardware : public ArduinoInterface {
+    // Uses real Arduino functions
+};
+
+// Test implementation  
+class ArduinoMock : public ArduinoInterface {
+    // Uses mock functions
+};
+
+// Modify gpio_controller to accept interface
+void initializeGPIO(ArduinoInterface* arduino);
+```
+
+**Benefits:**
+- Single implementation of GPIO logic
+- Tests use same code path as production
+- Easy to swap between real hardware and mocks
+
+### 3. **Consolidate CAN Frame Parsing Helpers** - HIGH PRIORITY
+
+**Strategy:** Create shared test utility library
+
+**Recommended Approach:**
+```cpp
+// Create test/common/can_test_utils.h
+class CANTestUtils {
+public:
+    // Shared frame creation
+    static CANFrame createCANFrame(uint32_t id, const uint8_t data[8]);
+    
+    // Shared signal setting (uses production setBits)
+    static void setSignalValue(uint8_t data[8], uint8_t startBit, uint8_t length, uint32_t value);
+    
+    // Remove pythonExtractSignalValue - use production extractBits instead
+};
+```
+
+**Actions:**
+1. Create unified `test/common/can_test_utils.h` with shared helpers
+2. Remove duplicate `createCANFrame()` from all test classes
+3. Remove duplicate `setBitPattern()` and `setSignalValue()` functions
+4. Remove duplicate `pythonExtractSignalValue()` functions
+5. Update all test files to use shared utilities
+
+**Files to Update:**
+- `test/test_message_parser.cpp` - Remove duplicate helpers
+- `test/test_can_bit_extraction.cpp` - Remove duplicate helpers
+- `test/test_can_protocol_integration.cpp` - Remove duplicate helpers
+- `test/test_locking_system_data.cpp` - Remove duplicate helpers
+- `test/test_can_data_validation.cpp` - Remove duplicate helpers
+
+**Benefits:**
+- Single implementation of CAN test utilities
+- Consistent frame creation across all tests
+- Easier maintenance when CAN frame format changes
+- Reduced test code duplication by ~18 functions
+
+### 4. **Eliminate Redundant Bit Extraction Functions** - MEDIUM PRIORITY
+
+**Action:** Replace all custom test bit extraction with production `extractBits`
+
+**Functions to Remove:**
+- `pythonExtractSignalValue()` - Replace with `extractBits()`
+- `pythonExtractBits()` - Replace with `extractBits()`
+- `setBitPattern()` - Replace with `setBits()`
+- Custom `setSignalValue()` implementations - Replace with `setBits()`
+
+**Verification:** Ensure all tests still pass after replacement to confirm behavior equivalence
+
+### 5. **Use Production Decision Logic** - MEDIUM PRIORITY
+
+**Action:** Update tests to call production decision functions directly
+
+**Example Refactor:**
+```cpp
+// Before (in test)
+bool shouldActivate = testState.systemReady && 
+                     testState.isParked && 
+                     testState.isUnlocked;
+
+// After (in test)
+bool shouldActivate = shouldActivateToolbox(testState.systemReady, 
+                                           testState.isParked, 
+                                           testState.isUnlocked);
+```
+
+## Implementation Plan
+
+### Phase 1: Critical Duplicates (Week 1)
+1. **`setBits` consolidation** - Remove test duplicate
+2. **GPIO function analysis** - Design dependency injection approach
+3. **Verification** - Ensure all tests pass after `setBits` changes
+
+### Phase 2: CAN Frame Parsing Consolidation (Week 2)
+1. **Create shared test utilities** - Unified `can_test_utils.h` library
+2. **Remove duplicate helpers** - Eliminate 18+ duplicate functions
+3. **Update all test files** - Use shared utilities
+4. **Verification** - Ensure all CAN parsing tests pass
+
+### Phase 3: GPIO Refactoring (Week 3)
+1. **Interface design** - Create `ArduinoInterface` abstraction
+2. **Production refactor** - Modify `gpio_controller` to use interface
+3. **Test update** - Remove duplicate GPIO implementations
+4. **Integration testing** - Verify hardware and test behavior
+
+### Phase 4: Final Cleanup (Week 4)
+1. **Bit extraction cleanup** - Replace test helpers with production functions
+2. **Decision logic consolidation** - Update tests to use production functions
+3. **Documentation update** - Update test documentation
+4. **Final verification** - Full test suite validation
+
+## Verification Criteria
+
+- [ ] All tests pass after each phase
+- [ ] Production behavior unchanged
+- [ ] Test coverage maintained or improved
+- [ ] Reduced code duplication metrics
+- [ ] Simplified test maintenance
+
+## Long-term Benefits
+
+1. **Reduced Maintenance Overhead:** Single point of truth for core functionality
+2. **Improved Test Accuracy:** Tests use same code path as production
+3. **Faster Development:** Changes only need to be made once
+4. **Better Refactoring Safety:** IDE can find all usages of functions
+5. **Clearer Code Architecture:** Separation of concerns between logic and mocking
+
+## Conclusion
+
+The identified duplicates represent significant technical debt that increases maintenance overhead and creates risk of production/test behavior divergence. The recommended consolidation approach will eliminate this debt while maintaining comprehensive test coverage and improving overall code quality.
+
+Priority should be given to the `setBits` and GPIO function duplicates as they represent the highest risk and maintenance impact.
