@@ -202,15 +202,13 @@ TEST_F(ArduinoTest, SystemIntegrationBasics) {
     ArduinoMock::instance().setDigitalWrite(BEDLIGHT_PIN, HIGH);
     advanceTime(100);
     
-    // Simulate LED control
-    ArduinoMock::instance().setDigitalWrite(PARKED_LED_PIN, HIGH);
-    ArduinoMock::instance().setDigitalWrite(UNLOCKED_LED_PIN, HIGH);
+    // Simulate system ready control
+    ArduinoMock::instance().setDigitalWrite(SYSTEM_READY_PIN, HIGH);
     advanceTime(200);
     
     // Verify states
     EXPECT_TRUE(isGPIOHigh(BEDLIGHT_PIN));
-    EXPECT_TRUE(isGPIOHigh(PARKED_LED_PIN));
-    EXPECT_TRUE(isGPIOHigh(UNLOCKED_LED_PIN));
+    EXPECT_TRUE(isGPIOHigh(SYSTEM_READY_PIN));
     EXPECT_EQ(millis(), 2300);
 }
 

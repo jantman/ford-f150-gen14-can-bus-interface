@@ -14,8 +14,6 @@
 
 // Mock GPIO pins - use same values as config.h
 #define BEDLIGHT_PIN 5
-#define PARKED_LED_PIN 16
-#define UNLOCKED_LED_PIN 15
 #define TOOLBOX_OPENER_PIN 4
 #define TOOLBOX_BUTTON_PIN 17
 #define SYSTEM_READY_PIN 18

@@ -24,7 +24,6 @@ This project implements a Ford F150 Gen14 CAN bus interface using Arduino Framew
 * Monitors CAN bus messages for bed lights, door locks, transmission park status, and battery state
 * Controls bed light relay based on vehicle puddle lamp status with manual override capability
 * Manual bed light control via double-click button (independent of CAN bus signals)
-* Controls status LEDs for vehicle lock and park status
 * Provides secure toolbox unlock functionality (only when vehicle is unlocked and in park)
 * Comprehensive logging and error handling
 * Modular, maintainable code architecture
@@ -99,10 +98,13 @@ Before flashing, you may want to adjust the pin assignments in `src/config.h`:
 
 ```cpp
 #define BEDLIGHT_PIN 5          // Output: Controls bed light relay
-#define PARKED_LED_PIN 16       // Output: LED indicating vehicle is parked  
-#define UNLOCKED_LED_PIN 15     // Output: LED indicating vehicle is unlocked
 #define TOOLBOX_OPENER_PIN 4    // Output: Controls toolbox opener relay
 #define TOOLBOX_BUTTON_PIN 17   // Input: Toolbox unlock button
+#define SYSTEM_READY_PIN 18     // Output: System ready indicator
+
+// Available for future use (previously LED indicators):
+// GPIO15 - Available (was UNLOCKED_LED_PIN)
+// GPIO16 - Available (was PARKED_LED_PIN)
 ```
 
 #### Troubleshooting

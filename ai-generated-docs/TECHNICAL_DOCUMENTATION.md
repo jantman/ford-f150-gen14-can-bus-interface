@@ -69,8 +69,7 @@ The MCP2515 controller supports hardware-level message filtering which is enable
 |-------|-----------|--------|---------|-------------|
 | Veh_Lock_Status | 34 | 2 bits | 0=DBL_LOCK, 1=LOCK_ALL, 2=UNLOCK_ALL, 3=UNLOCK_DRV | Vehicle lock status |
 
-**Usage**: Controls unlocked LED and toolbox activation logic
-- Unlocked LED ON when Veh_Lock_Status = 2 (UNLOCK_ALL) or 3 (UNLOCK_DRV)
+**Usage**: Controls toolbox activation logic
 - Required for toolbox activation (must be unlocked)
 
 ### PowertrainData_10 (0x204)
@@ -80,8 +79,7 @@ The MCP2515 controller supports hardware-level message filtering which is enable
 |-------|-----------|--------|---------|-------------|
 | TrnPrkSys_D_Actl | 31 | 4 bits | 0=UNKNOWN, 1=PARK, others=NOT_PARK | Transmission park system status |
 
-**Usage**: Controls parked LED and toolbox activation logic
-- Parked LED ON when TrnPrkSys_D_Actl = 1 (PARK)
+**Usage**: Controls toolbox activation logic
 - Required for toolbox activation (must be parked)
 - **Default Value**: When the `POWERTRAIN_DATA_10` message is not received (e.g., vehicle not running), the system defaults to `TRNPRKSTS_PARK` (1), meaning the vehicle is considered parked until the actual transmission status is received.
 

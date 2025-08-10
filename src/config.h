@@ -8,8 +8,6 @@
 
 // GPIO Pin Definitions
 #define BEDLIGHT_PIN 5          // Output: Controls bed light relay
-#define PARKED_LED_PIN 16       // Output: LED indicating vehicle is parked
-#define UNLOCKED_LED_PIN 15     // Output: LED indicating vehicle is unlocked
 #define TOOLBOX_OPENER_PIN 4    // Output: Controls toolbox opener relay
 #define TOOLBOX_BUTTON_PIN 17   // Input: Toolbox unlock button (with pullup)
 #define SYSTEM_READY_PIN 18     // Output: System ready indicator (relay VCC)

@@ -65,8 +65,6 @@ protected:
         
         // Output control flags
         bool toolboxShouldOpen;
-        bool parkedLEDShouldBeOn;
-        bool unlockedLEDShouldBeOn;
     } vehicleState;
     
     void initializeVehicleState() {
@@ -99,7 +97,6 @@ protected:
         
         // Update derived state - unlocked when UNLOCK_ALL or UNLOCK_DRV
         vehicleState.isUnlocked = (lockStatus == VEH_UNLOCK_ALL || lockStatus == VEH_UNLOCK_DRV);
-        vehicleState.unlockedLEDShouldBeOn = vehicleState.isUnlocked;
     }
     
     // Simulate receiving a Powertrain message
@@ -110,7 +107,6 @@ protected:
         
         // Update derived state - parked when status is PARK
         vehicleState.isParked = (parkStatus == TRNPRKSTS_PARK);
-        vehicleState.parkedLEDShouldBeOn = vehicleState.isParked;
     }
     
     // Simulate receiving a Battery Management message
@@ -188,25 +184,21 @@ TEST_F(VehicleStateTest, VehicleLockSignalInterpretation) {
     updateLockingSystemsStatus(VEH_LOCK_DBL, baseTime);
     EXPECT_EQ(vehicleState.vehicleLockStatus, VEH_LOCK_DBL);
     EXPECT_FALSE(vehicleState.isUnlocked);
-    EXPECT_FALSE(vehicleState.unlockedLEDShouldBeOn);
     
     // Test LOCK_ALL state (Python: {1: "LOCK_ALL"})
     updateLockingSystemsStatus(VEH_LOCK_ALL, baseTime + 100);
     EXPECT_EQ(vehicleState.vehicleLockStatus, VEH_LOCK_ALL);
     EXPECT_FALSE(vehicleState.isUnlocked);
-    EXPECT_FALSE(vehicleState.unlockedLEDShouldBeOn);
     
     // Test UNLOCK_ALL state (Python: {2: "UNLOCK_ALL"})
     updateLockingSystemsStatus(VEH_UNLOCK_ALL, baseTime + 200);
     EXPECT_EQ(vehicleState.vehicleLockStatus, VEH_UNLOCK_ALL);
     EXPECT_TRUE(vehicleState.isUnlocked);
-    EXPECT_TRUE(vehicleState.unlockedLEDShouldBeOn);
     
     // Test UNLOCK_DRV state (Python: {3: "UNLOCK_DRV"})
     updateLockingSystemsStatus(VEH_UNLOCK_DRV, baseTime + 300);
     EXPECT_EQ(vehicleState.vehicleLockStatus, VEH_UNLOCK_DRV);
     EXPECT_TRUE(vehicleState.isUnlocked);
-    EXPECT_TRUE(vehicleState.unlockedLEDShouldBeOn);
 }
 
 TEST_F(VehicleStateTest, TransmissionParkSignalInterpretation) {
@@ -218,24 +210,20 @@ TEST_F(VehicleStateTest, TransmissionParkSignalInterpretation) {
     updatePowertrainStatus(TRNPRKSTS_UNKNOWN, baseTime);
     EXPECT_EQ(vehicleState.transmissionParkStatus, TRNPRKSTS_UNKNOWN);
     EXPECT_FALSE(vehicleState.isParked);
-    EXPECT_FALSE(vehicleState.parkedLEDShouldBeOn);
     
     // Test Park state (Python: {1: "Park"})
     updatePowertrainStatus(TRNPRKSTS_PARK, baseTime + 100);
     EXPECT_EQ(vehicleState.transmissionParkStatus, TRNPRKSTS_PARK);
     EXPECT_TRUE(vehicleState.isParked);
-    EXPECT_TRUE(vehicleState.parkedLEDShouldBeOn);
     
     // Test transition states (should not be considered "parked")
     updatePowertrainStatus(TRNPRKSTS_TRANSITION_CLOSE_TO_PARK, baseTime + 200);
     EXPECT_EQ(vehicleState.transmissionParkStatus, TRNPRKSTS_TRANSITION_CLOSE_TO_PARK);
     EXPECT_FALSE(vehicleState.isParked);
-    EXPECT_FALSE(vehicleState.parkedLEDShouldBeOn);
     
     updatePowertrainStatus(TRNPRKSTS_OUT_OF_PARK, baseTime + 300);
     EXPECT_EQ(vehicleState.transmissionParkStatus, TRNPRKSTS_OUT_OF_PARK);
     EXPECT_FALSE(vehicleState.isParked);
-    EXPECT_FALSE(vehicleState.parkedLEDShouldBeOn);
 }
 
 TEST_F(VehicleStateTest, BatterySOCSignalInterpretation) {

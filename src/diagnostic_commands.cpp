@@ -167,8 +167,6 @@ void cmd_system_info() {
     GPIOState gpioState = getGPIOState();
     LOG_INFO("=== GPIO STATUS ===");
     LOG_INFO("Bedlight: %s", gpioState.bedlight ? "ON" : "OFF");
-    LOG_INFO("Parked LED: %s", gpioState.parkedLED ? "ON" : "OFF");
-    LOG_INFO("Unlocked LED: %s", gpioState.unlockedLED ? "ON" : "OFF");
     LOG_INFO("System Ready: %s", gpioState.systemReady ? "ON" : "OFF");
     LOG_INFO("Toolbox Opener: %s", gpioState.toolboxOpener ? "ACTIVE" : "INACTIVE");
     LOG_INFO("Button State: %s", gpioState.toolboxButton ? "PRESSED" : "RELEASED");
@@ -204,10 +202,8 @@ void cmd_status() {
              vehicleState.transmissionParkStatus, vehicleState.batterySOC);
     
     // GPIO States
-    LOG_INFO("GPIO Outputs: Bed=%s Park=%s Unlock=%s SysReady=%s Toolbox=%s Button=%s",
+    LOG_INFO("GPIO Outputs: Bed=%s SysReady=%s Toolbox=%s Button=%s",
              gpioState.bedlight ? "ON" : "OFF",
-             gpioState.parkedLED ? "ON" : "OFF", 
-             gpioState.unlockedLED ? "ON" : "OFF",
              gpioState.systemReady ? "ON" : "OFF",
              gpioState.toolboxOpener ? "ACTIVE" : "OFF",
              gpioState.toolboxButton ? "PRESSED" : "RELEASED");

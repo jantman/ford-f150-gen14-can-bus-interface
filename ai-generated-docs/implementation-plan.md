@@ -10,10 +10,13 @@ We are implementing a Ford F150 Gen14 CAN bus interface application using Arduin
 - **CAN Controller**: Built-in TWAI (Two-Wire Automotive Interface) controller
 - **GPIO Assignments**:
   - `BEDLIGHT_PIN` - GPIO5
-  - `PARKED_LED_PIN` - GPIO16
-  - `UNLOCKED_LED_PIN` - GPIO15
   - `TOOLBOX_OPENER_PIN` - GPIO4
   - `TOOLBOX_BUTTON_PIN` - GPIO17 (input with pullup)
+  - `SYSTEM_READY_PIN` - GPIO18
+
+- **Available for Future Use** (previously LED indicators removed):
+  - GPIO15 (was `UNLOCKED_LED_PIN`)
+  - GPIO16 (was `PARKED_LED_PIN`)
 
 ## CAN Messages to Monitor
 
@@ -70,9 +73,8 @@ Based on the minimal.dbc file, we need to monitor:
 
 ### Step 7: Output Control Logic
 - Implement bed light control based on PudLamp_D_Rq
-- Implement unlocked LED control based on Veh_Lock_Status
-- Implement parked LED control based on TrnPrkSys_D_Actl
 - Implement toolbox opener logic with timing and conditions
+- Implement system ready indicator control
 
 ### Step 8: Main Loop Integration
 - Integrate all components into main loop

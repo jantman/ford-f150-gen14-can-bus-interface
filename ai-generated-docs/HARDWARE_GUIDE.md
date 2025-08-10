@@ -31,8 +31,6 @@ This guide provides detailed instructions for connecting the ESP32-S3 CAN bus in
 | Breadboard/PCB | 1 | For prototyping connections | Optional for permanent install |
 | Jumper Wires | Various | Male-to-male, male-to-female | As needed |
 | Resistors | 2 | 120Ω termination resistors | Check if needed |
-| LEDs | 2 | Green (parked) and Blue (unlocked) | 5mm standard LEDs |
-| LED Resistors | 2 | 220Ω - 470Ω current limiting | Based on LED specifications |
 | Relay/MOSFET | 1 | For bedlight control | Rated for bedlight current |
 | Relay | 1 | For toolbox opener | 12V coil, appropriate contacts |
 | Button | 1 | Momentary push button | For manual toolbox control |
@@ -48,15 +46,18 @@ This guide provides detailed instructions for connecting the ESP32-S3 CAN bus in
 ```
 ESP32-S3 Pin Assignments:
 ┌─────────────────────────────────────┐
-│  GPIO_2  → Bedlight Control        │
-│  GPIO_4  → Parked LED (Green)      │
-│  GPIO_5  → Unlocked LED (Blue)     │
-│  GPIO_16 → Toolbox Opener Relay    │
+│  GPIO_5  → Bedlight Control        │
+│  GPIO_4  → Toolbox Opener Relay    │
 │  GPIO_17 → Toolbox Button (Input)  │
+│  GPIO_18 → System Ready Indicator  │
 │  GPIO_21 → CAN TX                  │
 │  GPIO_22 → CAN RX                  │
 │  GND     → Common Ground           │
 │  3.3V    → Power Supply            │
+│                                     │
+│  Available for Future Use:         │
+│  GPIO_15 (was Unlocked LED)        │
+│  GPIO_16 (was Parked LED)          │
 └─────────────────────────────────────┘
 ```
 
@@ -96,15 +97,18 @@ Complete System Diagram:
 ┌─────────────────────────────────────────────────────────────────┐
 │                           ESP32-S3                             │
 ├─────────────────────────────────────────────────────────────────┤
-│  GPIO_2  ●─── Relay/MOSFET ──● Bedlight Power                  │
-│  GPIO_4  ●─── 330Ω Resistor ─● Green LED (Parked)             │
-│  GPIO_5  ●─── 330Ω Resistor ─● Blue LED (Unlocked)            │
-│  GPIO_16 ●─── Relay Coil ────● Toolbox Opener                 │
+│  GPIO_5  ●─── Relay/MOSFET ──● Bedlight Power                  │
+│  GPIO_4  ●─── Relay Coil ────● Toolbox Opener                 │
 │  GPIO_17 ●─── Button ─── 10kΩ ── 3.3V (Pullup)               │
+│  GPIO_18 ●─── System Ready Indicator                           │
 │  GPIO_21 ●─── CAN TX                                           │
 │  GPIO_22 ●─── CAN RX                                           │
 │  GND     ●─── Common Ground                                    │
 │  3.3V    ●─── Power Supply                                     │
+│                                                                 │
+│  Available for Future Use:                                     │
+│  GPIO_15 (was Unlocked LED)                                    │
+│  GPIO_16 (was Parked LED)                                      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -178,19 +182,12 @@ Bedlight+ ●────● Relay 87a
 Bedlight- ●────● Ground
 ```
 
-#### LED Indicators
-```
-LED Wiring (each LED):
-ESP32 GPIO ●──[330Ω Resistor]──● LED Anode
-Ground     ●────────────────────● LED Cathode
-```
-
 #### Toolbox Opener
 ```
 Toolbox Relay Wiring:
 12V+ ●──[Fuse]──● Relay 30
      
-ESP32 GPIO_16 ●──● Relay 86
+ESP32 GPIO_4 ●──● Relay 86
 Ground        ●──● Relay 85
 
 Toolbox+ ●────● Relay 87

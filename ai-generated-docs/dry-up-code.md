@@ -80,8 +80,6 @@ inline void setBits(uint8_t* data, int startBit, int length, uint32_t value) {
 **Production Versions:** `/src/gpio_controller.cpp`
 - `bool initializeGPIO()`
 - `void setBedlight(bool state)`
-- `void setParkedLED(bool state)`
-- `void setUnlockedLED(bool state)`
 - `void setSystemReady(bool state)`
 - `void setToolboxOpener(bool state)`
 - `bool readToolboxButton()`

@@ -8,7 +8,6 @@ This ESP32-S3 based device interfaces with your Ford F150 Gen14 CAN bus to provi
 
 - **Automated Bedlight Control**: Automatically turns on/off bedlight based on vehicle PUD lamp status
 - **Smart Toolbox Opener**: Opens toolbox when vehicle is parked and unlocked (with manual button that requires 1000ms hold)
-- **Visual Status Indicators**: LEDs show vehicle locked/unlocked and parked status
 - **Safety Systems**: Built-in watchdog, error recovery, and timeout protections
 - **CAN Bus Monitoring**: Real-time monitoring of Ford F150 CAN messages
 - **Button Control**: Manual toolbox opener with debouncing and hold detection
@@ -33,13 +32,16 @@ The following GPIO pins are used by the application:
 
 | Function | GPIO Pin | Type | Description |
 |----------|----------|------|-------------|
-| Bedlight Control | GPIO_2 | Output | Controls bedlight relay/MOSFET |
-| Parked LED | GPIO_4 | Output | Green LED indicating vehicle is parked |
-| Unlocked LED | GPIO_5 | Output | Blue LED indicating vehicle is unlocked |
-| Toolbox Opener | GPIO_16 | Output | Controls toolbox opener relay (500ms pulse) |
+| Bedlight Control | GPIO_5 | Output | Controls bedlight relay/MOSFET |
+| Toolbox Opener | GPIO_4 | Output | Controls toolbox opener relay (500ms pulse) |
 | Toolbox Button | GPIO_17 | Input (Pullup) | Manual toolbox opener button |
+| System Ready | GPIO_18 | Output | System ready indicator |
 | CAN TX | GPIO_21 | CAN | CAN bus transmit line |
 | CAN RX | GPIO_22 | CAN | CAN bus receive line |
+
+**Available for Future Use:**
+- GPIO_15 (previously unlocked LED - removed as hardware testing feature)
+- GPIO_16 (previously parked LED - removed as hardware testing feature)
 
 ## Installation
 
@@ -47,7 +49,7 @@ The following GPIO pins are used by the application:
 
 1. **Mount ESP32-S3 Board**: Secure the ESP32-S3 in a suitable enclosure
 2. **Connect CAN Interface**: Wire CAN TX/RX to your F150's CAN bus
-3. **Wire Outputs**: Connect bedlight, LEDs, and toolbox opener to appropriate GPIO pins
+3. **Wire Outputs**: Connect bedlight and toolbox opener to appropriate GPIO pins
 4. **Add Button**: Install manual toolbox button with pullup resistor
 5. **Power Connection**: Provide stable 3.3V power supply
 

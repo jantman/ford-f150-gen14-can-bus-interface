@@ -3,8 +3,6 @@
 // Global GPIO state tracking
 static GPIOState gpioState = {
     .bedlight = false,
-    .parkedLED = false,
-    .unlockedLED = false,
     .toolboxOpener = false,
     .toolboxButton = false,
     .systemReady = false,
@@ -16,8 +14,6 @@ bool initializeGPIO() {
     
     // Initialize output pins
     pinMode(BEDLIGHT_PIN, OUTPUT);
-    pinMode(PARKED_LED_PIN, OUTPUT);
-    pinMode(UNLOCKED_LED_PIN, OUTPUT);
     pinMode(TOOLBOX_OPENER_PIN, OUTPUT);
     pinMode(SYSTEM_READY_PIN, OUTPUT);
     
@@ -26,15 +22,11 @@ bool initializeGPIO() {
     
     // Set all outputs to known state (off)
     digitalWrite(BEDLIGHT_PIN, LOW);
-    digitalWrite(PARKED_LED_PIN, LOW);
-    digitalWrite(UNLOCKED_LED_PIN, LOW);
     digitalWrite(TOOLBOX_OPENER_PIN, LOW);
     digitalWrite(SYSTEM_READY_PIN, LOW);
     
     // Initialize state structure
     gpioState.bedlight = false;
-    gpioState.parkedLED = false;
-    gpioState.unlockedLED = false;
     gpioState.toolboxOpener = false;
     gpioState.systemReady = false;
     gpioState.toolboxButton = digitalRead(TOOLBOX_BUTTON_PIN) == LOW; // Active low with pullup
@@ -42,8 +34,6 @@ bool initializeGPIO() {
     
     LOG_INFO("GPIO initialization complete");
     LOG_INFO("  BEDLIGHT_PIN (%d): OUTPUT, initial state: LOW", BEDLIGHT_PIN);
-    LOG_INFO("  PARKED_LED_PIN (%d): OUTPUT, initial state: LOW", PARKED_LED_PIN);
-    LOG_INFO("  UNLOCKED_LED_PIN (%d): OUTPUT, initial state: LOW", UNLOCKED_LED_PIN);
     LOG_INFO("  TOOLBOX_OPENER_PIN (%d): OUTPUT, initial state: LOW", TOOLBOX_OPENER_PIN);
     LOG_INFO("  SYSTEM_READY_PIN (%d): OUTPUT, initial state: LOW", SYSTEM_READY_PIN);
     LOG_INFO("  TOOLBOX_BUTTON_PIN (%d): INPUT_PULLUP, current state: %s", 
@@ -57,22 +47,6 @@ void setBedlight(bool state) {
         gpioState.bedlight = state;
         digitalWrite(BEDLIGHT_PIN, state ? HIGH : LOW);
         LOG_INFO("Bedlight changed to: %s", state ? "ON" : "OFF");
-    }
-}
-
-void setParkedLED(bool state) {
-    if (gpioState.parkedLED != state) {
-        gpioState.parkedLED = state;
-        digitalWrite(PARKED_LED_PIN, state ? HIGH : LOW);
-        LOG_INFO("Parked LED changed to: %s", state ? "ON" : "OFF");
-    }
-}
-
-void setUnlockedLED(bool state) {
-    if (gpioState.unlockedLED != state) {
-        gpioState.unlockedLED = state;
-        digitalWrite(UNLOCKED_LED_PIN, state ? HIGH : LOW);
-        LOG_INFO("Unlocked LED changed to: %s", state ? "ON" : "OFF");
     }
 }
 
@@ -146,8 +120,6 @@ void printGPIOStatus() {
     
     LOG_DEBUG("GPIO Status:");
     LOG_DEBUG("  Bedlight: %s", state.bedlight ? "ON" : "OFF");
-    LOG_DEBUG("  Parked LED: %s", state.parkedLED ? "ON" : "OFF");
-    LOG_DEBUG("  Unlocked LED: %s", state.unlockedLED ? "ON" : "OFF");
     LOG_DEBUG("  System Ready: %s", state.systemReady ? "ON" : "OFF");
     LOG_DEBUG("  Toolbox Opener: %s", state.toolboxOpener ? "ACTIVE" : "INACTIVE");
     LOG_DEBUG("  Toolbox Button: %s", state.toolboxButton ? "PRESSED" : "RELEASED");

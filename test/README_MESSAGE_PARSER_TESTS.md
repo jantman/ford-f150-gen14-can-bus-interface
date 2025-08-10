@@ -67,7 +67,7 @@ The tests validate these signal interpretations:
 ### Vehicle State Logic
 - Tests bedlight activation (PudLamp ON or RAMP_UP)
 - Tests toolbox activation (parked AND unlocked AND system ready)
-- Tests LED indicators (parked LED, unlocked LED)
+- Tests toolbox activation logic (requires unlocked and parked conditions)
 - Validates 5-second message timeout handling
 
 ### Real-world Scenarios
