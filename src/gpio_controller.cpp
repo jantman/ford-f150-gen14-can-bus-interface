@@ -1,6 +1,8 @@
 #include "gpio_controller.h"
 #ifdef NATIVE_ENV
 #include "native_arduino_compat.h"
+#else
+#include <climits>  // For ULONG_MAX
 #endif
 
 // Global GPIO state tracking
