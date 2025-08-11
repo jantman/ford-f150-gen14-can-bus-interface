@@ -127,16 +127,4 @@ extern "C" {
     bool shouldActivateToolboxWithParams(bool systemReady, bool isParked, bool isUnlocked);
     bool shouldActivateToolbox();
     bool isTargetCANMessage(uint32_t messageId);
-    
-    // Mock GPIO functions
-    bool initializeGPIO();
-    void setBedlight(bool state);
-    void setToolboxOpener(bool state);
-    void setSystemReady(bool state);
-    bool readToolboxButton();
-    void updateToolboxOpenerTiming();
 }
-
-// Mock Arduino interface functions  
-bool initializeGPIOWithInterface(class ArduinoInterface* interface);
-void setArduinoInterface(class ArduinoInterface* arduino);

@@ -4,21 +4,7 @@
 // Define the mock Serial instance
 MockSerial Serial;
 
-// Mock GPIO state for testing
-static struct {
-    bool bedlight;
-    bool toolboxOpener;
-    bool toolboxButton;
-    bool systemReady;
-    unsigned long toolboxOpenerStartTime;
-} mockGPIOState = {false, false, false, false, 0};
-
-// Mock GPIO controller functions
-class ArduinoInterface; // Forward declaration
-
 extern "C" {
-    bool initializeGPIO() { return true; }
-    
     // Decision logic utility functions with C linkage for test compatibility
     bool shouldEnableBedlight(uint8_t pudLampRequest) {
         return (pudLampRequest == 1 || pudLampRequest == 2);  // PUDLAMP_ON or PUDLAMP_RAMP_UP
@@ -49,61 +35,4 @@ extern "C" {
                 messageId == POWERTRAIN_DATA_10_ID ||
                 messageId == BATTERY_MGMT_3_FD1_ID);
     }
-    
-    void setBedlight(bool state) {
-        mockGPIOState.bedlight = state;
-    }
-    
-    void setToolboxOpener(bool state) {
-        mockGPIOState.toolboxOpener = state;
-        if (state) {
-            mockGPIOState.toolboxOpenerStartTime = ArduinoMock::instance().getMillis();
-        }
-    }
-    
-    void setSystemReady(bool state) {
-        mockGPIOState.systemReady = state;
-    }
-    
-    bool readToolboxButton() {
-        return mockGPIOState.toolboxButton;
-    }
-    
-    void updateToolboxOpenerTiming() {
-        // Auto-shutoff after 1 second
-        if (mockGPIOState.toolboxOpener && 
-            (ArduinoMock::instance().getMillis() - mockGPIOState.toolboxOpenerStartTime) >= 1000) {
-            mockGPIOState.toolboxOpener = false;
-        }
-    }
-    
-    // Return the mock GPIO state
-    struct GPIOState {
-        bool bedlight;
-        bool toolboxOpener;
-        bool toolboxButton;
-        bool systemReady;
-        unsigned long toolboxOpenerStartTime;
-    };
-    
-    struct GPIOState getGPIOState() {
-        struct GPIOState state = {
-            mockGPIOState.bedlight,
-            mockGPIOState.toolboxOpener,
-            mockGPIOState.toolboxButton,
-            mockGPIOState.systemReady,
-            mockGPIOState.toolboxOpenerStartTime
-        };
-        return state;
-    }
-}
-
-// C++ functions
-bool initializeGPIOWithInterface(ArduinoInterface* interface) {
-    // Mock implementation - just initialize
-    return true;
-}
-
-void setArduinoInterface(ArduinoInterface* arduino) {
-    // Mock implementation
 }
