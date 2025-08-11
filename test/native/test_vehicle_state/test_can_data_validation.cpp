@@ -5,7 +5,9 @@
 // Import production code structures and functions
 extern "C" {
     #include "../src/bit_utils.h"
-    #include "../src/can_protocol.h"
+extern "C" {
+    #include "../src/message_parser.h"
+}
 }
 
 /**

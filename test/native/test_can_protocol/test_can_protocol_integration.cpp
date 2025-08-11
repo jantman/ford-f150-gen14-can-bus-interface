@@ -12,6 +12,8 @@ extern "C" {
 // Include production message parser
 #include "../src/message_parser.h"
 
+// Decision logic functions are provided by mock with C++ linkage
+
 class CANProtocolTest : public ::testing::Test {
 protected:
     void SetUp() override {

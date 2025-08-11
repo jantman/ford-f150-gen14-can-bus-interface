@@ -2,6 +2,21 @@
 #include "mocks/mock_arduino.h"
 #include "../src/can_protocol.h"
 #include "../src/bit_utils.h"
+// Decision logic functions now available via mock_arduino.cpp
+
+// Forward declaration for CANMessage struct from can_manager.h
+struct CANMessage {
+    uint32_t id;
+    uint8_t length;
+    uint8_t data[8];
+    unsigned long timestamp;
+};
+extern "C" {
+    bool shouldEnableBedlight(uint8_t pudLampRequest);
+    bool isVehicleUnlocked(uint8_t vehicleLockStatus);
+    bool isVehicleParked(uint8_t transmissionParkStatus);
+    bool shouldActivateToolboxWithParams(bool systemReady, bool isParked, bool isUnlocked);
+}
 
 // Since we're in NATIVE_ENV, use our test config
 #ifdef NATIVE_ENV
@@ -34,13 +49,8 @@
 
 // Forward declarations and implementations
 extern "C" {
-    // CAN Message structure
-    struct CANMessage {
-        uint32_t id;
-        uint8_t length;
-        uint8_t data[8];
-        unsigned long timestamp;
-    };
+    // Use production CANMessage struct from can_manager.h
+    // (struct definition removed to avoid conflict)
     
     // Use production extractBits function from can_protocol.c
     uint8_t extractBits(const uint8_t* data, uint8_t startBit, uint8_t length);
@@ -449,7 +459,7 @@ TEST_F(ArduinoTest, StateUpdatePowertrainStatus) {
 }
 
 TEST_F(ArduinoTest, ToolboxActivationLogic) {
-    // Test shouldActivateToolbox() decision logic
+    // Test shouldActivateToolboxWithParams() decision logic
     setTime(4000);
     
     struct VehicleState {
@@ -479,20 +489,18 @@ TEST_F(ArduinoTest, ToolboxActivationLogic) {
     testState.lastLockingSystemsUpdate = 4000;
     testState.lastPowertrainUpdate = 4000;
     
-    // Simulate shouldActivateToolbox logic (timeout check is in systemReady)
-    bool shouldActivate = shouldActivateToolbox(testState.systemReady, 
-                                               testState.isParked, 
-                                               testState.isUnlocked);
-    
-    EXPECT_FALSE(shouldActivate);
+    // Simulate shouldActivateToolboxWithParams logic (timeout check is in systemReady)
+    bool shouldActivate = shouldActivateToolboxWithParams(testState.systemReady, 
+                                                          testState.isParked, 
+                                                          testState.isUnlocked);    EXPECT_FALSE(shouldActivate);
     
     // Test case 2: Parked but locked - should NOT activate  
     testState.isParked = true;
     testState.isUnlocked = false;
     
-    shouldActivate = shouldActivateToolbox(testState.systemReady, 
-                                          testState.isParked, 
-                                          testState.isUnlocked);
+    shouldActivate = shouldActivateToolboxWithParams(testState.systemReady, 
+                                                     testState.isParked, 
+                                                     testState.isUnlocked);
     
     EXPECT_FALSE(shouldActivate);
     
@@ -500,9 +508,9 @@ TEST_F(ArduinoTest, ToolboxActivationLogic) {
     testState.isParked = false;
     testState.isUnlocked = true;
     
-    shouldActivate = shouldActivateToolbox(testState.systemReady, 
-                                          testState.isParked, 
-                                          testState.isUnlocked);
+    shouldActivate = shouldActivateToolboxWithParams(testState.systemReady, 
+                                                     testState.isParked, 
+                                                     testState.isUnlocked);
     
     EXPECT_FALSE(shouldActivate);
     
@@ -510,18 +518,18 @@ TEST_F(ArduinoTest, ToolboxActivationLogic) {
     testState.isParked = true;
     testState.isUnlocked = true;
     
-    shouldActivate = shouldActivateToolbox(testState.systemReady, 
-                                          testState.isParked, 
-                                          testState.isUnlocked);
+    shouldActivate = shouldActivateToolboxWithParams(testState.systemReady, 
+                                                     testState.isParked, 
+                                                     testState.isUnlocked);
     
     EXPECT_TRUE(shouldActivate);
     
     // Test case 5: Conditions met but system not ready (stale data) - should NOT activate
     testState.systemReady = false;  // System not ready due to stale data
     
-    shouldActivate = shouldActivateToolbox(testState.systemReady, 
-                                          testState.isParked, 
-                                          testState.isUnlocked);
+    shouldActivate = shouldActivateToolboxWithParams(testState.systemReady, 
+                                                     testState.isParked, 
+                                                     testState.isUnlocked);
     
     EXPECT_FALSE(shouldActivate);
 }

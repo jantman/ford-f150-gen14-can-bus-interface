@@ -3,8 +3,9 @@
 #include "common/test_config.h"
 
 // Import production code structures and functions
+// isTargetCANMessage is provided by mock_arduino.cpp to avoid Arduino dependencies
 extern "C" {
-    #include "../src/can_protocol.h"
+    bool isTargetCANMessage(uint32_t messageId);
 }
 
 /**

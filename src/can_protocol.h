@@ -18,10 +18,7 @@ typedef struct {
 #include "bit_utils.h"
 
 // Pure decision logic functions (no Arduino dependencies)
-bool shouldActivateToolbox(bool systemReady, bool isParked, bool isUnlocked);
-bool shouldEnableBedlight(uint8_t pudLampRequest);
-bool isVehicleUnlocked(uint8_t vehicleLockStatus);
-bool isVehicleParked(uint8_t transmissionParkStatus);
+// These functions have been moved to state_manager.h to eliminate duplication
 
 #ifdef __cplusplus
 }

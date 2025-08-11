@@ -66,6 +66,12 @@ bool shouldActivateToolbox();
 VehicleState getCurrentState();
 void resetStateTimeouts();
 
+// Utility functions for testing - parameterized versions of state logic
+bool shouldEnableBedlight(uint8_t pudLampRequest);
+bool isVehicleUnlocked(uint8_t vehicleLockStatus);
+bool isVehicleParked(uint8_t transmissionParkStatus);
+bool shouldActivateToolboxWithParams(bool systemReady, bool isParked, bool isUnlocked);
+
 // Function declarations for button handling (Step 6)
 void updateButtonState();
 bool isButtonPressed();

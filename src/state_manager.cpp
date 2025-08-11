@@ -488,3 +488,20 @@ void clearBedlightManualOverride() {
         LOG_INFO("Bed light manual override cleared, returning to automatic mode");
     }
 }
+
+// Utility functions for testing - parameterized versions of the state logic
+bool shouldEnableBedlight(uint8_t pudLampRequest) {
+    return (pudLampRequest == PUDLAMP_ON || pudLampRequest == PUDLAMP_RAMP_UP);
+}
+
+bool isVehicleUnlocked(uint8_t vehicleLockStatus) {
+    return (vehicleLockStatus == VEH_UNLOCK_ALL || vehicleLockStatus == VEH_UNLOCK_DRV);
+}
+
+bool isVehicleParked(uint8_t transmissionParkStatus) {
+    return (transmissionParkStatus == TRNPRKSTS_PARK);
+}
+
+bool shouldActivateToolboxWithParams(bool systemReady, bool isParked, bool isUnlocked) {
+    return systemReady && isParked && isUnlocked;
+}

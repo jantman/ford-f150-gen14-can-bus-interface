@@ -4,7 +4,9 @@
 
 // Import production code structures and functions
 extern "C" {
-    #include "../src/can_protocol.h"
+extern "C" {
+    #include "../src/state_manager.h"
+}
 }
 
 /**

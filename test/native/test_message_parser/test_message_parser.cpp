@@ -1,12 +1,12 @@
 #include <gtest/gtest.h>
-#include "mocks/mock_arduino.h"
-#include "common/test_config.h"
-#include "common/can_test_utils.h"
+#include "../../common/test_helpers.h"
+#include "../../common/can_test_utils.h"
 
-// Import production code structures and functions
-extern "C" {
-    #include "../src/can_protocol.h"
-}
+// Import production code structures and functions - using production message_parser.h
+// No need to import can_protocol.h since we removed the duplicate functions
+#include "../src/state_manager.h"
+// isTargetCANMessage is provided by mock_arduino.cpp
+// Decision logic functions are declared in state_manager.h
 
 /**
  * Message Parser Test Suite
@@ -23,11 +23,8 @@ extern "C" {
  * The Python implementation uses Intel (little-endian) byte order with DBC bit positioning.
  */
 
-class MessageParserTest : public ::testing::Test {
+class MessageParserTest : public ArduinoTest {
 protected:
-    void SetUp() override {
-        ArduinoMock::instance().reset();
-    }
     
     void TearDown() override {
         ArduinoMock::instance().reset();
@@ -98,8 +95,12 @@ TEST_F(MessageParserTest, BCMLampStatusBasicParsing) {
     CANTestUtils::setSignalValue(testData, 11, 2, 1); // PudLamp_D_Rq = ON (1)
     
     CANFrame frame = CANTestUtils::createCANFrame(BCM_LAMP_STAT_FD1_ID, testData);
-    BCMLampData result = parseBCMLampFrame(&frame);
+    CANMessage message = convertToCANMessage(frame);
+    BCMLampStatus result;
     
+    bool success = parseBCMLampStatus(message, result);
+    
+    EXPECT_TRUE(success);
     EXPECT_TRUE(result.valid);
     EXPECT_EQ(result.pudLampRequest, 1); // PUDLAMP_ON
 }
@@ -126,8 +127,12 @@ TEST_F(MessageParserTest, BCMLampStatusPythonValueMapping) {
         CANTestUtils::setSignalValue(testData, 11, 2, testCase.rawValue);
         
         CANFrame frame = CANTestUtils::createCANFrame(BCM_LAMP_STAT_FD1_ID, testData);
-        BCMLampData result = parseBCMLampFrame(&frame);
+        CANMessage message = convertToCANMessage(frame);
+        BCMLampStatus result;
         
+        bool success = parseBCMLampStatus(message, result);
+        
+        EXPECT_TRUE(success) << "Parsing failed for " << testCase.description;
         EXPECT_TRUE(result.valid) << "Failed for " << testCase.description;
         EXPECT_EQ(result.pudLampRequest, testCase.expectedConstant) << "Value mismatch for " << testCase.description;
         
@@ -141,15 +146,21 @@ TEST_F(MessageParserTest, BCMLampStatusInvalidMessage) {
     // Test invalid message ID
     uint8_t testData[8] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
     CANFrame frame = CANTestUtils::createCANFrame(0x999, testData); // Wrong ID
-    BCMLampData result = parseBCMLampFrame(&frame);
+    CANMessage message = convertToCANMessage(frame);
+    BCMLampStatus result;
     
+    bool success = parseBCMLampStatus(message, result);
+    
+    EXPECT_FALSE(success);
     EXPECT_FALSE(result.valid);
     
     // Test invalid length
     frame.id = BCM_LAMP_STAT_FD1_ID;
     frame.length = 4; // Wrong length
+    message = convertToCANMessage(frame);
     
-    result = parseBCMLampFrame(&frame);
+    success = parseBCMLampStatus(message, result);
+    EXPECT_FALSE(success);
     EXPECT_FALSE(result.valid);
 }
 
@@ -165,8 +176,12 @@ TEST_F(MessageParserTest, LockingSystemsBasicParsing) {
     CANTestUtils::setSignalValue(testData, 34, 2, 2); // Veh_Lock_Status = UNLOCK_ALL (2) - match production bit position
     
     CANFrame frame = CANTestUtils::createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, testData);
-    LockingSystemsData result = parseLockingSystemsFrame(&frame);
+    CANMessage message = convertToCANMessage(frame);
+    LockingSystemsStatus result;
     
+    bool success = parseLockingSystemsStatus(message, result);
+    
+    EXPECT_TRUE(success);
     EXPECT_TRUE(result.valid);
     EXPECT_EQ(result.vehicleLockStatus, 2); // VEH_UNLOCK_ALL
 }
@@ -199,8 +214,12 @@ TEST_F(MessageParserTest, LockingSystemsRealCANData) {
     
     for (const auto& testCase : testCases) {
         CANFrame frame = CANTestUtils::createCANFrame(LOCKING_SYSTEMS_2_FD1_ID, testCase.data);
-        LockingSystemsData result = parseLockingSystemsFrame(&frame);
+        CANMessage message = convertToCANMessage(frame);
+        LockingSystemsStatus result;
         
+        bool success = parseLockingSystemsStatus(message, result);
+        
+        EXPECT_TRUE(success) << "Parsing failed for " << testCase.description;
         EXPECT_TRUE(result.valid) << "Failed for " << testCase.description;
         EXPECT_EQ(result.vehicleLockStatus, testCase.expectedStatus) << "Value mismatch for " << testCase.description;
         
@@ -228,8 +247,12 @@ TEST_F(MessageParserTest, PowertrainDataBasicParsing) {
     CANTestUtils::setSignalValue(testData, 31, 4, 1); // TrnPrkSys_D_Actl = PARK (1)
     
     CANFrame frame = CANTestUtils::createCANFrame(POWERTRAIN_DATA_10_ID, testData);
-    PowertrainData result = parsePowertrainFrame(&frame);
+    CANMessage message = convertToCANMessage(frame);
+    PowertrainData result;
     
+    bool success = parsePowertrainData(message, result);
+    
+    EXPECT_TRUE(success);
     EXPECT_TRUE(result.valid);
     EXPECT_EQ(result.transmissionParkStatus, 1); // TRNPRKSTS_PARK
 }
@@ -263,8 +286,12 @@ TEST_F(MessageParserTest, PowertrainDataPythonValueMapping) {
         CANTestUtils::setSignalValue(testData, 31, 4, testCase.rawValue);
         
         CANFrame frame = CANTestUtils::createCANFrame(POWERTRAIN_DATA_10_ID, testData);
-        PowertrainData result = parsePowertrainFrame(&frame);
+        CANMessage message = convertToCANMessage(frame);
+        PowertrainData result;
         
+        bool success = parsePowertrainData(message, result);
+        
+        EXPECT_TRUE(success) << "Parsing failed for " << testCase.description;
         EXPECT_TRUE(result.valid) << "Failed for " << testCase.description;
         EXPECT_EQ(result.transmissionParkStatus, testCase.expectedConstant) << "Value mismatch for " << testCase.description;
         
@@ -286,8 +313,12 @@ TEST_F(MessageParserTest, BatteryManagementBasicParsing) {
     CANTestUtils::setSignalValue(testData, 22, 7, 85); // Battery SOC = 85%
     
     CANFrame frame = CANTestUtils::createCANFrame(BATTERY_MGMT_3_FD1_ID, testData);
-    BatteryData result = parseBatteryFrame(&frame);
+    CANMessage message = convertToCANMessage(frame);
+    BatteryManagement result;
     
+    bool success = parseBatteryManagement(message, result);
+    
+    EXPECT_TRUE(success);
     EXPECT_TRUE(result.valid);
     EXPECT_EQ(result.batterySOC, 85);
 }
@@ -313,8 +344,12 @@ TEST_F(MessageParserTest, BatteryManagementRangeValues) {
         CANTestUtils::setSignalValue(testData, 22, 7, testCase.rawValue);
         
         CANFrame frame = CANTestUtils::createCANFrame(BATTERY_MGMT_3_FD1_ID, testData);
-        BatteryData result = parseBatteryFrame(&frame);
+        CANMessage message = convertToCANMessage(frame);
+        BatteryManagement result;
         
+        bool success = parseBatteryManagement(message, result);
+        
+        EXPECT_TRUE(success) << "Parsing failed for " << testCase.description;
         EXPECT_TRUE(result.valid) << "Failed for " << testCase.description;
         EXPECT_EQ(result.batterySOC, testCase.rawValue) << "Value mismatch for " << testCase.description;
         
@@ -329,12 +364,12 @@ TEST_F(MessageParserTest, BatteryManagementRangeValues) {
 // ===============================================
 
 TEST_F(MessageParserTest, VehicleStateDecisionLogic) {
-    // Test shouldActivateToolbox logic
-    EXPECT_TRUE(shouldActivateToolbox(true, true, true));   // All conditions met
-    EXPECT_FALSE(shouldActivateToolbox(false, true, true)); // System not ready
-    EXPECT_FALSE(shouldActivateToolbox(true, false, true)); // Not parked
-    EXPECT_FALSE(shouldActivateToolbox(true, true, false)); // Not unlocked
-    EXPECT_FALSE(shouldActivateToolbox(false, false, false)); // No conditions met
+    // Test shouldActivateToolboxWithParams logic
+    EXPECT_TRUE(shouldActivateToolboxWithParams(true, true, true));   // All conditions met
+    EXPECT_FALSE(shouldActivateToolboxWithParams(false, true, true)); // System not ready
+    EXPECT_FALSE(shouldActivateToolboxWithParams(true, false, true)); // Not parked
+    EXPECT_FALSE(shouldActivateToolboxWithParams(true, true, false)); // Not unlocked
+    EXPECT_FALSE(shouldActivateToolboxWithParams(false, false, false)); // No conditions met
     
     // Test shouldEnableBedlight logic (ON or RAMP_UP)
     EXPECT_FALSE(shouldEnableBedlight(PUDLAMP_OFF));
@@ -381,10 +416,26 @@ TEST_F(MessageParserTest, ComprehensiveMessageValidation) {
     CANFrame battFrame = CANTestUtils::createCANFrame(BATTERY_MGMT_3_FD1_ID, battData);
     
     // Parse all messages
-    BCMLampData bcmResult = parseBCMLampFrame(&bcmFrame);
-    LockingSystemsData lockResult = parseLockingSystemsFrame(&lockFrame);
-    PowertrainData powerResult = parsePowertrainFrame(&powerFrame);
-    BatteryData battResult = parseBatteryFrame(&battFrame);
+    CANMessage bcmMessage = convertToCANMessage(bcmFrame);
+    CANMessage lockMessage = convertToCANMessage(lockFrame);
+    CANMessage powerMessage = convertToCANMessage(powerFrame);
+    CANMessage battMessage = convertToCANMessage(battFrame);
+    
+    BCMLampStatus bcmResult;
+    LockingSystemsStatus lockResult;
+    PowertrainData powerResult;
+    BatteryManagement battResult;
+    
+    bool bcmSuccess = parseBCMLampStatus(bcmMessage, bcmResult);
+    bool lockSuccess = parseLockingSystemsStatus(lockMessage, lockResult);
+    bool powerSuccess = parsePowertrainData(powerMessage, powerResult);
+    bool battSuccess = parseBatteryManagement(battMessage, battResult);
+    
+    // Validate all parsing succeeded
+    EXPECT_TRUE(bcmSuccess);
+    EXPECT_TRUE(lockSuccess);
+    EXPECT_TRUE(powerSuccess);
+    EXPECT_TRUE(battSuccess);
     
     // Validate all parsed values
     EXPECT_TRUE(bcmResult.valid);
@@ -403,7 +454,7 @@ TEST_F(MessageParserTest, ComprehensiveMessageValidation) {
     bool bedlightShouldBeOn = shouldEnableBedlight(bcmResult.pudLampRequest);
     bool vehicleIsUnlocked = isVehicleUnlocked(lockResult.vehicleLockStatus);
     bool vehicleIsParked = isVehicleParked(powerResult.transmissionParkStatus);
-    bool toolboxShouldOpen = shouldActivateToolbox(true, vehicleIsParked, vehicleIsUnlocked);
+    bool toolboxShouldOpen = shouldActivateToolboxWithParams(true, vehicleIsParked, vehicleIsUnlocked);
     
     EXPECT_TRUE(bedlightShouldBeOn);  // PUDLAMP_ON
     EXPECT_TRUE(vehicleIsUnlocked);   // VEH_UNLOCK_ALL
