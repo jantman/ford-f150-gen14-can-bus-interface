@@ -2,7 +2,7 @@
 
 // Import the mock Arduino layer for native tests
 #ifdef UNIT_TESTING
-#include "../mocks/mock_arduino.h"
+#include "mock_arduino.h"
 #endif
 
 // Test-specific config that mirrors src/config.h but works in native environment

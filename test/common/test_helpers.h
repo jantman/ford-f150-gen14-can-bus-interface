@@ -1,7 +1,7 @@
 #pragma once
 
 #include <gtest/gtest.h>
-#include "../mocks/mock_arduino.h"
+#include "mock_arduino.h"
 
 // Include production headers for conversion functions
 // Note: The production headers work in native tests because 

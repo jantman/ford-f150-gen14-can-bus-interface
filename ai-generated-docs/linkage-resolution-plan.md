@@ -68,7 +68,7 @@ bool shouldActivateToolbox(bool, bool, bool);  // C++ linkage
 
 #### Step 1: Standardize Mock Functions
 ```cpp
-// In test/mocks/mock_arduino.cpp - provide C++ linkage
+// In lib/test_mocks/src/mock_arduino.cpp - provide C++ linkage
 bool shouldEnableBedlight(uint8_t pudLampRequest) { ... }
 bool isVehicleUnlocked(uint8_t vehicleLockStatus) { ... }
 bool isVehicleParked(uint8_t transmissionParkStatus) { ... }
@@ -108,7 +108,7 @@ extern "C" {
 Create dedicated mock headers for clean separation:
 
 ```cpp
-// test/mocks/mock_functions.h
+// lib/test_mocks/include/mock_functions.h
 #pragma once
 #include <cstdint>
 

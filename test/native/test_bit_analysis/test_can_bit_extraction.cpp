@@ -1,11 +1,12 @@
 #include <gtest/gtest.h>
-#include "mocks/mock_arduino.h"
+#include "mock_arduino.h"
 #include "common/test_config.h"
 #include "common/can_test_utils.h"
 
 // Import production code structures and functions
 extern "C" {
     #include "../src/can_protocol.h"
+    #include "../src/bit_utils.h"
 }
 
 /**

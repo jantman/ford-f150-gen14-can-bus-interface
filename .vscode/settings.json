@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "bitset": "cpp",
+        "atomic": "cpp"
     }
 }

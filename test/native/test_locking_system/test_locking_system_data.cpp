@@ -2,10 +2,8 @@
 #include "../../common/test_helpers.h"
 #include "../../common/can_test_utils.h"
 
-// Using production parsing functions from message_parser.cpp
-extern "C" {
-    #include "../src/state_manager.h"
-}
+// Using production parsing functions from message_parser.cpp and state_manager.cpp
+#include "../../../src/state_manager.h"
 
 /**
  * Locking System Data Test Suite

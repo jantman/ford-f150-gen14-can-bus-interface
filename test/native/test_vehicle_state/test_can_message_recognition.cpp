@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "mocks/mock_arduino.h"
+#include "mock_arduino.h"
 #include "common/test_config.h"
 
 // Import production code structures and functions

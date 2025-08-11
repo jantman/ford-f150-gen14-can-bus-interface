@@ -118,3 +118,25 @@ public:
 };
 
 extern MockSerial Serial;
+
+// Mock decision logic functions with C linkage for test compatibility
+extern "C" {
+    bool shouldEnableBedlight(uint8_t pudLampRequest);
+    bool isVehicleUnlocked(uint8_t vehicleLockStatus);
+    bool isVehicleParked(uint8_t transmissionParkStatus);
+    bool shouldActivateToolboxWithParams(bool systemReady, bool isParked, bool isUnlocked);
+    bool shouldActivateToolbox();
+    bool isTargetCANMessage(uint32_t messageId);
+    
+    // Mock GPIO functions
+    bool initializeGPIO();
+    void setBedlight(bool state);
+    void setToolboxOpener(bool state);
+    void setSystemReady(bool state);
+    bool readToolboxButton();
+    void updateToolboxOpenerTiming();
+}
+
+// Mock Arduino interface functions  
+bool initializeGPIOWithInterface(class ArduinoInterface* interface);
+void setArduinoInterface(class ArduinoInterface* arduino);

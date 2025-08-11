@@ -1,0 +1,20 @@
+{
+  "name": "test_mocks",
+  "version": "1.0.0",
+  "description": "Mock implementations for native testing of Ford F-150 CAN Bus Interface",
+  "keywords": ["test", "mock", "arduino", "embedded", "can"],
+  "authors": [
+    {
+      "name": "Ford F-150 CAN Bus Interface Project"
+    }
+  ],
+  "license": "MIT",
+  "frameworks": ["*"],
+  "platforms": ["native"],
+  "build": {
+    "flags": [
+      "-DUNIT_TESTING",
+      "-DNATIVE_ENV"
+    ]
+  }
+}

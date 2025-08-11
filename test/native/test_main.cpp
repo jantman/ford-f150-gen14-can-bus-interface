@@ -1,22 +1,10 @@
 #include <gtest/gtest.h>
-#include "mocks/mock_arduino.h"
+#include "mock_arduino.h"
 #include "../src/can_protocol.h"
 #include "../src/bit_utils.h"
-// Decision logic functions now available via mock_arduino.cpp
+#include "../src/state_manager.h" // Use production header for decision logic functions
 
-// Forward declaration for CANMessage struct from can_manager.h
-struct CANMessage {
-    uint32_t id;
-    uint8_t length;
-    uint8_t data[8];
-    unsigned long timestamp;
-};
-extern "C" {
-    bool shouldEnableBedlight(uint8_t pudLampRequest);
-    bool isVehicleUnlocked(uint8_t vehicleLockStatus);
-    bool isVehicleParked(uint8_t transmissionParkStatus);
-    bool shouldActivateToolboxWithParams(bool systemReady, bool isParked, bool isUnlocked);
-}
+// CANMessage struct is now available from state_manager.h -> can_manager.h
 
 // Since we're in NATIVE_ENV, use our test config
 #ifdef NATIVE_ENV

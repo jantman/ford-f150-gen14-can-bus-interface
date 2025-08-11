@@ -6,13 +6,11 @@
 extern "C" {
     #include "../src/config.h"  // For CAN message IDs
     #include "../src/bit_utils.h"  // For setBits function
-    #include "../src/can_protocol.h"  // For decision logic functions
 }
 
-// Include production message parser
+// Include production message parser and state manager
 #include "../src/message_parser.h"
-
-// Decision logic functions are provided by mock with C++ linkage
+#include "../src/state_manager.h"
 
 class CANProtocolTest : public ::testing::Test {
 protected:
@@ -100,11 +98,11 @@ TEST_F(CANProtocolTest, PowertrainParsingProduction) {
 // Test the ACTUAL decision logic functions
 TEST_F(CANProtocolTest, DecisionLogicProduction) {
     // Test toolbox activation logic
-    EXPECT_FALSE(shouldActivateToolbox(false, false, false));  // Nothing ready
-    EXPECT_FALSE(shouldActivateToolbox(true, false, false));   // System ready only
-    EXPECT_FALSE(shouldActivateToolbox(true, true, false));    // System ready + parked
-    EXPECT_FALSE(shouldActivateToolbox(true, false, true));    // System ready + unlocked
-    EXPECT_TRUE(shouldActivateToolbox(true, true, true));      // All conditions met
+    EXPECT_FALSE(shouldActivateToolboxWithParams(false, false, false));  // Nothing ready
+    EXPECT_FALSE(shouldActivateToolboxWithParams(true, false, false));   // System ready only
+    EXPECT_FALSE(shouldActivateToolboxWithParams(true, true, false));    // System ready + parked
+    EXPECT_FALSE(shouldActivateToolboxWithParams(true, false, true));    // System ready + unlocked
+    EXPECT_TRUE(shouldActivateToolboxWithParams(true, true, true));      // All conditions met
     
     // Test bedlight logic
     EXPECT_FALSE(shouldEnableBedlight(0));  // OFF
@@ -172,7 +170,7 @@ TEST_F(CANProtocolTest, EndToEndScenarioProduction) {
     EXPECT_TRUE(shouldEnableBedlight(bcm.pudLampRequest));
     EXPECT_TRUE(isVehicleUnlocked(lock.vehicleLockStatus));
     EXPECT_TRUE(isVehicleParked(park.transmissionParkStatus));
-    EXPECT_TRUE(shouldActivateToolbox(true, isVehicleParked(park.transmissionParkStatus), isVehicleUnlocked(lock.vehicleLockStatus)));
+    EXPECT_TRUE(shouldActivateToolboxWithParams(true, isVehicleParked(park.transmissionParkStatus), isVehicleUnlocked(lock.vehicleLockStatus)));
 }
 
 // Test invalid frames are rejected properly

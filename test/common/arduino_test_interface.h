@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../src/arduino_interface.h"
-#include "../mocks/mock_arduino.h"
+#include "mock_arduino.h"
 
 /**
  * Test implementation using ArduinoMock for dependency injection
