@@ -209,7 +209,14 @@ The code is organized into modules:
 
 ### In-Cab Enclosure
 
-**TBD - Need Photo**
+[![In-cab enclosure view 1](photos/cab1_640.jpg)](photos/cab1.jpg)
+[![In-cab enclosure view 2](photos/cab2_640.jpg)](photos/cab2.jpg)
+[![In-cab enclosure view 3](photos/cab3_640.jpg)](photos/cab3.jpg)
+[![In-cab enclosure view 4](photos/cab4_640.jpg)](photos/cab4.jpg)
+[![In-cab enclosure view 5](photos/cab5_640.jpg)](photos/cab5.jpg)
+[![In-cab enclosure view 6](photos/cab6_640.jpg)](photos/cab6.jpg)
+[![In-cab enclosure view 7](photos/cab7_640.jpg)](photos/cab7.jpg)
+[![In-cab enclosure view 8](photos/cab8_640.jpg)](photos/cab8.jpg)
 
 A small project box enclosure containing an [AutoSport Labs ESP32-CAN-X2](https://www.autosportlabs.com/product/esp32-can-x2-dual-can-bus-automotive-grade-development-board/) development board, which combines an ESP32, dual can transceivers, and an automotive-grade 12-40VDC power supply. The ESP mounts to headers on a carrier board (simple 70x90cm protoboard) with connectors for IO, so that the ESP and/or carrier board can be removed from the enclosure without soldering. The enclosure exposes:
 
@@ -221,7 +228,12 @@ Wiring diagrams for this enclosure can be seen in [PNG](./enclosure_wiring.png) 
 
 ### Bed Toolbox Enclosure
 
-**TBD - Need Photo**
+[![Bed toolbox view 1](photos/bed1_640.jpg)](photos/bed1.jpg)
+[![Bed toolbox view 2](photos/bed2_640.jpg)](photos/bed2.jpg)
+
+### Operation
+
+Here is a video (Google Drive share) of the main features in operation: [https://drive.google.com/file/d/1tNBWQjMUxib8DWaKHlI0bFDWAgj8HGII/view?usp=sharing](https://drive.google.com/file/d/1tNBWQjMUxib8DWaKHlI0bFDWAgj8HGII/view?usp=sharing)
 
 ## History of Project
 
