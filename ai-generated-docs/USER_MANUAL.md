@@ -1,5 +1,12 @@
 # Ford F150 Gen14 CAN Bus Interface - User Manual
 
+## Very Important Disclaimers
+
+1. If you try to do this yourself and mess up, **YOU CAN KILL PEOPLE**.
+2. This page explains one person's crazy experiment. You problably do NOT want to do this. I'm _sure_ that Ford _really_ doesn't want you to do this. It could easily void your warranty, fry your truck, electrocute someone (to death, to be redundant), turn your hound into a gerbil, or accidentally send a signal to space saying "we are Earth, destroy us." Don't mess with this if you don't absolutely know what you're doing. You have been warned.
+3. Very seriously though, we're talking about a computer network that also performs critical operations for the tons of steel carrying you and your family hurtling down the highway. Having a solder joint fail is not an option. Having a little wire whisker short out two conductors is not an option. If you're not comofortable doing electrical work that peoples' lives depend on, just stop reading now. Please.
+4. Aside from correcting gross errors or omissions in this documentation, I provide **NO SUPPORT** whatsoever. This isn't a side business for me and it's not a hobby, it's just some information I put out there. Maybe think about it like I tacked some helpful instructions up on the town bulletin board. Anonymously. You can read them, or you can not read them; that's the extent of our interaction.
+
 ## Overview
 
 This ESP32-S3 based device interfaces with your Ford F150 Gen14 CAN bus to provide automated bedlight control and toolbox opener functionality based on vehicle state.

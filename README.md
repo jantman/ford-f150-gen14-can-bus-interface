@@ -4,6 +4,13 @@
 
 Interface for doing various things in response to messages on the CAN bus of my 2025 (Generation 14) Ford F150, along with details of construction, initial investigation/experiments, wiring info, etc.
 
+## Very Important Disclaimers
+
+1. If you try to do this yourself and mess up, **YOU CAN KILL PEOPLE**.
+2. This page explains one person's crazy experiment. You problably do NOT want to do this. I'm _sure_ that Ford _really_ doesn't want you to do this. It could easily void your warranty, fry your truck, electrocute someone (to death, to be redundant), turn your hound into a gerbil, or accidentally send a signal to space saying "we are Earth, destroy us." Don't mess with this if you don't absolutely know what you're doing. You have been warned.
+3. Very seriously though, we're talking about a computer network that also performs critical operations for the tons of steel carrying you and your family hurtling down the highway. Having a solder joint fail is not an option. Having a little wire whisker short out two conductors is not an option. If you're not comofortable doing electrical work that peoples' lives depend on, just stop reading now. Please.
+4. Aside from correcting gross errors or omissions in this documentation, I provide **NO SUPPORT** whatsoever. This isn't a side business for me and it's not a hobby, it's just some information I put out there. Maybe think about it like I tacked some helpful instructions up on the town bulletin board. Anonymously. You can read them, or you can not read them; that's the extent of our interaction.
+
 ## What does it do?
 
 * Trigger a relay for OEM-style aftermarket bed lights, when the CHMSL bed lights are on.
@@ -225,6 +232,26 @@ A small project box enclosure containing an [AutoSport Labs ESP32-CAN-X2](https:
 * An 8-pin (7 populated) connector for a 7-wire harness that goes into the toolbox mounted in the bed of the truck, carrying six GPIO lines as well as a tap from an in-cab +12VDC circuit (SBA40) that is controlled by the ECU load-shedding logic. This will ensure that aftermarket accessories can't drain the battery too low.
 
 Wiring diagrams for this enclosure can be seen in [PNG](./enclosure_wiring.png) or [SVG](./enclosure_wiring.svg).
+
+#### CAN Bus Connection
+
+Noting the disclaimer above (void your warranty, fry your truck, kill people, etc.)
+
+I connected to the HS-CAN3 bus by making the pigtail connector shown above, to avoid any modifications to the factory wiring.
+
+The large connector is C3154A to the Audio DSP Module on the rear wall of the cab behind the passenger seat, behind the insulation. This connector is a Molex 34728-0200 with a combination of 19, 20, and 22 gauge wires. HS-CAN3 High is on pin 1, 22ga Green-Blue wire; HS-CAN3 Low is on pin 11, 22ga White-Green wire. The Molex 34728-0200 is a proprietary connector.
+
+The small connector is C3154B which also connects to the Audio DSP Module and in my vehicle (standard 8-speaker B&O stereo) and just has four pins populated for ground and power. This is a Molex 34728-0080 with 19ga and possibly one 22ga wires. Pins 1 and 5 are circuit GD348 ground to the C pillar, 19ga Black-Yellow wire; pins 4 and 8 are circuit SBA40 to Fuse 40, always hot, 19ga Red wire.
+
+I was able to identify non-proprietary Molex connectors that, as far as I can tell, mate with the above perfectly. Note that you'll need a proper crimping tool for the pins, which can be a bit finnicky and is outside the scope of this document but there are plenty of good automotive and electronics tutorials on the topic. Make sure that each and every pin is fully, properly crimped (pull test all of them; same with the soldered terminals).
+
+* Large connector (C3154A / Molex 34728-0200) male - Molex 034729-0200 / [DigiKey part WM9303-ND](https://www.digikey.com/en/products/detail/molex/0347290200/2520782)
+* Large connector (C3154A) female - Molex 034690-0200 / [DigiKey part WM6284-ND](https://www.digikey.com/en/products/detail/molex/0346900200/2297946)
+* Small connector (C3154B / Molex 34728-0080) male - Molex 034729-0080 / [DigiKey part WM9304-ND](https://www.digikey.com/en/products/detail/molex/0347290080/2520773)
+* Small connector (C3154B) female - Molex 034691-0080 / [DigiKey part WM6285-ND](https://www.digikey.com/en/products/detail/molex/0346910080/2297950)
+* Pins for male connectors - Molex 034803-3212 / [DigiKey part WM16246CT-ND](https://www.digikey.com/en/products/detail/molex/0348033212/5029976)
+
+I'd also recommend that you do a decent, proper wiring job. I used 3x adhesive-lined heat shrink on all solder joints (solder tabs on female connector bodies). For the harness wiring, I used blue TXL (thin insulation) XLPE wire from McMaster, and finished the harnesses in tape.
 
 ### Bed Toolbox Enclosure
 
